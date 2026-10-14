@@ -135,13 +135,13 @@ its format is known. Not part of the first version.
 so outcome is carried in the body. GET and POST use the same envelope:
 
 ```json
-{ "ok": true,  "result": "created" | "noop", "data": { … } }
+{ "ok": true,  "result": "applied" | "noop", "data": { … } }
 { "ok": false, "error": "conflict" | "pin" | "invalid" | "busy", "message": "…" }
 ```
 
 | Outcome | Outbox behaviour |
 |---|---|
-| `ok` (`created` / `noop`) | Remove op, continue. |
+| `ok` (`applied` / `noop`) | Remove op, continue. |
 | `conflict` | Drop op **and cascade** (§10), toast, refetch. |
 | `invalid` | Drop op and cascade, toast (indicates a bug or a hand edit), refetch. |
 | `pin` | Hold the whole outbox; prompt for PIN; resume. |
@@ -163,11 +163,15 @@ docs/                   the published site (GitHub Pages: branch main, folder /d
     api/                the only code that knows the backend exists
       client.js         fetch wrapper (GET all, POST action)
     state/              persistence on the phone
-      cache.js          last fetched dataset
-      outbox.js         queued writes, retry, unsynced count
-      store.js          dataset = cache + pending outbox ops applied optimistically
+      storage.js        JSON wrapper around localStorage (injectable for tests)
+      outbox.js         queued writes, serial flush, retry, cascade, unsynced count
+      store.js          dataset = cached server data + pending ops applied optimistically
+      actions.js        user intents → validated ops (the only way views write)
     domain/             pure functions; no DOM, no network, no storage
-      match.js          score, completion, current night/match, sit-outs
+      dates.js          local ISO dates
+      players.js        name rules and lookup
+      match.js          ids, canonical order, score, completion, current night/match
+      dataset.js        applyOp: idempotent op application (same rules as the server)
       season.js         season of a date, season ranges
       elo.js            rating engine + documented constants
       proposal.js       team proposal rules (as data) + engine
