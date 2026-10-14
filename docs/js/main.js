@@ -67,9 +67,8 @@ const router = createRouter({
   onRoute: markActiveTab,
 });
 router.start();
-// theme-init.js already set the theme; charts read token colours when drawn, so redraw on a switch.
+// theme-init.js already set the theme; charts restyle themselves on `themechange`.
 followSystemTheme();
-window.addEventListener('themechange', () => router.rerender());
 
 store.refresh().catch(() => false).then((ok) => {
   if (!ok) showToast(t.offline);

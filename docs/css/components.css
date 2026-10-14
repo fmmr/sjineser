@@ -260,6 +260,12 @@ select.field {
  * Bottom sheet (views/components/sheet.js): a modal <dialog> filling the viewport dims the
  * page; the panel slides up from the bottom edge and back down on close (data-closing).
  */
+
+/* iOS scrolls the page behind a modal dialog; lock it while a sheet is open. */
+html:has(.sheet[open]) {
+  overflow: hidden;
+}
+
 .sheet {
   position: fixed;
   inset: 0;
@@ -296,6 +302,7 @@ select.field {
   max-width: var(--content-width);
   max-height: calc(100dvh - env(safe-area-inset-top) - var(--space-6));
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding:
     var(--space-2)
     max(var(--space-5), env(safe-area-inset-right))

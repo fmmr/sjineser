@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { THEME_KEY, nextTheme, resolveTheme, storedTheme, themeColor } from '../docs/js/theme.js';
+import { THEME_KEY, followSystemTheme, nextTheme, resolveTheme, storedTheme, themeColor } from '../docs/js/theme.js';
 
 /** localStorage stand-in holding raw strings; `broken` throws like Safari private mode used to. */
 function fakeStorage(initial = {}, { broken = false } = {}) {
@@ -84,4 +84,41 @@ test('theme-init.js resolves exactly like theme.js and sets the theme-color', ()
     const expected = resolveTheme(env);
     assert.deepEqual(runInit(env), { theme: expected, color: themeColor(expected) });
   }
+});
+
+/** matchMedia stand-in whose 'change' listeners the test can fire. */
+function liveMatchMedia(light) {
+  const listeners = [];
+  const matchMedia = (query) => ({
+    matches: query === '(prefers-color-scheme: light)' && light.value,
+    addEventListener: (type, listener) => listeners.push({ query, type, listener }),
+  });
+  return { matchMedia, fire: () => listeners.forEach(({ listener }) => listener()), listeners };
+}
+
+test('followSystemTheme follows device changes while no explicit choice is stored', () => {
+  const light = { value: false };
+  const media = liveMatchMedia(light);
+  const applied = [];
+  let current = 'dark';
+  const storage = fakeStorage();
+  followSystemTheme({ matchMedia: media.matchMedia, storage, current: () => current, apply: (theme) => applied.push(theme) });
+  assert.deepEqual(media.listeners.map(({ query, type }) => [query, type]), [['(prefers-color-scheme: light)', 'change']]);
+
+  light.value = true;
+  media.fire();
+  assert.deepEqual(applied, ['light']);
+
+  current = 'light';
+  media.fire();
+  assert.deepEqual(applied, ['light'], 'no re-apply when the theme is already right');
+
+  storage.setItem(THEME_KEY, 'light');
+  light.value = false;
+  media.fire();
+  assert.deepEqual(applied, ['light'], 'an explicit choice wins');
+});
+
+test('followSystemTheme without matchMedia does nothing', () => {
+  assert.doesNotThrow(() => followSystemTheme({ matchMedia: undefined, storage: fakeStorage() }));
 });

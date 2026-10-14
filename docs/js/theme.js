@@ -62,11 +62,18 @@ export function setTheme(theme) {
   applyTheme(theme);
 }
 
-/** Follows device theme changes for as long as no explicit choice is stored. */
-export function followSystemTheme() {
-  globalThis.matchMedia?.(LIGHT_QUERY).addEventListener('change', () => {
-    if (storedTheme(globalThis.localStorage)) return;
-    const theme = resolveTheme({ storage: globalThis.localStorage, matchMedia: globalThis.matchMedia });
-    if (theme !== currentTheme()) applyTheme(theme);
+/**
+ * Follows device theme changes for as long as no explicit choice is stored.
+ * @param {{ matchMedia?: (query: string) => MediaQueryList, storage?: Pick<Storage, 'getItem'>,
+ *   current?: () => 'dark' | 'light', apply?: (theme: 'dark' | 'light') => void }} [env]
+ *   the browser by default (injectable for tests)
+ */
+export function followSystemTheme({
+  matchMedia = globalThis.matchMedia, storage = globalThis.localStorage, current = currentTheme, apply = applyTheme,
+} = {}) {
+  matchMedia?.(LIGHT_QUERY).addEventListener('change', () => {
+    if (storedTheme(storage)) return;
+    const theme = resolveTheme({ storage, matchMedia });
+    if (theme !== current()) apply(theme);
   });
 }

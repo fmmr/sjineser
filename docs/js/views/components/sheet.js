@@ -39,12 +39,12 @@ export function wrapFocus(index, count, backwards) {
 /**
  * Opens a bottom sheet.
  * @param {{ title: string, message?: string, body?: Node[], actions: SheetAction[],
- *   cancelValue?: any, initialFocus?: (panel: HTMLElement) => HTMLElement | null }} options
- *   cancelValue: result of Escape, backdrop tap or navigation; initialFocus: the element to
- *   focus first (default: the first action)
+ *   cancelValue?: any, initialFocus?: (panel: HTMLElement) => HTMLElement | null, focusIndex?: number }} options
+ *   cancelValue: result of Escape, backdrop tap, navigation or any other close; initialFocus:
+ *   the element to focus first; otherwise the action at focusIndex (default: the first)
  * @returns {Promise<any>} the chosen action's value, or cancelValue
  */
-export function openSheet({ title, message, body = [], actions, cancelValue, initialFocus }) {
+export function openSheet({ title, message, body = [], actions, cancelValue, initialFocus, focusIndex = 0 }) {
   const returnFocus = document.activeElement;
   const titleId = `sheet-title-${(sheetCount += 1)}`;
   let settled = false;
@@ -79,6 +79,8 @@ export function openSheet({ title, message, body = [], actions, cancelValue, ini
       if (event.target === dialog) close(cancelValue);
     },
     onkeydown: trapTab,
+    // Safety net: however the dialog closes, the promise settles (as cancel unless already chosen).
+    onclose: () => close(cancelValue),
   }, panel);
 
   function onSubmit(event) {
@@ -120,8 +122,24 @@ export function openSheet({ title, message, body = [], actions, cancelValue, ini
 
   document.body.append(dialog);
   dialog.showModal();
-  (initialFocus?.(panel) ?? buttons[0])?.focus();
+  (initialFocus?.(panel) ?? buttons[focusIndex])?.focus();
   return result;
+}
+
+/**
+ * The actions of a yes/no sheet and which one gets focus: a destructive question starts on
+ * cancel, so a stray Enter does not destroy anything.
+ * @param {{ confirmLabel: string, cancelLabel?: string, destructive?: boolean }} options
+ * @returns {{ actions: SheetAction[], focusIndex: number }}
+ */
+export function confirmActions({ confirmLabel, cancelLabel = t.sheet.cancel, destructive = false }) {
+  return {
+    actions: [
+      { label: confirmLabel, value: true, variant: destructive ? 'danger' : 'primary' },
+      { label: cancelLabel, value: false, variant: 'ghost' },
+    ],
+    focusIndex: destructive ? 1 : 0,
+  };
 }
 
 /**
@@ -129,16 +147,8 @@ export function openSheet({ title, message, body = [], actions, cancelValue, ini
  * @param {{ title: string, message?: string, confirmLabel: string, cancelLabel?: string, destructive?: boolean }} options
  * @returns {Promise<boolean>}
  */
-export function confirmSheet({ title, message, confirmLabel, cancelLabel = t.sheet.cancel, destructive = false }) {
-  return openSheet({
-    title,
-    message,
-    actions: [
-      { label: confirmLabel, value: true, variant: destructive ? 'danger' : 'primary' },
-      { label: cancelLabel, value: false, variant: 'ghost' },
-    ],
-    cancelValue: false,
-  });
+export function confirmSheet({ title, message, ...labels }) {
+  return openSheet({ title, message, ...confirmActions(labels), cancelValue: false });
 }
 
 /**

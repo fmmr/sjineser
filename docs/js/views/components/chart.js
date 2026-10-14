@@ -41,6 +41,7 @@ const defaultTones = (count) => (count === 1 ? ['accent'] : ['team-a', 'team-b',
  *   tones?: string[], formatX?: (x: string) => string, formatY?: (y: number) => string, label?: string }} options
  *   tones: token names per series ('team-a', 'team-b', 'accent', …); formatX / formatY: axis and tooltip
  *   text of an x / y value; label: accessible name of the chart image
+ * Colours are read from the tokens when drawn and again on every `themechange` (theme.js).
  * @returns {{ destroy(): void }}
  */
 export function renderLineChart(container, {
@@ -52,9 +53,11 @@ export function renderLineChart(container, {
   container.replaceChildren(canvas);
   let chart = null;
   let destroyed = false;
+  let Chart = null;
 
-  loadChartLibrary().then((Chart) => {
-    if (destroyed) return;
+  /** (Re)builds the chart with the current token colours. */
+  function draw() {
+    chart?.destroy();
     const style = getComputedStyle(container);
     const token = (name) => style.getPropertyValue(`--${name}`).trim();
     const xs = [...new Set(series.flatMap((s) => s.points.map((p) => p.x)))].sort();
@@ -126,13 +129,25 @@ export function renderLineChart(container, {
         },
       },
     });
+  }
+
+  const onThemeChange = () => {
+    if (Chart && !destroyed) draw();
+  };
+  window.addEventListener('themechange', onThemeChange);
+
+  loadChartLibrary().then((library) => {
+    if (destroyed) return;
+    Chart = library;
+    draw();
   }).catch(() => {
-    // Chart missing (e.g. offline before the file was cached): leave the empty container.
+    // Chart missing (e.g. the file failed to load): leave the empty container.
   });
 
   return {
     destroy() {
       destroyed = true;
+      window.removeEventListener('themechange', onThemeChange);
       chart?.destroy();
       chart = null;
     },

@@ -18,15 +18,18 @@ export function createRouter({ root, routes, ctx, onRoute = () => {} }) {
     onRoute(path);
   }
 
-  /** Route changes cross-fade where view transitions exist and motion is welcome (base.css). */
+  /** Route changes cross-fade where view transitions exist and motion is welcome (base.css; header and tab bar stay put). */
   function navigateTo() {
     const reduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     if (!document.startViewTransition || reduce) {
       render();
       return;
     }
+    const transition = document.startViewTransition(render);
     // A transition interrupted by the next navigation is skipped (render still runs); that is fine.
-    document.startViewTransition(render).ready.catch(() => {});
+    transition.ready.catch(() => {});
+    // But an error thrown while rendering the view must not vanish.
+    transition.updateCallbackDone.catch(console.error);
   }
 
   return {
@@ -34,12 +37,6 @@ export function createRouter({ root, routes, ctx, onRoute = () => {} }) {
       window.addEventListener('hashchange', navigateTo);
       ctx.store.subscribe(() => current?.update?.());
       render();
-    },
-    /** Re-mounts the current view in place (e.g. so charts pick up new theme colours). */
-    rerender() {
-      const { scrollY } = window;
-      render();
-      window.scrollTo(0, scrollY);
     },
   };
 }

@@ -93,6 +93,25 @@ a {
   animation-timing-function: var(--ease);
 }
 
+/* Header and tab bar are their own layers that do not change, so they stay put meanwhile. */
+.app-header {
+  view-transition-name: app-header;
+}
+
+.tabbar {
+  view-transition-name: tabbar;
+}
+
+::view-transition-old(app-header),
+::view-transition-old(tabbar) {
+  display: none;
+}
+
+::view-transition-new(app-header),
+::view-transition-new(tabbar) {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

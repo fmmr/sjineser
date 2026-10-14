@@ -6,7 +6,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 export const DOCS_DIR = fileURLToPath(new URL('../docs/', import.meta.url));
@@ -77,7 +77,8 @@ export function stamp(source, version, files) {
   return source.replace(BLOCK, (_, begin, end) => `${begin}${renderBlock(version, files)}${end}`);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+// Run as a script (also through a symlinked path), not when imported by the tests.
+if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
   const files = shippableFiles();
   const version = computeVersion(files);
   const source = readFileSync(SW_PATH, 'utf8');
