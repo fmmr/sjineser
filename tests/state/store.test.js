@@ -68,3 +68,25 @@ test('ops committed while a refresh is in flight survive the stale response', as
   await refreshing;
   assert.equal(store.get().games.length, 1);
 });
+
+test('a failed refresh leaves the store unchanged and resolves to false', async () => {
+  const empty = setup({ getAll: async () => ({ ok: false, error: 'network' }) });
+  assert.equal(await empty.store.refresh(), false);
+  assert.equal(empty.store.isLoaded(), false);
+  const cached = nightWithMatch(['A']);
+  const { store, storage } = setup({ cached, getAll: async () => ({ ok: false, error: 'busy' }) });
+  assert.equal(await store.refresh(), false);
+  assert.equal(store.isLoaded(), true);
+  assert.deepEqual(store.get(), cached);
+  assert.deepEqual(storage.get('dataset', null), cached);
+});
+
+test('a deleteGame committed while a refresh is in flight is reapplied to the response', async () => {
+  let respond;
+  const { store } = setup({ cached: nightWithMatch(['A', 'B']), getAll: () => new Promise((r) => { respond = r; }) });
+  const refreshing = store.refresh();
+  store.commit({ id: 'd2', action: 'deleteGame', payload: { matchId: MATCH_1, gameNo: 2 } });
+  respond({ ok: true, data: nightWithMatch(['A', 'B']) });
+  await refreshing;
+  assert.deepEqual(store.get().games.map((g) => g.gameNo), [1]);
+});

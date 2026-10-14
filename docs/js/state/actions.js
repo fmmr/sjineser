@@ -19,9 +19,14 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
     return { ok: true };
   }
 
-  /** Takes back an earlier op: drop it if still queued, otherwise enqueue its inverse. */
+  /**
+   * Takes back an earlier op: drop it if still unsent, otherwise enqueue its inverse.
+   * @returns {boolean} true if the original was retracted
+   */
   function revert(isOriginal, inverseAction, inversePayload) {
-    if (!outbox.retract(isOriginal)) outbox.enqueue(inverseAction, inversePayload);
+    if (outbox.retract(isOriginal)) return true;
+    outbox.enqueue(inverseAction, inversePayload);
+    return false;
   }
 
   const removeGame = (matchId, gameNo) => revert(
@@ -49,9 +54,13 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
       const night = currentNight(view());
       if (!night) return { ok: false, error: 'noNight' };
       if (!validSeats({ A1, A2, B1, B2 })) return { ok: false, error: 'invalid' };
+      let matchId = nextMatchId(view(), night.date);
       const open = currentMatch(view());
-      if (open && gamesOf(view(), open.matchId).length === 0) removeMatch(open.matchId);
-      return submit('startMatch', { matchId: nextMatchId(view(), night.date), date: night.date, A1, A2, B1, B2 });
+      // The number of a match the server may have seen is never reused: its deleteMatch might be dropped.
+      if (open && gamesOf(view(), open.matchId).length === 0 && removeMatch(open.matchId)) {
+        matchId = nextMatchId(view(), night.date);
+      }
+      return submit('startMatch', { matchId, date: night.date, A1, A2, B1, B2 });
     },
 
     recordGame(result) {

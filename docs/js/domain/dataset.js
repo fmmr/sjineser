@@ -1,6 +1,6 @@
 import { isISODate } from './dates.js';
 import { findPlayer, nameFormatError } from './players.js';
-import { isValidMatchId, sameSeats, validSeats } from './match.js';
+import { isValidMatchId, parseMatchId, sameSeats, validSeats } from './match.js';
 
 /** @typedef {'applied' | 'noop' | 'conflict' | 'invalid'} Outcome */
 /** @typedef {{ action: string, payload: object }} Op */
@@ -19,7 +19,7 @@ export const emptyDataset = () => ({ players: [], nights: [], matches: [], games
  */
 export function applyOp(dataset, op) {
   const handler = HANDLERS[op.action];
-  return handler ? handler(dataset, op.payload) : unchanged(dataset, 'invalid');
+  return handler ? handler(dataset, op.payload ?? {}) : unchanged(dataset, 'invalid');
 }
 
 const unchanged = (dataset, outcome) => ({ dataset, outcome });
@@ -29,12 +29,13 @@ const isGame = (matchId, gameNo) => (g) => g.matchId === matchId && g.gameNo ===
 
 const HANDLERS = {
   addPlayer(ds, { name }) {
-    if (nameFormatError(name)) return unchanged(ds, 'invalid');
+    if (typeof name !== 'string' || nameFormatError(name)) return unchanged(ds, 'invalid');
     if (findPlayer(ds.players, name)) return unchanged(ds, 'noop');
     return changed(ds, { players: [...ds.players, { name: name.trim(), active: true }] });
   },
 
   startNight(ds, { date, players }) {
+    if (!Array.isArray(players)) return unchanged(ds, 'invalid');
     const existing = ds.nights.find((n) => n.date === date);
     if (existing) return unchanged(ds, sameMembers(existing.players, players) ? 'noop' : 'conflict');
     if (!isISODate(date) || players.length < 4 || new Set(players).size !== players.length) {
@@ -47,12 +48,15 @@ const HANDLERS = {
     const match = { matchId, date, A1, A2, B1, B2 };
     const existing = ds.matches.find((m) => m.matchId === matchId);
     if (existing) return unchanged(ds, sameSeats(existing, match) ? 'noop' : 'conflict');
-    if (!isValidMatchId(matchId) || !validSeats(match)) return unchanged(ds, 'invalid');
+    if (!isValidMatchId(matchId) || date !== parseMatchId(matchId).date || !validSeats(match)) {
+      return unchanged(ds, 'invalid');
+    }
     return changed(ds, { matches: [...ds.matches, match] });
   },
 
   addGame(ds, { matchId, gameNo, result, timestamp }) {
-    if (!RESULTS.includes(result) || !ds.matches.some((m) => m.matchId === matchId)) {
+    if (!Number.isInteger(gameNo) || gameNo < 1 || !RESULTS.includes(result)
+      || !ds.matches.some((m) => m.matchId === matchId)) {
       return unchanged(ds, 'invalid');
     }
     const existing = ds.games.find(isGame(matchId, gameNo));

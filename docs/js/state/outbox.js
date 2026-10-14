@@ -20,6 +20,7 @@ export function dependsOn(later, dropped) {
 
 /**
  * Persistent write queue. Sends strictly one op at a time, in order.
+ * Ops are marked sent before the first attempt and from then on cannot be retracted.
  * - ok → onSent(op), removed
  * - conflict/invalid → dropped with all dependent ops, onDrop(op, response, dropped)
  * - pin → queue held until resume(), onPinRequired()
@@ -35,8 +36,8 @@ export function createOutbox({
   schedule = (fn, ms) => setTimeout(fn, ms),
   newId = () => crypto.randomUUID(),
 }) {
-  let queue = storage.get('outbox', []);
-  let inFlightId = null;
+  const saved = storage.get('outbox', []);
+  let queue = Array.isArray(saved) ? saved : [];
   let held = false;
   let attempt = 0;
   let retryTimer = null;
@@ -48,8 +49,17 @@ export function createOutbox({
   }
 
   function remove(ops) {
-    queue = queue.filter((o) => !ops.includes(o));
+    const ids = new Set(ops.map((o) => o.id));
+    queue = queue.filter((o) => !ids.has(o.id));
     save();
+  }
+
+  /** Flags the op as possibly seen by the server, so it can no longer be retracted. */
+  function markSent(op) {
+    if (op.sent) return op;
+    queue = queue.map((o) => (o.id === op.id ? { ...o, sent: true } : o));
+    save();
+    return queue.find((o) => o.id === op.id);
   }
 
   async function sendSafely(op) {
@@ -66,34 +76,38 @@ export function createOutbox({
     attempt += 1;
     retryTimer = schedule(() => {
       retryTimer = null;
-      flush();
+      flush().catch(() => {});
     }, delay);
   }
 
   async function drain() {
     while (queue.length > 0 && !held) {
-      const op = queue[0];
-      inFlightId = op.id;
-      const response = await sendSafely(op);
-      inFlightId = null;
+      try {
+        const op = markSent(queue[0]);
+        const response = await sendSafely(op);
 
-      if (response.ok) {
-        attempt = 0;
-        onSent(op, response);
-        remove([op]);
-      } else if (response.error === 'pin') {
-        held = true;
-        onChange();
-        onPinRequired();
-        // onPinRequired may prompt synchronously and call resume(); if so, keep draining here,
-        // because resume()'s flush() returns this already-running drain.
-        if (held) return;
-      } else if (DROP_ERRORS.has(response.error)) {
-        attempt = 0;
-        const dropped = [op, ...queue.filter((o) => o !== op && dependsOn(o, op))];
-        remove(dropped);
-        onDrop(op, response, dropped);
-      } else {
+        if (response.ok) {
+          attempt = 0;
+          onSent(op, response);
+          remove([op]);
+        } else if (response.error === 'pin') {
+          held = true;
+          onChange();
+          onPinRequired();
+          // onPinRequired may prompt synchronously and call resume(); if so, keep draining here,
+          // because resume()'s flush() returns this already-running drain.
+          if (held) return;
+        } else if (DROP_ERRORS.has(response.error)) {
+          attempt = 0;
+          const dropped = [op, ...queue.filter((o) => o.id !== op.id && dependsOn(o, op))];
+          remove(dropped);
+          onDrop(op, response, dropped);
+        } else {
+          scheduleRetry();
+          return;
+        }
+      } catch {
+        // A throwing callback or storage must not stall the queue; the op is retried later.
         scheduleRetry();
         return;
       }
@@ -113,12 +127,12 @@ export function createOutbox({
       const op = { id: newId(), action, payload };
       queue = [...queue, op];
       save();
-      flush();
+      flush().catch(() => {});
       return op;
     },
-    /** Removes the newest queued op matching `predicate`, unless it is in flight. */
+    /** Removes the newest op matching `predicate`, unless it may already have reached the server. */
     retract(predicate) {
-      const op = queue.findLast((o) => o.id !== inFlightId && predicate(o));
+      const op = queue.findLast((o) => !o.sent && predicate(o));
       if (!op) return false;
       remove([op]);
       return true;

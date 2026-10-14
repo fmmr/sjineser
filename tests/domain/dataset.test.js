@@ -66,3 +66,33 @@ test('unknown actions are invalid and input is never mutated', () => {
   applyOp(ds, op('deleteGame', { matchId: MATCH_1, gameNo: 1 }));
   assert.deepEqual(ds, snapshot);
 });
+
+test('a missing payload returns invalid instead of throwing', () => {
+  for (const action of ['addPlayer', 'startNight', 'startMatch', 'addGame', 'deleteGame', 'deleteMatch']) {
+    assert.notEqual(applyOp(nightWithMatch(), { action }).outcome, 'applied', action);
+  }
+  for (const action of ['addPlayer', 'startNight', 'startMatch', 'addGame']) {
+    assert.equal(applyOp(nightWithMatch(), { action }).outcome, 'invalid', action);
+  }
+});
+
+test('addPlayer rejects a non-string name', () => {
+  assert.equal(outcome(dataset(), 'addPlayer', { name: 42 }), 'invalid');
+  assert.equal(outcome(dataset(), 'addPlayer', { name: ['Kari'] }), 'invalid');
+});
+
+test('startNight rejects players that are not an array', () => {
+  assert.equal(outcome(dataset(), 'startNight', { date: DATE, players: 'Hans,Per,Frode,Tor' }), 'invalid');
+  assert.equal(outcome(dataset(), 'startNight', { date: DATE }), 'invalid');
+});
+
+test('startMatch rejects a date that differs from the match id', () => {
+  assert.equal(outcome(nightWithMatch(), 'startMatch', { matchId: `${DATE}#2`, date: '2026-10-15', ...seats }), 'invalid');
+});
+
+test('addGame rejects a game number that is not a positive integer', () => {
+  const g = { matchId: MATCH_1, result: 'A', timestamp: 'T' };
+  for (const gameNo of [0, -1, 1.5, '1', undefined]) {
+    assert.equal(outcome(nightWithMatch(), 'addGame', { ...g, gameNo }), 'invalid', String(gameNo));
+  }
+});

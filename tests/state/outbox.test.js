@@ -6,7 +6,7 @@ import { DATE, memoryBackend } from '../helpers.js';
 
 const OK = { ok: true, result: 'applied' };
 
-function setup({ responses = [], storage = createStorage(memoryBackend()) } = {}) {
+function setup({ responses = [], storage = createStorage(memoryBackend()), onSent = () => {} } = {}) {
   const pendingResponses = [...responses];
   const log = { sent: [], committed: [], dropped: [], pinRequests: 0, retries: [], maxConcurrent: 0 };
   let active = 0;
@@ -21,7 +21,7 @@ function setup({ responses = [], storage = createStorage(memoryBackend()) } = {}
       active -= 1;
       return pendingResponses.shift() ?? OK;
     },
-    onSent: (op) => log.committed.push(op.action),
+    onSent: (op) => { onSent(op); log.committed.push(op.action); },
     onDrop: (op, response, dropped) => log.dropped.push(dropped.map((o) => o.action)),
     onPinRequired: () => { log.pinRequests += 1; },
     schedule: (fn, ms) => { log.retries.push({ fn, ms }); return log.retries.length; },
@@ -139,4 +139,77 @@ test('retract removes a queued op but never the one in flight', async () => {
   release();
   await outbox.flush();
   assert.deepEqual(outbox.pending(), []);
+});
+
+test('an op that failed with a network error may have reached the server and is not retractable', async () => {
+  const { outbox } = setup({ responses: [{ ok: false, error: 'network' }] });
+  outbox.enqueue('addGame', game(`${DATE}#1`, 1));
+  await outbox.flush();
+  assert.equal(outbox.retract((op) => op.action === 'addGame'), false);
+  assert.equal(outbox.pending().length, 1);
+});
+
+test('a sent op loaded from storage is not retractable', () => {
+  const storage = createStorage(memoryBackend());
+  storage.set('outbox', [{ id: 'op1', action: 'addGame', payload: game(`${DATE}#1`, 1), sent: true }]);
+  const { outbox } = setup({ storage, responses: [{ ok: false, error: 'pin' }] });
+  assert.equal(outbox.retract((op) => op.action === 'addGame'), false);
+  assert.equal(outbox.pending()[0].sent, true);
+});
+
+test('an exception while handling a response schedules a retry instead of stalling', async () => {
+  let failures = 1;
+  const { outbox, log } = setup({ onSent: () => { if (failures-- > 0) throw new Error('boom'); } });
+  outbox.enqueue('addPlayer', { name: 'Kari' });
+  await outbox.flush();
+  assert.equal(log.retries.length, 1);
+  assert.equal(outbox.pending().length, 1);
+  log.retries[0].fn();
+  await outbox.flush();
+  assert.deepEqual(log.committed, ['addPlayer']);
+  assert.deepEqual(outbox.pending(), []);
+});
+
+test('a corrupt persisted queue is ignored', () => {
+  const storage = createStorage(memoryBackend());
+  storage.set('outbox', { not: 'a queue' });
+  const { outbox } = setup({ storage });
+  assert.deepEqual(outbox.pending(), []);
+});
+
+test('enqueue while held does not send until resume', async () => {
+  const { outbox, log } = setup({ responses: [{ ok: false, error: 'pin' }] });
+  outbox.enqueue('addPlayer', { name: 'Kari' });
+  await outbox.flush();
+  outbox.enqueue('addPlayer', { name: 'Ola' });
+  await outbox.flush();
+  assert.equal(log.sent.length, 1);
+  assert.equal(outbox.pending().length, 2);
+  await outbox.resume();
+  assert.deepEqual(log.sent, ['addPlayer', 'addPlayer', 'addPlayer']);
+  assert.deepEqual(outbox.pending(), []);
+});
+
+test('a dropped deleteMatch drops later ops on the same match', async () => {
+  const { outbox, log } = setup({ responses: [{ ok: false, error: 'invalid' }] });
+  outbox.enqueue('deleteMatch', { matchId: `${DATE}#1` });
+  outbox.enqueue('startMatch', { matchId: `${DATE}#1`, date: DATE });
+  outbox.enqueue('addGame', game(`${DATE}#1`, 1));
+  outbox.enqueue('addGame', game(`${DATE}#2`, 1));
+  await outbox.flush();
+  assert.deepEqual(log.dropped, [['deleteMatch', 'startMatch', 'addGame']]);
+  assert.deepEqual(log.sent, ['deleteMatch', 'addGame']);
+});
+
+test('backoff resets after a success', async () => {
+  const { outbox, log } = setup({ responses: [{ ok: false, error: 'network' }, OK, { ok: false, error: 'network' }] });
+  outbox.enqueue('addPlayer', { name: 'Kari' });
+  await outbox.flush();
+  assert.equal(log.retries[0].ms, 1000);
+  log.retries[0].fn();
+  await outbox.flush();
+  assert.deepEqual(outbox.pending(), []);
+  outbox.enqueue('addPlayer', { name: 'Ola' });
+  await outbox.flush();
+  assert.equal(log.retries[1].ms, 1000);
 });

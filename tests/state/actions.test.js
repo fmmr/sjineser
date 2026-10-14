@@ -5,9 +5,8 @@ import { createStore } from '../../docs/js/state/store.js';
 import { createStorage } from '../../docs/js/state/storage.js';
 import { DATE, FOUR, MATCH_1, dataset, memoryBackend, nightWithMatch } from '../helpers.js';
 
-/** Minimal outbox with the same retract semantics as the real one, plus manual in-flight marking. */
+/** Minimal outbox with the same retract semantics as the real one, plus manual sent marking. */
 function fakeOutbox() {
-  const inFlight = new Set();
   let n = 0;
   const box = {
     queue: [],
@@ -19,14 +18,14 @@ function fakeOutbox() {
       return op;
     },
     retract(predicate) {
-      const op = box.queue.findLast((o) => !inFlight.has(o.id) && predicate(o));
+      const op = box.queue.findLast((o) => !o.sent && predicate(o));
       if (!op) return false;
       box.queue = box.queue.filter((o) => o !== op);
       box.onChange();
       return true;
     },
     pending: () => box.queue,
-    markInFlight: (op) => inFlight.add(op.id),
+    markSent: (op) => { op.sent = true; },
   };
   return box;
 }
@@ -75,10 +74,10 @@ test('starting a new match replaces an empty unsent match', () => {
   assert.equal(outbox.queue[0].payload.A2, 'Per');
 });
 
-test('starting a new match deletes an empty synced match and reuses its number', () => {
+test('starting a new match deletes an empty synced match and takes the next number', () => {
   const { actions, outbox } = setup(nightWithMatch());
   actions.startMatch(seats);
-  assert.deepEqual(queued(outbox), [`deleteMatch ${MATCH_1}`, `startMatch ${MATCH_1}`]);
+  assert.deepEqual(queued(outbox), [`deleteMatch ${MATCH_1}`, `startMatch ${DATE}#2`]);
 });
 
 test('starting a new match keeps an abandoned match that has games', () => {
@@ -109,10 +108,10 @@ test('undo retracts an unsent game', () => {
   assert.equal(store.get().games.length, 0);
 });
 
-test('undo of an in-flight game enqueues deleteGame', () => {
+test('undo of a sent game enqueues deleteGame', () => {
   const { actions, outbox, store } = setup(nightWithMatch());
   actions.recordGame('A');
-  outbox.markInFlight(outbox.queue[0]);
+  outbox.markSent(outbox.queue[0]);
   actions.undo();
   assert.deepEqual(queued(outbox), [`addGame ${MATCH_1}/1`, `deleteGame ${MATCH_1}/1`]);
   assert.equal(store.get().games.length, 0);
@@ -130,4 +129,12 @@ test('undo with no games removes the match', () => {
   actions.undo();
   assert.deepEqual(queued(outbox), [`deleteMatch ${MATCH_1}`]);
   assert.deepEqual(setup().actions.undo(), { ok: false, error: 'nothingToUndo' });
+});
+
+test('an empty match whose startMatch was sent is deleted and its number not reused', () => {
+  const { actions, outbox } = setup({ ...nightWithMatch(), matches: [] });
+  actions.startMatch({ A1: 'Hans', A2: 'Frode', B1: 'Tor', B2: 'Per' });
+  outbox.markSent(outbox.queue[0]);
+  actions.startMatch(seats);
+  assert.deepEqual(queued(outbox), [`startMatch ${MATCH_1}`, `deleteMatch ${MATCH_1}`, `startMatch ${DATE}#2`]);
 });

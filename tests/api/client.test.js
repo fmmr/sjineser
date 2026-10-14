@@ -38,3 +38,12 @@ test('network failures and non-envelope replies become a network error', async (
   const odd = createApiClient({ url: 'u', fetchFn: async () => jsonResponse({ hello: 1 }) });
   assert.equal((await odd.getAll()).error, 'network');
 });
+
+test('both requests carry a timeout abort signal', async () => {
+  const { calls, fetchFn } = fakeFetch(() => jsonResponse({ ok: true }));
+  const api = createApiClient({ url: 'u', fetchFn });
+  await api.getAll();
+  await api.post('addPlayer', { name: 'Kari' }, '1234');
+  assert.ok(calls[0].init.signal instanceof AbortSignal);
+  assert.ok(calls[1].init.signal instanceof AbortSignal);
+});

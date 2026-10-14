@@ -1,3 +1,5 @@
+// A timed-out request aborts and is reported as a network error, so the outbox retries it.
+const TIMEOUT_MS = 15000;
 const NETWORK_ERROR = Object.freeze({ ok: false, error: 'network', message: 'Network error' });
 
 /**
@@ -8,7 +10,7 @@ const NETWORK_ERROR = Object.freeze({ ok: false, error: 'network', message: 'Net
 export function createApiClient({ url, fetchFn = (...args) => globalThis.fetch(...args) }) {
   async function call(init) {
     try {
-      const response = await fetchFn(url, init);
+      const response = await fetchFn(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
       const body = await response.json();
       return typeof body?.ok === 'boolean' ? body : NETWORK_ERROR;
     } catch {
