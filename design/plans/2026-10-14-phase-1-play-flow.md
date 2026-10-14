@@ -135,7 +135,7 @@ test('memory backend stores strings', () => {
 - [ ] **Step 5: Run tests**
 
 Run: `npm test`
-Expected: `# pass 1`, `# fail 0`
+Expected: summary lines `ℹ pass 1` and `ℹ fail 0`
 
 - [ ] **Step 6: Commit**
 
@@ -887,6 +887,22 @@ test('wrong PIN holds the queue until resume', async () => {
   assert.deepEqual(outbox.pending(), []);
 });
 
+test('resuming synchronously inside onPinRequired keeps sending', async () => {
+  const storage = createStorage(memoryBackend());
+  const responses = [{ ok: false, error: 'pin' }];
+  let outbox;
+  outbox = createOutbox({
+    storage,
+    send: async () => responses.shift() ?? OK,
+    onPinRequired: () => { outbox.resume(); },
+    newId: () => 'op1',
+  });
+  outbox.enqueue('addPlayer', { name: 'Kari' });
+  await outbox.flush();
+  assert.equal(outbox.isHeld(), false);
+  assert.deepEqual(outbox.pending(), []);
+});
+
 test('busy and network errors keep the op and schedule a backoff retry', async () => {
   const { outbox, log } = setup({ responses: [{ ok: false, error: 'busy' }, { ok: false, error: 'network' }] });
   outbox.enqueue('addPlayer', { name: 'Kari' });
@@ -1040,7 +1056,9 @@ export function createOutbox({
         held = true;
         onChange();
         onPinRequired();
-        return;
+        // onPinRequired may prompt synchronously and call resume(); if so, keep draining here,
+        // because resume()'s flush() returns this already-running drain.
+        if (held) return;
       } else if (DROP_ERRORS.has(response.error)) {
         attempt = 0;
         const dropped = [op, ...queue.filter((o) => o !== op && dependsOn(o, op))];
@@ -1156,6 +1174,15 @@ test('concurrent refreshes share one request and notify subscribers', async () =
   await Promise.all([store.refresh(), store.refresh()]);
   assert.equal(calls, 1);
   assert.equal(notified, 1);
+});
+
+test('a refresh with unchanged data does not notify subscribers', async () => {
+  const { store } = setup({ cached: nightWithMatch(['A']), getAll: async () => ({ ok: true, data: nightWithMatch(['A']) }) });
+  await store.refresh();
+  let notified = 0;
+  store.subscribe(() => { notified += 1; });
+  await store.refresh();
+  assert.equal(notified, 0);
 });
 
 test('commit applies a sent op to server data', () => {
@@ -1352,13 +1379,15 @@ export function createStore({ storage, outbox, api }) {
   async function load() {
     sentDuringFetch = [];
     const response = await api.getAll();
-    if (response.ok) {
-      // Ops the server accepted after this request started may be missing from the response.
-      setBase(applyAll(response.data, sentDuringFetch));
-      loaded = true;
-    }
-    recompute();
-    return response.ok;
+    if (!response.ok) return false;
+    // Ops the server accepted after this request started may be missing from the response.
+    const fresh = applyAll(response.data, sentDuringFetch);
+    const changed = !loaded || JSON.stringify(fresh) !== JSON.stringify(base);
+    setBase(fresh);
+    loaded = true;
+    // Polling must not rebuild views (and swallow taps) when nothing changed.
+    if (changed) recompute();
+    return true;
   }
 
   return {
@@ -1496,7 +1525,7 @@ Expected: `clasp login` ends with "You are logged in".
 - [ ] **Step 2 (user): Create the standalone script project**
 
 ```bash
-cd apps-script && clasp create --type standalone --title "Sjineser API"
+mkdir -p apps-script && cd apps-script && clasp create --type standalone --title "Sjineser API"
 ```
 
 Expected: creates `apps-script/.clasp.json` with a `scriptId` and an `appsscript.json`. (clasp 3 also accepts `clasp create-script`.)
@@ -2175,7 +2204,7 @@ export const t = {
   pinNeeded: 'PIN trengs',
   enterPin: 'Skriv inn PIN for å lagre resultater',
   matchTaken: (n) => `Noen andre startet kamp ${n}. Henter siste data.`,
-  rejected: (reason) => `Endringen ble avvist (${reason}). Henter siste data.`,
+  rejected: { conflict: 'En endring kolliderte med data fra en annen telefon. Henter siste data.', invalid: 'En endring ble avvist. Henter siste data.' },
 
   errors: {
     empty: 'Skriv inn et navn',
@@ -2298,7 +2327,7 @@ export function describeDrop(op, response) {
   if (op.action === 'startMatch' && response.error === 'conflict') {
     return t.matchTaken(parseMatchId(op.payload.matchId).number);
   }
-  return t.rejected(response.message ?? response.error);
+  return t.rejected[response.error] ?? t.rejected.invalid;
 }
 ```
 
@@ -2691,7 +2720,8 @@ export function mountMatch(root, { store, actions, navigate }) {
   function update() {
     const ds = store.get();
     if (!currentNight(ds)) {
-      navigate('/play');
+      if (store.isLoaded()) navigate('/play');
+      else root.replaceChildren(h('p', { class: 'muted' }, t.loading));
       return;
     }
     const match = latestMatch(ds);
@@ -2880,7 +2910,7 @@ git commit -m "chore: point app at Apps Script deployment"
 - [ ] **Step 2: End-to-end on localhost**
 
 1. `npm run serve`, open http://localhost:8000 in two browser windows (simulating two phones).
-2. Window 1: start a night (badge shows "PIN trengs" → tap it, enter the PIN). Within ~2 s the badge disappears and the Nights tab shows the row.
+2. Window 1: start a night. A PIN prompt appears on the first write; enter the PIN. Within ~2 s the badge disappears and the Nights tab shows the row. (If you cancel the prompt, the badge shows "PIN trengs"; tapping it prompts again.)
 3. Window 1: new match, record games. Matches/Games rows appear; the `status` column shows e.g. `ikke ferdig 1–0`, then `A vant 3–1`.
 4. Window 2: open the match screen; results from window 1 appear within ~5 s.
 5. Conflict: in DevTools set window 2 offline, start "Kamp N" with different teams and record a game; in window 1 start "Kamp N" online. Bring window 2 online → toast "Noen andre startet kamp N…", window 2 shows window 1's match, and no games from window 2 were written to the sheet.

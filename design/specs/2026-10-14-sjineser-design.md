@@ -117,7 +117,7 @@ its format is known. Not part of the first version.
 | Method | Action | Payload | Behaviour |
 |---|---|---|---|
 | GET | — | — | Returns the envelope with `data: { players, nights, matches, games }`. |
-| POST | `addPlayer` | `{ name }` | `noop` if exists (case-insensitive); `invalid` if name breaks the rules. `data.name` returns the canonical stored name, which the client adopts. |
+| POST | `addPlayer` | `{ name }` | `noop` if exists (case-insensitive); `invalid` if name breaks the rules. `data.name` returns the canonical stored name. (Accepted limitation: if two phones add the same name with different casing at the same moment, the second phone's roster keeps its own casing until corrected in the sheet.) |
 | POST | `startNight` | `{ date, players }` | `noop` if identical night exists; `conflict` if date exists with a different roster. |
 | POST | `startMatch` | `{ matchId, date, A1, A2, B1, B2 }` | `noop` if identical; `conflict` if `matchId` exists with different players. |
 | POST | `addGame` | `{ matchId, gameNo, result, timestamp }` | `noop` if `(matchId, gameNo)` exists with the same result; `conflict` if different result; `invalid` if the match does not exist. |
