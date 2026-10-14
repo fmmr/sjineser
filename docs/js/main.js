@@ -1,4 +1,4 @@
-import { API_URL } from './config.js';
+import { API_URL, SANDBOX_TAP_COOLDOWN_MS, TAP_COOLDOWN_MS } from './config.js';
 import { createApiClient } from './api/client.js';
 import { createStorage } from './state/storage.js';
 import { createOutbox } from './state/outbox.js';
@@ -61,7 +61,7 @@ if (sandbox) {
 createRouter({
   root: document.getElementById('view'),
   routes,
-  ctx: { store, actions, navigate, clock },
+  ctx: { store, actions, navigate, clock, tapCooldownMs: sandbox ? SANDBOX_TAP_COOLDOWN_MS : TAP_COOLDOWN_MS },
   onRoute: markActiveTab,
 }).start();
 

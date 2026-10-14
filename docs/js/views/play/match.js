@@ -1,14 +1,13 @@
 import { h } from '../components/dom.js';
 import { showToast } from '../components/toast.js';
 import { t } from '../../i18n/nb.js';
-import { POLL_MS } from '../../config.js';
+import { POLL_MS, TAP_COOLDOWN_MS } from '../../config.js';
 import { currentNight, gamesOf, latestMatch, parseMatchId, score, teamOf, winnerOf } from '../../domain/match.js';
 
-/** Ignores a second tap this soon after the first, so a double tap does not record two games (or undo two). */
-const TAP_COOLDOWN_MS = 800;
 const RESULT_ORDER = ['A', 'D', 'B'];
 
-export function mountMatch(root, { store, actions, navigate }) {
+/** tapCooldownMs: taps closer together than this count as one (guards against double taps). */
+export function mountMatch(root, { store, actions, navigate, tapCooldownMs = TAP_COOLDOWN_MS }) {
   let lastTap = 0;
   const poll = setInterval(() => {
     if (document.visibilityState === 'visible') store.refresh();
@@ -17,7 +16,7 @@ export function mountMatch(root, { store, actions, navigate }) {
   /** Wraps a tap handler so all match-screen actions share one cooldown. */
   const guardTap = (fn) => (...args) => {
     const now = Date.now();
-    if (now - lastTap < TAP_COOLDOWN_MS) return;
+    if (now - lastTap < tapCooldownMs) return;
     lastTap = now;
     fn(...args);
   };
