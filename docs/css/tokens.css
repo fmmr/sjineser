@@ -39,7 +39,7 @@
   --tap: 48px;
   --header-height: 52px;
   --tabbar-height: 60px;
-  --sandbox-height: 44px;
+  --sandbox-height: var(--tap);
   --content-width: 640px;
 }
 

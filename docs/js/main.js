@@ -1,24 +1,27 @@
 import { API_URL } from './config.js';
 import { createApiClient } from './api/client.js';
-import { createSandboxApi } from './sandbox/backend.js';
 import { createStorage } from './state/storage.js';
 import { createOutbox } from './state/outbox.js';
 import { createStore } from './state/store.js';
 import { createActions } from './state/actions.js';
 import { createClock } from './state/clock.js';
 import { createRouter, navigate } from './router.js';
+import { currentNight } from './domain/match.js';
 import { routes } from './views/routes.js';
 import { markActiveTab, mountShell } from './views/shell.js';
-import { mountSandboxBar } from './views/sandbox-bar.js';
 import { showToast } from './views/components/toast.js';
 import { askForPin } from './views/components/pin-prompt.js';
 import { describeDrop } from './views/sync-messages.js';
 import { t } from './i18n/nb.js';
 
 // ?sandbox: fake backend, generated data, pretend date, own storage namespace (spec §17).
+// Sandbox code is only loaded in sandbox mode.
 const sandbox = new URLSearchParams(location.search).has('sandbox');
+const sandboxModules = sandbox
+  ? await Promise.all([import('./sandbox/backend.js'), import('./views/sandbox-bar.js')])
+  : null;
 const storage = createStorage(localStorage, sandbox ? 'sjineser-sandbox:' : 'sjineser:');
-const api = sandbox ? createSandboxApi({ storage }) : createApiClient({ url: API_URL });
+const api = sandbox ? sandboxModules[0].createSandboxApi({ storage }) : createApiClient({ url: API_URL });
 const clock = createClock({ storage: sandbox ? storage : null });
 
 let store;
@@ -42,8 +45,18 @@ const actions = createActions({ store, outbox, today: clock.today });
 
 updateBadge = mountShell({ outbox, storage });
 if (sandbox) {
-  // The data does not change with the date, so re-mount the current view instead of waiting for the store.
-  mountSandboxBar({ clock, api, storage, onDateChange: () => window.dispatchEvent(new HashChangeEvent('hashchange')) });
+  sandboxModules[1].mountSandboxBar({
+    clock,
+    // The data does not change with the date, so re-mount the current view instead of waiting for the store.
+    onDateChange: () => window.dispatchEvent(new HashChangeEvent('hashchange')),
+    onReset: async () => {
+      await api.reset();
+      storage.set('outbox', []);
+      storage.set('dataset', null);
+      location.reload();
+    },
+    minDate: () => currentNight(store.get())?.date,
+  });
 }
 createRouter({
   root: document.getElementById('view'),

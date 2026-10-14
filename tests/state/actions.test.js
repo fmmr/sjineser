@@ -57,6 +57,16 @@ test('startNight uses today and rejects fewer than four players', () => {
   assert.deepEqual(queued(outbox), [`startNight ${DATE}`]);
 });
 
+test('startNight dates the night with the injected today, not the device date', () => {
+  const storage = createStorage(memoryBackend());
+  storage.set('dataset', dataset());
+  const outbox = fakeOutbox();
+  const store = createStore({ storage, outbox, api: { getAll: async () => ({ ok: false }) } });
+  const actions = createActions({ store, outbox, today: () => '2030-02-03', now: () => 'T' });
+  actions.startNight(FOUR);
+  assert.equal(outbox.queue[0].payload.date, '2030-02-03');
+});
+
 test('startMatch needs a night and numbers matches within it', () => {
   assert.deepEqual(setup().actions.startMatch(seats), { ok: false, error: 'noNight' });
   const { actions, outbox, store } = setup(nightWithMatch(['A', 'A', 'A']));

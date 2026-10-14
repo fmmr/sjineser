@@ -1,9 +1,9 @@
 import { applyOp } from '../domain/dataset.js';
 import { findPlayer } from '../domain/players.js';
+import { TODAY_KEY } from '../state/clock.js';
 import { SANDBOX_SEED, generateHistory } from './generate.js';
 
 const DATA_KEY = 'sandboxData';
-const TODAY_KEY = 'today';
 
 /**
  * In-browser stand-in for the Apps Script API: same interface and envelopes as api/client.js,

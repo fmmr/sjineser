@@ -4,6 +4,8 @@ export function memoryBackend() {
   return {
     getItem: (key) => (data.has(key) ? data.get(key) : null),
     setItem: (key, value) => data.set(key, String(value)),
+    /** Every stored key, prefix included. */
+    keys: () => [...data.keys()],
   };
 }
 

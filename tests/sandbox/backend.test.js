@@ -2,7 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSandboxApi } from '../../docs/js/sandbox/backend.js';
 import { generateHistory } from '../../docs/js/sandbox/generate.js';
+import { createActions } from '../../docs/js/state/actions.js';
+import { TODAY_KEY, createClock } from '../../docs/js/state/clock.js';
+import { createOutbox } from '../../docs/js/state/outbox.js';
 import { createStorage } from '../../docs/js/state/storage.js';
+import { createStore } from '../../docs/js/state/store.js';
 import { memoryBackend } from '../helpers.js';
 
 const generated = generateHistory();
@@ -76,4 +80,39 @@ test('creating the api seeds the data and pretend date at once, before any reque
   createSandboxApi({ storage });
   assert.equal(storage.get('today', null), DATE);
   assert.deepEqual(storage.get('sandboxData', null), generated.dataset);
+});
+
+test('the pretend date is stored under the clock\'s TODAY_KEY', () => {
+  const storage = freshStorage();
+  createSandboxApi({ storage });
+  assert.equal(TODAY_KEY, 'today');
+  assert.equal(storage.get(TODAY_KEY, null), DATE);
+  assert.equal(createClock({ storage }).today(), DATE);
+});
+
+test('sandbox api, outbox and store never write to the real storage namespace', async () => {
+  const backend = memoryBackend();
+  const real = createStorage(backend, 'sjineser:');
+  real.set('pin', '1234');
+  const storage = createStorage(backend, 'sjineser-sandbox:');
+  const api = createSandboxApi({ storage });
+  let store;
+  const outbox = createOutbox({
+    storage,
+    send: (op) => api.post(op.action, op.payload, ''),
+    onSent: (op) => store.commit(op),
+    onChange: () => store?.recompute(),
+  });
+  store = createStore({ storage, outbox, api });
+  const clock = createClock({ storage });
+  const actions = createActions({ store, outbox, today: clock.today });
+
+  await store.refresh();
+  assert.deepEqual(actions.startNight(['Anne', 'Bjørn', 'Cato', 'Dag']), { ok: true });
+  await outbox.flush();
+  api.reset();
+
+  assert.ok(store.get().nights.some((night) => night.date === DATE));
+  assert.deepEqual(backend.keys().filter((key) => key.startsWith('sjineser:')), ['sjineser:pin']);
+  assert.ok(backend.keys().includes('sjineser-sandbox:outbox'));
 });
