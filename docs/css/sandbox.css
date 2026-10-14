@@ -1,0 +1,45 @@
+/* Sandbox mode (?sandbox): a slim warning-coloured bar fixed under the header. */
+.sandbox-bar {
+  position: fixed;
+  inset: calc(var(--header-height) + env(safe-area-inset-top)) 0 auto;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--sandbox-height);
+  padding: 0 var(--space-4);
+  background: var(--warning);
+  color: #15191e;
+  font-size: var(--text-sm);
+}
+
+.sandbox-bar[hidden] {
+  display: none;
+}
+
+.sandbox-label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Controls fill the bar's height so they stay comfortable tap targets. */
+.sandbox-date,
+.sandbox-reset,
+.sandbox-exit {
+  height: var(--sandbox-height);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+}
+
+.sandbox-date {
+  margin-left: auto;
+  color-scheme: light;
+}
+
+.sandbox-exit {
+  display: inline-flex;
+  align-items: center;
+}

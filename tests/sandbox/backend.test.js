@@ -70,3 +70,10 @@ test('reset restores the generated history and the pretend date', async () => {
   assert.deepEqual((await api.getAll()).data, generated.dataset);
   assert.equal(storage.get('today', null), DATE);
 });
+
+test('creating the api seeds the data and pretend date at once, before any request', () => {
+  const storage = freshStorage();
+  createSandboxApi({ storage });
+  assert.equal(storage.get('today', null), DATE);
+  assert.deepEqual(storage.get('sandboxData', null), generated.dataset);
+});

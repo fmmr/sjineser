@@ -39,6 +39,8 @@ export function createSandboxApi({ storage, seed = SANDBOX_SEED }) {
     return Promise.resolve(response);
   }
 
+  // Seed now, so the pretend date exists before anything asks the clock for today.
+  load();
   return {
     getAll: () => Promise.resolve({ ok: true, result: 'noop', data: load() }),
     post,

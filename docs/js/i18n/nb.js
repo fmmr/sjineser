@@ -92,6 +92,8 @@ export const t = {
   },
 
   statsComingSoon: 'Statistikk kommer snart.',
+
+  sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', exit: 'Avslutt', date: 'Dato' },
 };
 
 const dateFormat = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short' });
