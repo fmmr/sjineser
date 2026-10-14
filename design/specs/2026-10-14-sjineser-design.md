@@ -242,6 +242,15 @@ reasons are rendered from these definitions, so documentation cannot drift from 
 
 With 4 players over 3 matches, each split occurs once; Elo decides order (most balanced first).
 
+Details:
+- Rules are compared lexicographically (rule 1 first; later rules only break ties).
+- "Balance" compares team-rating differences in buckets of `BALANCE_TOLERANCE` (10)
+  points, so near-equal splits fall through to the variety rule.
+- The reason shown is the most important rule on which the chosen option beats at
+  least one alternative (for the bench: last player in vs first player out); if all
+  options are equal, the screen says so.
+- An open match without games is ignored, since starting the next match replaces it.
+
 ## 8. Elo
 
 - Updated **per game**, chronologically over all games (incomplete matches included).
