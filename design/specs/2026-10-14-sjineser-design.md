@@ -161,6 +161,8 @@ docs/                   the published site (GitHub Pages: branch main, folder /d
   css/                  tokens.css, base.css, layout.css, components.css, views/*.css
   js/
     main.js             bootstraps app, router
+    theme-init.js       classic script in <head>: applies the theme before first paint
+    theme.js            theme resolution, switch and following the device
     config.js           Apps Script URL and other constants
     router.js           hash routing (#/play, #/stats/players/Hans, …)
     api/                the only code that knows the backend exists
@@ -383,8 +385,12 @@ Chart.js (§11), loaded only when a chart is shown.
 - System font stack, a short type scale, generous whitespace.
 - **Design tokens:** all colours, spacing, radii and type sizes are CSS custom
   properties in one file (`css/tokens.css`).
-- **Dark and light theme**, following the device setting (`prefers-color-scheme`).
-  Dark is the default: light applies only when the device explicitly prefers light.
+- **Dark and light theme** with a switch in the header. The first visit follows the
+  device (`prefers-color-scheme`; dark when unknown) and keeps following it; an explicit
+  choice is remembered per device (`localStorage['sjineser:theme']`, shared by real and
+  sandbox mode). `js/theme-init.js`, a small classic script loaded synchronously in
+  `<head>`, sets `data-theme` on `<html>` before first paint, so the wrong theme never flashes.
+- **Header:** the logo and name link to the front page (`#/play`, keeps `?sandbox`).
 - **Match screen is the exception:** big score and big buttons, readable across the table.
 - **Charts: Chart.js** 4.5.1, the UMD build (`chart.umd.min.js`, no dependencies) vendored
   into `docs/vendor/` (no CDN at runtime; works offline), loaded lazily by the wrapper. Only `views/components/chart.js` imports it; views request

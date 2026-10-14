@@ -26,10 +26,29 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* The logo and name are the home link; it presses in like the other controls. */
 .app-brand {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  min-height: var(--tap);
+  margin-left: calc(-1 * var(--space-2));
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  text-decoration: none;
+  transition: transform var(--duration) var(--ease);
+}
+
+.app-brand:active {
+  transform: scale(var(--press-scale));
+}
+
+.app-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-right: calc(-1 * var(--space-2));
 }
 
 .app-logo {

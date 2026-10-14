@@ -24,6 +24,12 @@ export function createRouter({ root, routes, ctx, onRoute = () => {} }) {
       ctx.store.subscribe(() => current?.update?.());
       render();
     },
+    /** Re-mounts the current view in place (e.g. so charts pick up new theme colours). */
+    rerender() {
+      const { scrollY } = window;
+      render();
+      window.scrollTo(0, scrollY);
+    },
   };
 }
 

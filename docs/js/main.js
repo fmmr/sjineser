@@ -13,6 +13,7 @@ import { showToast } from './views/components/toast.js';
 import { askForPin } from './views/components/pin-prompt.js';
 import { describeDrop } from './views/sync-messages.js';
 import { t } from './i18n/nb.js';
+import { followSystemTheme } from './theme.js';
 
 // ?sandbox: fake backend, generated data, pretend date, own storage namespace (spec §17).
 // Sandbox code is only loaded in sandbox mode.
@@ -58,12 +59,16 @@ if (sandbox) {
     minDate: () => currentNight(store.get())?.date,
   });
 }
-createRouter({
+const router = createRouter({
   root: document.getElementById('view'),
   routes,
   ctx: { store, actions, navigate, clock, tapCooldownMs: sandbox ? SANDBOX_TAP_COOLDOWN_MS : TAP_COOLDOWN_MS },
   onRoute: markActiveTab,
-}).start();
+});
+router.start();
+// theme-init.js already set the theme; charts read token colours when drawn, so redraw on a switch.
+followSystemTheme();
+window.addEventListener('themechange', () => router.rerender());
 
 store.refresh().catch(() => false).then((ok) => {
   if (!ok) showToast(t.offline);

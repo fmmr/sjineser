@@ -1,6 +1,8 @@
 /** All user-visible Norwegian text. */
 export const t = {
   appName: 'Sjineser',
+  homeLink: 'Sjineser, til forsiden',
+  theme: { light: 'Lyst tema' },
   tabs: { play: 'Spill', stats: 'Statistikk' },
   loading: 'Laster …',
   offline: 'Får ikke kontakt med serveren. Viser lagrede data.',

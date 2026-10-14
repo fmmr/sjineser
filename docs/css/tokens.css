@@ -1,5 +1,6 @@
 /*
- * Design tokens. Dark is the default; light applies only when the device asks for it.
+ * Design tokens. Dark is the default; light applies with data-theme="light" on <html>, which
+ * js/theme-init.js sets before first paint (explicit choice, else the device, else dark).
  * Surfaces are close steps on a cool near-black; borders are low-alpha hairlines.
  * Team A (cool blue) and team B (warm sand) differ in hue and lightness, so they stay
  * apart for colour-blind eyes too.
@@ -65,32 +66,30 @@
   --content-width: 640px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-    --bg: #f5f6f8;
-    --surface: #ffffff;
-    --surface-raised: #eef0f3;
-    --surface-pressed: #e4e7ec;
-    --border: rgb(16 22 32 / 0.09);
-    --border-strong: rgb(16 22 32 / 0.16);
-    --highlight: rgb(255 255 255 / 0.6);
-    --glass: rgb(245 246 248 / 0.78);
-    --text: #111418;
-    --text-muted: #5a636f;
-    --accent: #186a58;
-    --accent-text: #ffffff;
-    --primary: #111418;
-    --primary-text: #ffffff;
-    --team-a: #2f5fa8;
-    --team-b: #87570b;
-    --draw: #5f6874;
-    --suit-red: #c24a3c;
-    --warning: #775400;
-    --on-warning: #ffffff;
-    --danger: #b3423c;
-    --chart-grid: rgba(16, 22, 32, 0.07);
-  }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-raised: #eef0f3;
+  --surface-pressed: #e4e7ec;
+  --border: rgb(16 22 32 / 0.09);
+  --border-strong: rgb(16 22 32 / 0.16);
+  --highlight: rgb(255 255 255 / 0.6);
+  --glass: rgb(245 246 248 / 0.78);
+  --text: #111418;
+  --text-muted: #5a636f;
+  --accent: #186a58;
+  --accent-text: #ffffff;
+  --primary: #111418;
+  --primary-text: #ffffff;
+  --team-a: #2f5fa8;
+  --team-b: #87570b;
+  --draw: #5f6874;
+  --suit-red: #c24a3c;
+  --warning: #775400;
+  --on-warning: #ffffff;
+  --danger: #b3423c;
+  --chart-grid: rgba(16, 22, 32, 0.07);
 }
 
 @media (prefers-reduced-motion: reduce) {

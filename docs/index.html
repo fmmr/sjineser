@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#0b0d10">
-  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
   <title>Sjineser</title>
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
+  <script src="js/theme-init.js"></script>
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
@@ -24,11 +24,13 @@
 </head>
 <body>
   <header class="app-header">
-    <span class="app-brand">
+    <a class="app-brand" href="#/play">
       <span class="app-logo" aria-hidden="true"></span>
       <span class="app-title" data-text="appName"></span>
-    </span>
-    <button id="sync-badge" class="badge" type="button" hidden></button>
+    </a>
+    <div class="app-actions">
+      <button id="sync-badge" class="badge" type="button" hidden></button>
+    </div>
   </header>
   <div id="sandbox-bar" class="sandbox-bar" hidden></div>
   <main id="view" class="app-main"></main>

@@ -95,10 +95,8 @@
   pointer-events: none;
 }
 
-@media (prefers-color-scheme: light) {
-  .match::before {
-    opacity: 0.045;
-  }
+:root[data-theme="light"] .match::before {
+  opacity: 0.045;
 }
 
 .teams {

@@ -1,5 +1,5 @@
 /**
- * Inline SVG icons: the card-suit logo mark and the tab bar glyphs. Icons are decorative
+ * Inline SVG icons: the card-suit logo mark, the tab bar glyphs and the theme switch. Icons are decorative
  * (aria-hidden); the text next to them carries the meaning. Colours come from CSS.
  */
 
@@ -60,3 +60,21 @@ const TAB_ICONS = {
 
 /** @param {'play' | 'stats'} tab @returns {SVGElement} */
 export const tabIcon = (tab) => TAB_ICONS[tab]();
+
+const stroke = { fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+
+/** Eight short rays around the sun's disc. */
+const SUN_RAYS = Array.from({ length: 8 }, (_, i) => {
+  const angle = (i * Math.PI) / 4;
+  const at = (r) => [12 + r * Math.cos(angle), 12 + r * Math.sin(angle)].map((v) => v.toFixed(2)).join(' ');
+  return `M${at(7)}L${at(9)}`;
+}).join('');
+
+/** Theme switch glyph: the sun in the light theme, the moon in the dark one. */
+const THEME_ICONS = {
+  light: () => svg([svgEl('circle', { cx: '12', cy: '12', r: '4', ...stroke }), svgEl('path', { d: SUN_RAYS, ...stroke })]),
+  dark: () => svg([svgEl('path', { d: 'M19.5 14.6A7.5 7.5 0 0 1 9.4 4.5a7.5 7.5 0 1 0 10.1 10.1z', ...stroke })]),
+};
+
+/** @param {'dark' | 'light'} theme @returns {SVGElement} */
+export const themeIcon = (theme) => THEME_ICONS[theme]();
