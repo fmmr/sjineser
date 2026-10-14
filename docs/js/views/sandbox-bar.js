@@ -1,4 +1,5 @@
 import { h } from './components/dom.js';
+import { confirmSheet } from './components/sheet.js';
 import { t } from '../i18n/nb.js';
 
 /**
@@ -32,8 +33,14 @@ export function mountSandboxBar({ clock, onDateChange, onReset, minDate }) {
     },
   });
 
-  function reset() {
-    if (window.confirm(t.sandbox.resetConfirm)) onReset();
+  async function reset() {
+    const ok = await confirmSheet({
+      title: t.sandbox.resetConfirm,
+      message: t.sandbox.resetMessage,
+      confirmLabel: t.sandbox.reset,
+      destructive: true,
+    });
+    if (ok) onReset();
   }
 
   // Leaving keeps the page you are on.

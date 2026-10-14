@@ -23,7 +23,12 @@ export const t = {
   pickTeams: 'Trykk på en spiller for å flytte: benk → Lag A → Lag B',
   sides: { bench: 'Benk', A: 'Lag A', B: 'Lag B' },
   startMatch: 'Start kampen',
-  abandonConfirm: (a, b) => `Kampen står ${a}–${b}. Avbryte den og starte en ny?`,
+  abandon: {
+    title: 'Avbryte kampen?',
+    message: (a, b) => `Kampen står ${a}–${b}. Den blir avbrutt, og en ny kamp startes.`,
+    confirm: 'Avbryt og start ny',
+    cancel: 'Fortsett kampen',
+  },
 
   matchTitle: (n) => `Kamp ${n}`,
   noMatch: 'Ingen kamp i gang.',
@@ -37,7 +42,8 @@ export const t = {
 
   unsynced: (n) => `${n} ikke lagret`,
   pinNeeded: 'PIN trengs',
-  enterPin: 'Skriv inn PIN for å lagre resultater',
+  pin: { title: 'PIN', message: 'Skriv inn PIN for å lagre resultater', label: 'PIN', save: 'Lagre' },
+  sheet: { cancel: 'Avbryt' },
   matchTaken: (n) => `Noen andre startet kamp ${n}. Henter siste data.`,
   rejected: { conflict: 'En endring kolliderte med data fra en annen telefon. Henter siste data.', invalid: 'En endring ble avvist. Henter siste data.' },
 
@@ -166,7 +172,7 @@ export const t = {
     notFound: 'Fant ikke dette i dataene.',
   },
 
-  sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', exit: 'Avslutt', date: 'Dato' },
+  sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', resetMessage: 'Testdataene genereres på nytt, og endringer i testmodus forsvinner.', exit: 'Avslutt', date: 'Dato' },
 };
 
 const dateFormat = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short' });

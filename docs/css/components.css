@@ -63,6 +63,17 @@
   background: var(--surface-raised);
 }
 
+.btn-danger {
+  border-color: transparent;
+  background: var(--danger);
+  color: var(--on-danger);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+}
+
+.btn-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 86%, var(--bg));
+}
+
 .btn:disabled {
   opacity: 0.4;
   cursor: default;
@@ -239,4 +250,114 @@ select.field {
   color: var(--accent);
   font-weight: 600;
   text-decoration: none;
+}
+
+/*
+ * Bottom sheet (views/components/sheet.js): a modal <dialog> filling the viewport dims the
+ * page; the panel slides up from the bottom edge and back down on close (data-closing).
+ */
+.sheet {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgb(0 0 0 / 0.5);
+  color: var(--text);
+  animation: sheet-dim-in var(--sheet-duration) var(--ease);
+}
+
+.sheet[open] {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet::backdrop {
+  background: transparent;
+}
+
+.sheet[data-closing] {
+  animation: sheet-dim-out var(--sheet-duration) var(--ease) forwards;
+}
+
+.sheet-panel {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: var(--content-width);
+  max-height: calc(100dvh - env(safe-area-inset-top) - var(--space-6));
+  overflow-y: auto;
+  padding:
+    var(--space-2)
+    max(var(--space-5), env(safe-area-inset-right))
+    calc(var(--space-5) + env(safe-area-inset-bottom))
+    max(var(--space-5), env(safe-area-inset-left));
+  border: 1px solid var(--border-strong);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--highlight), 0 -12px 40px rgb(0 0 0 / 0.3);
+  animation: sheet-in var(--sheet-duration) var(--ease);
+}
+
+.sheet[data-closing] .sheet-panel {
+  animation: sheet-out var(--sheet-duration) var(--ease) forwards;
+}
+
+/* Decorative grab handle, as on native sheets. */
+.sheet-handle {
+  justify-self: center;
+  width: 36px;
+  height: 4px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+}
+
+.sheet-title {
+  margin: 0;
+}
+
+.sheet-message {
+  color: var(--text-muted);
+}
+
+.sheet-field {
+  margin-top: var(--space-1);
+  letter-spacing: 0.2em;
+}
+
+.sheet-actions {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-dim-in {
+  from {
+    background-color: transparent;
+  }
+}
+
+@keyframes sheet-dim-out {
+  to {
+    background-color: transparent;
+  }
 }

@@ -30,6 +30,7 @@
   --warning: #e0bd68;
   --on-warning: #1d1600;
   --danger: #e3807a;
+  --on-danger: #0b0d10;
   --chart-grid: rgba(255, 255, 255, 0.06);
 
   --space-1: 4px;
@@ -58,6 +59,7 @@
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --duration: 160ms;
   --press-scale: 0.97;
+  --sheet-duration: 280ms;
 
   --tap: 48px;
   --header-height: 56px;
@@ -89,6 +91,7 @@
   --warning: #775400;
   --on-warning: #ffffff;
   --danger: #b3423c;
+  --on-danger: #ffffff;
   --chart-grid: rgba(16, 22, 32, 0.07);
 }
 
@@ -96,5 +99,6 @@
   :root {
     --duration: 0ms;
     --press-scale: 1;
+    --sheet-duration: 0ms;
   }
 }

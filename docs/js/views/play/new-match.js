@@ -1,5 +1,6 @@
 import { h } from '../components/dom.js';
 import { showToast } from '../components/toast.js';
+import { confirmSheet } from '../components/sheet.js';
 import { t } from '../../i18n/nb.js';
 import { byName } from '../../domain/players.js';
 import { currentMatch, currentNight, gamesOf, score } from '../../domain/match.js';
@@ -14,8 +15,9 @@ export function mountNewMatch(root, { store, actions, navigate }) {
   const sides = new Map();
   /** Set once the user changes the proposal; from then on store updates keep their choice. */
   let touched = false;
-  /** Set once a start is under way, so a second tap cannot start another match. */
+  /** Set once a start is under way (including while the abandon sheet is open), so a second tap cannot start another match. */
   let starting = false;
+  let destroyed = false;
   const count = (side) => [...sides.values()].filter((s) => s === side).length;
   const team = (side) => [...sides].filter(([, s]) => s === side).map(([name]) => name).sort(byName);
 
@@ -41,17 +43,36 @@ export function mountNewMatch(root, { store, actions, navigate }) {
     update();
   }
 
-  function confirmAbandon() {
+  /** @returns {Promise<boolean>} true when there is no open match with games, or the user agrees to abandon it */
+  async function confirmAbandon() {
     const open = currentMatch(store.get());
     const games = open ? gamesOf(store.get(), open.matchId) : [];
     if (games.length === 0) return true;
     const { A, B } = score(games);
-    return window.confirm(t.abandonConfirm(A, B));
+    return confirmSheet({
+      title: t.abandon.title,
+      message: t.abandon.message(A, B),
+      confirmLabel: t.abandon.confirm,
+      cancelLabel: t.abandon.cancel,
+      destructive: true,
+    });
   }
 
-  function start() {
-    if (starting || !confirmAbandon()) return;
+  /** @param {MouseEvent} event */
+  async function start(event) {
+    if (starting) return;
+    const button = event.currentTarget;
+    // Not re-rendered while the sheet is open, so the button is still there to get focus back on cancel.
     starting = true;
+    const confirmed = await confirmAbandon();
+    // Leaving the screen closes the sheet as "cancel"; a destroyed view must not start anything.
+    if (destroyed) return;
+    if (!confirmed) {
+      starting = false;
+      // A store update re-rendered the screen (with the button disabled) meanwhile: render it enabled again.
+      if (!button.isConnected) update();
+      return;
+    }
     update();
     const [A1, A2] = team('A');
     const [B1, B2] = team('B');
@@ -109,5 +130,5 @@ export function mountNewMatch(root, { store, actions, navigate }) {
   }
 
   update();
-  return { update };
+  return { update, destroy: () => { destroyed = true; } };
 }
