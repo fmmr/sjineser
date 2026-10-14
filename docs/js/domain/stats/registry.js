@@ -1,3 +1,14 @@
+import { leaderboard } from './catalog/leaderboard.js';
+import { nightsCount } from './catalog/nightsCount.js';
+import { matchesCount } from './catalog/matchesCount.js';
+import { gamesCount } from './catalog/gamesCount.js';
+import { drawRate } from './catalog/drawRate.js';
+import { longestMatch } from './catalog/longestMatch.js';
+import { longestDrawStreak } from './catalog/longestDrawStreak.js';
+import { cleanSweeps } from './catalog/cleanSweeps.js';
+import { comebacks } from './catalog/comebacks.js';
+import { biggestUpset } from './catalog/biggestUpset.js';
+
 /**
  * The catalog of stat plugins (spec §9). Adding a stat = one file in catalog/, one import
  * and one entry here, and its title under t.stats in nb.js.
@@ -9,7 +20,10 @@
  */
 
 /** @type {Stat[]} */
-export const STATS = [];
+export const STATS = [
+  leaderboard, nightsCount, matchesCount, gamesCount, drawRate,
+  longestMatch, longestDrawStreak, cleanSweeps, comebacks, biggestUpset,
+];
 
 /** @param {string} id @returns {Stat | null} */
 export const statById = (id) => STATS.find((s) => s.id === id) ?? null;

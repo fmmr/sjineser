@@ -93,7 +93,18 @@ export const t = {
 
   statsComingSoon: 'Statistikk kommer snart.',
   /** Per stat plugin id: { title, description? }. The stats contract test requires a title for every stat. */
-  stats: {},
+  stats: {
+    leaderboard: { title: 'Rangering', description: 'Rating etter siste spill i perioden, og endring i perioden.' },
+    nightsCount: { title: 'Kvelder' },
+    matchesCount: { title: 'Kamper' },
+    gamesCount: { title: 'Spill' },
+    drawRate: { title: 'Uavgjort-andel' },
+    longestMatch: { title: 'Lengste kamp', description: 'Flest spill i én kamp.' },
+    longestDrawStreak: { title: 'Lengste uavgjort-rekke', description: 'Flest uavgjorte spill på rad samme kveld.' },
+    cleanSweeps: { title: 'Rene seire (3–0)', description: 'Kamper vunnet 3–0 uten uavgjort.' },
+    comebacks: { title: 'Comebacks (0–2 → 3–2)', description: 'Kamper vunnet 3–2 etter å ha ligget under 0–2.' },
+    biggestUpset: { title: 'Største overraskelse', description: 'Største forskjell i lagrating før spillet, vunnet av det svakeste laget.' },
+  },
 
   sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', exit: 'Avslutt', date: 'Dato' },
 };

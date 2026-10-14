@@ -4,13 +4,13 @@ Each idea becomes one stat plugin (`docs/js/domain/stats/catalog/<id>.js`) — s
 Mark ideas `[x]` when shipped.
 
 ## Starter set (phase 3)
-- [ ] Elo leaderboard with change in selected season
-- [ ] Season summary: nights, matches, games, draw %
-- [ ] Record: longest match (games)
-- [ ] Record: longest draw streak
-- [ ] Record: clean sweeps (3–0 without draws)
-- [ ] Record: comebacks (0–2 → 3–2)
-- [ ] Record: biggest upset
+- [x] Elo leaderboard with change in selected season
+- [x] Season summary: nights, matches, games, draw %
+- [x] Record: longest match (games)
+- [x] Record: longest draw streak
+- [x] Record: clean sweeps (3–0 without draws)
+- [x] Record: comebacks (0–2 → 3–2)
+- [x] Record: biggest upset
 - [ ] Player: Elo over time
 - [ ] Player: games W/D/L, win %; matches W/L, win %; draw rate
 - [ ] Player: streaks (win / unbeaten / loss; current and longest)
