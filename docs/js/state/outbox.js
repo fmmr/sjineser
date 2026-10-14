@@ -3,10 +3,13 @@ import { parseMatchId } from '../domain/match.js';
 const DROP_ERRORS = new Set(['conflict', 'invalid']);
 const RETRY_DELAYS_MS = [1000, 2000, 5000, 10000, 30000];
 
+const isObject = (value) => typeof value === 'object' && value !== null;
+const isOp = (op) => isObject(op) && typeof op.id === 'string' && typeof op.action === 'string' && isObject(op.payload);
+
 /** The night and match an op belongs to. */
 export function opScope(op) {
   if (op.action === 'startNight') return { night: op.payload.date, match: null };
-  if (op.payload.matchId) return { night: parseMatchId(op.payload.matchId).date, match: op.payload.matchId };
+  if (typeof op.payload.matchId === 'string') return { night: parseMatchId(op.payload.matchId).date, match: op.payload.matchId };
   return { night: null, match: null };
 }
 
@@ -37,7 +40,7 @@ export function createOutbox({
   newId = () => crypto.randomUUID(),
 }) {
   const saved = storage.get('outbox', []);
-  let queue = Array.isArray(saved) ? saved : [];
+  let queue = Array.isArray(saved) ? saved.filter(isOp) : [];
   let held = false;
   let attempt = 0;
   let retryTimer = null;

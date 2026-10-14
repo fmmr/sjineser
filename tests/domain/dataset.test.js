@@ -96,3 +96,17 @@ test('addGame rejects a game number that is not a positive integer', () => {
     assert.equal(outcome(nightWithMatch(), 'addGame', { ...g, gameNo }), 'invalid', String(gameNo));
   }
 });
+
+test('a non-object op is invalid instead of throwing', () => {
+  assert.equal(applyOp(nightWithMatch(), null).outcome, 'invalid');
+  assert.equal(applyOp(nightWithMatch(), 'startMatch').outcome, 'invalid');
+});
+
+test('a non-string matchId never throws', () => {
+  for (const matchId of [[MATCH_1], 42, { toString: () => MATCH_1 }]) {
+    assert.equal(outcome(nightWithMatch(), 'startMatch', { matchId, date: DATE, ...seats }), 'invalid');
+    assert.equal(outcome(nightWithMatch(), 'addGame', { matchId, gameNo: 1, result: 'A', timestamp: 'T' }), 'invalid');
+    assert.equal(outcome(nightWithMatch(['A']), 'deleteGame', { matchId, gameNo: 1 }), 'noop');
+    assert.equal(outcome(nightWithMatch(), 'deleteMatch', { matchId }), 'noop');
+  }
+});

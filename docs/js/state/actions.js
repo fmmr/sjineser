@@ -2,7 +2,7 @@ import { applyOp } from '../domain/dataset.js';
 import { toISODate } from '../domain/dates.js';
 import { validateNewName } from '../domain/players.js';
 import {
-  currentMatch, currentNight, gamesOf, latestMatch, nextGameNo, nextMatchId, validSeats,
+  currentMatch, currentNight, gamesOf, latestMatch, nextGameNo, nextMatchId, parseMatchId, validSeats,
 } from '../domain/match.js';
 
 /**
@@ -39,6 +39,21 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
     'deleteMatch', { matchId },
   );
 
+  /**
+   * The next match number of the night that neither the view nor any pending op uses.
+   * A number is reused only when no op referencing it may still reach the server.
+   */
+  function nextFreeMatchId(date) {
+    const pendingIds = outbox.pending()
+      .map((op) => op.payload?.matchId)
+      .filter((matchId) => typeof matchId === 'string');
+    const matches = [
+      ...view().matches,
+      ...pendingIds.map((matchId) => ({ matchId, date: parseMatchId(matchId).date })),
+    ];
+    return nextMatchId({ matches }, date);
+  }
+
   return {
     addPlayer(name) {
       const error = validateNewName(name, view().players);
@@ -54,12 +69,9 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
       const night = currentNight(view());
       if (!night) return { ok: false, error: 'noNight' };
       if (!validSeats({ A1, A2, B1, B2 })) return { ok: false, error: 'invalid' };
-      let matchId = nextMatchId(view(), night.date);
       const open = currentMatch(view());
-      // The number of a match the server may have seen is never reused: its deleteMatch might be dropped.
-      if (open && gamesOf(view(), open.matchId).length === 0 && removeMatch(open.matchId)) {
-        matchId = nextMatchId(view(), night.date);
-      }
+      if (open && gamesOf(view(), open.matchId).length === 0) removeMatch(open.matchId);
+      const matchId = nextFreeMatchId(night.date);
       return submit('startMatch', { matchId, date: night.date, A1, A2, B1, B2 });
     },
 

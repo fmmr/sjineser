@@ -138,3 +138,12 @@ test('an empty match whose startMatch was sent is deleted and its number not reu
   actions.startMatch(seats);
   assert.deepEqual(queued(outbox), [`startMatch ${MATCH_1}`, `deleteMatch ${MATCH_1}`, `startMatch ${DATE}#2`]);
 });
+
+test('a number whose deleteMatch is still queued is not reused', () => {
+  const { actions, outbox } = setup({ ...nightWithMatch(), matches: [] });
+  actions.startMatch({ A1: 'Hans', A2: 'Frode', B1: 'Tor', B2: 'Per' });
+  outbox.markSent(outbox.queue[0]);
+  actions.undo();
+  actions.startMatch(seats);
+  assert.deepEqual(queued(outbox), [`startMatch ${MATCH_1}`, `deleteMatch ${MATCH_1}`, `startMatch ${DATE}#2`]);
+});

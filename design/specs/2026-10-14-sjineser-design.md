@@ -86,8 +86,10 @@ match), seasons, all stats.
 **Latest match** = the highest-numbered match of the current night.
 **Current match** = the latest match, *if* it is incomplete; otherwise there is none. **Abandoning** a match is implicit: starting the
 next match leaves it incomplete. If the abandoned match has 0 games it is deleted
-instead. Its number is reused only if its `startMatch` was never sent; otherwise a
-`deleteMatch` is queued and the new match takes the next number (gaps are fine).
+instead. This applies to every removal (abandon or undo): a match number is reused only
+when no op referencing it may still reach the server. If its `startMatch` was never sent
+it is simply retracted and the number is free again; otherwise a `deleteMatch` is queued,
+and while any op naming that number is pending, the next match skips it (gaps are fine).
 
 **Canonical game order** (used by Elo, streaks, records — everywhere): night date,
 then numeric match number (parsed from `matchId`; never a string sort, `#10` > `#2`),

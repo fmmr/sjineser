@@ -47,3 +47,25 @@ test('both requests carry a timeout abort signal', async () => {
   assert.ok(calls[0].init.signal instanceof AbortSignal);
   assert.ok(calls[1].init.signal instanceof AbortSignal);
 });
+
+test('without AbortSignal.timeout requests still carry an abort signal', async () => {
+  const original = AbortSignal.timeout;
+  try {
+    delete AbortSignal.timeout;
+    const { calls, fetchFn } = fakeFetch(() => jsonResponse({ ok: true, result: 'noop' }));
+    const api = createApiClient({ url: 'u', fetchFn });
+    assert.deepEqual(await api.getAll(), { ok: true, result: 'noop' });
+    assert.deepEqual(await api.post('addPlayer', { name: 'Kari' }, '1234'), { ok: true, result: 'noop' });
+    assert.ok(calls[0].init.signal instanceof AbortSignal);
+    assert.ok(calls[1].init.signal instanceof AbortSignal);
+  } finally {
+    AbortSignal.timeout = original;
+  }
+});
+
+test('an aborted or timed-out request becomes a network error', async () => {
+  for (const name of ['AbortError', 'TimeoutError']) {
+    const api = createApiClient({ url: 'u', fetchFn: async () => { throw new DOMException('stop', name); } });
+    assert.equal((await api.getAll()).error, 'network', name);
+  }
+});

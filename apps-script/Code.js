@@ -52,7 +52,8 @@ function doPost(e) {
 
 const HANDLERS = {
   addPlayer({ name }) {
-    const clean = String(name || '').trim();
+    if (typeof name !== 'string') return fail('invalid', 'Invalid name');
+    const clean = name.trim();
     if (!clean || clean.includes(',')) return fail('invalid', 'Invalid name');
     const existing = readTab('Players').find((r) => r.value.name.toLowerCase() === clean.toLowerCase());
     if (existing) return done('noop', { name: existing.value.name });
@@ -61,7 +62,8 @@ const HANDLERS = {
   },
 
   startNight({ date, players }) {
-    const list = (players || []).map((p) => String(p).trim());
+    if (!Array.isArray(players)) return fail('invalid', 'Invalid night');
+    const list = players.map((p) => String(p).trim());
     const existing = readTab('Nights').find((r) => r.value.date === date);
     if (existing) {
       return sameMembers(existing.value.players, list) ? done('noop') : fail('conflict', 'Night exists with another roster');
@@ -89,19 +91,19 @@ const HANDLERS = {
   },
 
   addGame({ matchId, gameNo, result, timestamp }) {
-    const number = Number(gameNo);
-    if (!RESULTS.includes(result) || !Number.isInteger(number) || number < 1) return fail('invalid', 'Invalid game');
+    if (!RESULTS.includes(result) || !Number.isInteger(gameNo) || gameNo < 1) return fail('invalid', 'Invalid game');
     if (!readTab('Matches').some((r) => r.value.matchId === matchId)) return fail('invalid', 'Unknown match');
-    const existing = readTab('Games').find((r) => r.value.matchId === matchId && r.value.gameNo === number);
+    const existing = readTab('Games').find((r) => r.value.matchId === matchId && r.value.gameNo === gameNo);
     if (existing) {
       return existing.value.result === result ? done('noop') : fail('conflict', 'Game exists with another result');
     }
-    append('Games', [matchId, number, result, String(timestamp || new Date().toISOString())]);
+    append('Games', [matchId, gameNo, result, String(timestamp || new Date().toISOString())]);
     return done('applied');
   },
 
   deleteGame({ matchId, gameNo }) {
-    const existing = readTab('Games').find((r) => r.value.matchId === matchId && r.value.gameNo === Number(gameNo));
+    if (!Number.isInteger(gameNo)) return fail('invalid', 'Invalid game');
+    const existing = readTab('Games').find((r) => r.value.matchId === matchId && r.value.gameNo === gameNo);
     if (!existing) return done('noop');
     tab('Games').deleteRow(existing.row);
     return done('applied');

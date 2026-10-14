@@ -18,7 +18,8 @@ export const emptyDataset = () => ({ players: [], nights: [], matches: [], games
  * @returns {{ dataset: import('./match.js').Dataset, outcome: Outcome }}
  */
 export function applyOp(dataset, op) {
-  const handler = HANDLERS[op.action];
+  if (typeof op !== 'object' || op === null) return unchanged(dataset, 'invalid');
+  const handler = Object.hasOwn(HANDLERS, op.action) ? HANDLERS[op.action] : null;
   return handler ? handler(dataset, op.payload ?? {}) : unchanged(dataset, 'invalid');
 }
 
@@ -48,14 +49,14 @@ const HANDLERS = {
     const match = { matchId, date, A1, A2, B1, B2 };
     const existing = ds.matches.find((m) => m.matchId === matchId);
     if (existing) return unchanged(ds, sameSeats(existing, match) ? 'noop' : 'conflict');
-    if (!isValidMatchId(matchId) || date !== parseMatchId(matchId).date || !validSeats(match)) {
+    if (typeof matchId !== 'string' || !isValidMatchId(matchId) || date !== parseMatchId(matchId).date || !validSeats(match)) {
       return unchanged(ds, 'invalid');
     }
     return changed(ds, { matches: [...ds.matches, match] });
   },
 
   addGame(ds, { matchId, gameNo, result, timestamp }) {
-    if (!Number.isInteger(gameNo) || gameNo < 1 || !RESULTS.includes(result)
+    if (typeof matchId !== 'string' || !Number.isInteger(gameNo) || gameNo < 1 || !RESULTS.includes(result)
       || !ds.matches.some((m) => m.matchId === matchId)) {
       return unchanged(ds, 'invalid');
     }
@@ -65,12 +66,14 @@ const HANDLERS = {
   },
 
   deleteGame(ds, { matchId, gameNo }) {
+    if (typeof matchId !== 'string') return unchanged(ds, 'noop');
     const matches = isGame(matchId, gameNo);
     if (!ds.games.some(matches)) return unchanged(ds, 'noop');
     return changed(ds, { games: ds.games.filter((g) => !matches(g)) });
   },
 
   deleteMatch(ds, { matchId }) {
+    if (typeof matchId !== 'string') return unchanged(ds, 'noop');
     if (!ds.matches.some((m) => m.matchId === matchId)) return unchanged(ds, 'noop');
     if (ds.games.some((g) => g.matchId === matchId)) return unchanged(ds, 'invalid');
     return changed(ds, { matches: ds.matches.filter((m) => m.matchId !== matchId) });

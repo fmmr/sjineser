@@ -213,3 +213,11 @@ test('backoff resets after a success', async () => {
   await outbox.flush();
   assert.equal(log.retries[1].ms, 1000);
 });
+
+test('malformed persisted entries are discarded', () => {
+  const storage = createStorage(memoryBackend());
+  const valid = { id: 'op1', action: 'addPlayer', payload: { name: 'Kari' } };
+  storage.set('outbox', [null, {}, { id: 'op2', action: 'addPlayer', payload: null }, valid]);
+  const { outbox } = setup({ storage });
+  assert.deepEqual(outbox.pending(), [valid]);
+});
