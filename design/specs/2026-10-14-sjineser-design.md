@@ -28,7 +28,8 @@ Browser (GitHub Pages, static)  ──HTTPS/JSON──▶  Apps Script web app  
  localStorage: cache, outbox, PIN                  by the developer)
 ```
 
-- **Frontend:** plain HTML, CSS and JavaScript ES modules. No build step, no runtime
+- **Frontend:** plain HTML, CSS and JavaScript ES modules. No build step (a release only
+  stamps `sw.js`, §10), no runtime
   dependencies. JSDoc type annotations. Served by GitHub Pages from the `docs/` folder.
 - **Backend:** a standalone Google Apps Script project, deployed as a web app
   ("execute as me, anyone can access"). It locates the sheet by an ID stored in
@@ -157,7 +158,7 @@ docs/                   the published site (GitHub Pages: branch main, folder /d
   CNAME                 sjineser.rodland.no
   index.html            markup shell only — no inline CSS or JS
   manifest.webmanifest  PWA manifest
-  sw.js                 service worker: caches the app shell
+  sw.js                 service worker: one versioned cache of every shipped file
   css/                  tokens.css, base.css, layout.css, components.css, views/*.css
   js/
     main.js             bootstraps app, router
@@ -189,6 +190,7 @@ docs/                   the published site (GitHub Pages: branch main, folder /d
     i18n/nb.js          all user-visible Norwegian text
   vendor/               pinned third-party ES modules (Chart.js)
 apps-script/            Code.gs, appsscript.json, .clasp.json — not published
+scripts/                stamp-sw.mjs: stamps sw.js for a release (`npm run stamp`) — not published
 tests/                  node --test suites for docs/js/domain (and state/ where pure)
 design/                 specs and plans — not published
 ```
@@ -372,20 +374,25 @@ Chart.js (§11), loaded only when a chart is shown.
 - **Freshness:** full dataset cached locally for instant start; refreshed on open,
   and polled every ~5 s while a match screen is visible. A poll is skipped if the
   previous request is still pending.
-- **Service worker (`sw.js`, offline start):** one cache, `sjineser-vN`. Install
-  precaches a minimal shell (`./`, `index.html`, the manifest and icons, the CSS files,
-  `js/theme-init.js`, `js/main.js`), then activates at once (`skipWaiting`, `clients.claim`)
-  and deletes older `sjineser-*` caches. Navigations are network-first; the fresh page is
-  cached as `index.html`, which is served when offline (also for `?sandbox`). Every other
-  same-origin GET without a query is stale-while-revalidate, so lazily loaded files
-  (view modules, Chart.js, sandbox code) work offline after their first use; on a first
-  visit the page also hands the worker the files it loaded before the worker took control.
-  Cross-origin requests (the Apps Script backend) and non-GET requests are never
-  intercepted or cached. `js/pwa.js` registers the worker on https and on
-  localhost/127.0.0.1 only; registration failures are ignored. A deploy reaches users on
-  the second launch after it (served from cache once, refreshed in the background).
-- **Releasing:** bump `sjineser-vN` in `sw.js` only when the precache list changes;
-  ordinary file changes need no bump.
+- **Service worker (`sw.js`, offline start):** one complete, versioned cache per release,
+  `sjineser-<VERSION>`, where `VERSION` is a content hash (SHA-256, 12 hex chars) of every
+  shipped file. `PRECACHE` lists every file under `docs/` except `sw.js`, `CNAME`, dotfiles and
+  Markdown (vendor licences): `index.html`, the manifest, icons, CSS, `js/theme-init.js`, every
+  JS module (sandbox code included) and the vendored Chart.js. Install fetches all of them into
+  the new cache, bypassing the HTTP cache (`cache: 'reload'`); if any file fails the install
+  fails and the previous version stays. Then `skipWaiting`; activate deletes every other
+  `sjineser-*` cache and calls `clients.claim`, so versions are swapped atomically.
+  Fetch handles same-origin GETs only: navigations to the app (`./`, `index.html`, any query
+  such as `?sandbox`) get the cached `index.html` of the current version (cache-first, so the
+  page and its modules always come from the same release; network if missing). Other requests
+  are cache-first by exact URL; anything not in the cache goes to the network and is not
+  cached. Cross-origin requests (the Apps Script backend) and non-GET requests are never
+  intercepted. `js/pwa.js` registers the worker after the window `load` event, on https and on
+  localhost/127.0.0.1 only; registration failures are ignored. A release is downloaded when
+  the browser next checks `sw.js` and takes effect on the next launch after that.
+- **Releasing:** run `npm run stamp` (`scripts/stamp-sw.mjs`) after changing anything in
+  `docs/`; it regenerates `PRECACHE` and `VERSION` in `sw.js`. Enforced by `npm test`, which
+  fails while the stamp is stale.
 
 ## 11. Visual design
 
@@ -405,7 +412,7 @@ Chart.js (§11), loaded only when a chart is shown.
 - **Header:** the logo and name link to the front page (`#/play`, keeps `?sandbox`).
 - **Match screen is the exception:** big score and big buttons, readable across the table.
 - **Charts: Chart.js** 4.5.1, the UMD build (`chart.umd.min.js`, no dependencies) vendored
-  into `docs/vendor/` (no CDN at runtime; works offline), loaded lazily by the wrapper. Only `views/components/chart.js` imports it; views request
+  into `docs/vendor/` (no CDN at runtime; works offline), loaded on first use by the wrapper (precached like every other file). Only `views/components/chart.js` imports it; views request
   semantic charts (e.g. "Elo over time") and colours come from the design tokens.
   Swapping libraries touches one file.
 

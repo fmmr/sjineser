@@ -12,18 +12,18 @@ export function canRegisterServiceWorker({ protocol, hostname }) {
 }
 
 /**
- * Registers sw.js and, once it is active, hands it the files this page already loaded
- * (on a first visit they were fetched before the worker took control). Failures are ignored:
- * the app works without a worker, just not offline.
+ * Registers sw.js once the page has loaded, so it never competes with startup. Failures are
+ * ignored: the app works without a worker, just not offline. A new release takes effect on
+ * the next launch (docs/sw.js).
+ * @param {{ container?: ServiceWorkerContainer, location?: Location, window?: Window,
+ *   document?: Document }} [env] the browser globals by default (injectable for tests)
  */
-export function registerServiceWorker() {
-  const container = navigator.serviceWorker;
+export function registerServiceWorker({
+  container = globalThis.navigator?.serviceWorker, location = globalThis.location,
+  window = globalThis.window, document = globalThis.document,
+} = {}) {
   if (!container || !canRegisterServiceWorker(location)) return;
-  container.register('sw.js')
-    .then(() => container.ready)
-    .then((registration) => {
-      const urls = performance.getEntriesByType('resource').map((entry) => entry.name);
-      registration.active?.postMessage({ type: 'warm', urls });
-    })
-    .catch(() => undefined);
+  const register = () => container.register('sw.js').catch(() => undefined);
+  if (document.readyState === 'complete') register();
+  else window.addEventListener('load', register, { once: true });
 }

@@ -5,6 +5,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "test": "node --test",
+    "stamp": "node scripts/stamp-sw.mjs",
     "serve": "python3 -m http.server 8000 --directory docs"
   }
 }
