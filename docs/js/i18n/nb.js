@@ -92,6 +92,8 @@ export const t = {
   },
 
   statsComingSoon: 'Statistikk kommer snart.',
+  /** Per stat plugin id: { title, description? }. The stats contract test requires a title for every stat. */
+  stats: {},
 
   sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', exit: 'Avslutt', date: 'Dato' },
 };

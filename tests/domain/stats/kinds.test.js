@@ -1,0 +1,74 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { KINDS, NUMBER_FORMATS, TABLE_FORMATS, isValidValue } from '../../../docs/js/domain/stats/kinds.js';
+
+const valid = (kind, value) => assert.equal(isValidValue(kind, value), true, JSON.stringify(value));
+const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, JSON.stringify(value));
+
+test('known kinds and formats', () => {
+  assert.deepEqual(KINDS, ['number', 'wdl', 'table', 'record', 'chart']);
+  assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal']);
+  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label']);
+});
+
+test('unknown kinds and null are never valid', () => {
+  invalid('pie', { value: 1, format: 'int' });
+  for (const kind of KINDS) invalid(kind, null);
+});
+
+test('number', () => {
+  valid('number', { value: 3, format: 'int' });
+  valid('number', { value: 0.25, format: 'percent' });
+  valid('number', { value: 1012.4, format: 'rating', marker: 'provisional' });
+  valid('number', { value: -12.5, format: 'signed' });
+  valid('number', { value: 2.5, format: 'decimal' });
+  invalid('number', { value: 2.5, format: 'int' });
+  invalid('number', { value: 1.2, format: 'percent' });
+  invalid('number', { value: NaN, format: 'decimal' });
+  invalid('number', { value: '3', format: 'int' });
+  invalid('number', { value: 3, format: 'player' });
+  invalid('number', { value: 3, format: 'int', marker: 'new' });
+});
+
+test('wdl', () => {
+  valid('wdl', { W: 3, D: 0, L: 1 });
+  invalid('wdl', { W: 3, L: 1 });
+  invalid('wdl', { W: -1, D: 0, L: 1 });
+  invalid('wdl', { W: 1.5, D: 0, L: 1 });
+});
+
+test('table', () => {
+  const columns = [{ key: 'player', format: 'player' }, { key: 'pair', format: 'pair' }, { key: 'kind', format: 'label' },
+    { key: 'games', format: 'int' }, { key: 'winRate', format: 'percent' }];
+  const row = { player: 'Anne', pair: ['Anne', 'Bjørn'], kind: 'streak_win', games: 4, winRate: 0.5 };
+  valid('table', { columns, rows: [] });
+  valid('table', { columns, rows: [row, { ...row, subject: { type: 'player', name: 'Anne' }, provisional: true }] });
+  invalid('table', { columns: [], rows: [] });
+  invalid('table', { columns: [{ key: 'x', format: 'colour' }], rows: [] });
+  invalid('table', { columns: [{ key: 'x', format: 'int' }, { key: 'x', format: 'int' }], rows: [] });
+  invalid('table', { columns, rows: [{ ...row, games: 1.5 }] });
+  invalid('table', { columns, rows: [{ ...row, player: '' }] });
+  invalid('table', { columns, rows: [{ ...row, pair: ['Anne'] }] });
+  invalid('table', { columns, rows: [{ ...row, kind: 3 }] });
+  invalid('table', { columns, rows: [{ ...row, subject: { type: 'team' } }] });
+  invalid('table', { columns, rows: null });
+});
+
+test('record', () => {
+  valid('record', { value: 7, format: 'int', holders: [] });
+  valid('record', { value: 0.8, format: 'percent', holders: ['Anne'], date: '2026-10-14', matchId: '2026-10-14#2' });
+  invalid('record', { value: 7, format: 'int' });
+  invalid('record', { value: 7, format: 'int', holders: [3] });
+  invalid('record', { value: 7, format: 'int', holders: [], date: '14.10.2026' });
+  invalid('record', { value: 7, format: 'int', holders: [], matchId: 'x' });
+  invalid('record', { value: 7, format: 'pair', holders: [] });
+});
+
+test('chart', () => {
+  valid('chart', { series: [{ name: 'Anne', points: [{ x: '2026-10-14', y: 1012.5 }] }] });
+  valid('chart', { series: [{ name: 'Anne', points: [] }, { name: 'Bjørn', points: [{ x: '2026-10-14', y: 990 }] }] });
+  invalid('chart', { series: [] });
+  invalid('chart', { series: [{ name: 'Anne', points: [{ x: 'today', y: 1 }] }] });
+  invalid('chart', { series: [{ name: 'Anne', points: [{ x: '2026-10-14', y: null }] }] });
+  invalid('chart', { series: [{ points: [] }] });
+});
