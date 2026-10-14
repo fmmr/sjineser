@@ -361,3 +361,53 @@ select.field {
     background-color: transparent;
   }
 }
+
+/* Text for screen readers only. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Loading placeholders (views/components/skeleton.js): quiet bars that breathe slowly. */
+.skeleton-bar {
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-bar[data-size="label"] {
+  width: 38%;
+  height: 10px;
+}
+
+.skeleton-bar[data-size="title"] {
+  width: 64%;
+  height: 24px;
+}
+
+.skeleton-bar[data-size="value"] {
+  width: 52%;
+  height: 36px;
+}
+
+.skeleton-bar[data-size="button"] {
+  height: var(--tap);
+  border-radius: var(--radius);
+}
+
+.skeleton-bar[data-size="chart"] {
+  height: 220px;
+  border-radius: var(--radius-lg);
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}

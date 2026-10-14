@@ -18,9 +18,20 @@ export function createRouter({ root, routes, ctx, onRoute = () => {} }) {
     onRoute(path);
   }
 
+  /** Route changes cross-fade where view transitions exist and motion is welcome (base.css). */
+  function navigateTo() {
+    const reduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reduce) {
+      render();
+      return;
+    }
+    // A transition interrupted by the next navigation is skipped (render still runs); that is fine.
+    document.startViewTransition(render).ready.catch(() => {});
+  }
+
   return {
     start() {
-      window.addEventListener('hashchange', render);
+      window.addEventListener('hashchange', navigateTo);
       ctx.store.subscribe(() => current?.update?.());
       render();
     },

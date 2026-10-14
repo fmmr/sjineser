@@ -157,6 +157,18 @@
   color: var(--side);
 }
 
+/* A changed score pops once; --bump-offset (set by match.js) resumes a pop after a re-render. */
+.score-bump {
+  animation: score-bump 320ms var(--ease) var(--bump-offset, 0ms);
+}
+
+@keyframes score-bump {
+  30% {
+    opacity: 0.6;
+    transform: scale(1.12);
+  }
+}
+
 .draws {
   color: var(--text-muted);
   font-size: var(--text-sm);

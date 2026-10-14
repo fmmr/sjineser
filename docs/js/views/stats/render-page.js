@@ -1,4 +1,5 @@
 import { h } from '../components/dom.js';
+import { statsSkeleton } from '../components/skeleton.js';
 import { t } from '../../i18n/nb.js';
 import { statById } from '../../domain/stats/registry.js';
 import { defaultFilter, parseFilter } from '../../domain/stats/filter.js';
@@ -65,7 +66,7 @@ export const notFound = (ctx) => [
 ];
 
 /**
- * Shared frame of the stats views: loading text, filter from ?s (without it: the latest
+ * Shared frame of the stats views: loading placeholder, filter from ?s (without it: the latest
  * season with games, see defaultFilter), memoized facts, and re-rendering on store changes.
  * @param {HTMLElement} root
  * @param {{ store: object, clock: { today(): string }, query: Record<string, string> }} ctx
@@ -80,12 +81,12 @@ export function mountStatsView(root, ctx, render) {
   function update() {
     cleanup?.();
     cleanup = null;
-    const page = h('div', { class: 'stats-page' });
-    root.replaceChildren(page);
     if (!store.isLoaded() && !store.hasTried()) {
-      page.append(h('p', { class: 'muted' }, t.loading));
+      root.replaceChildren(statsSkeleton());
       return;
     }
+    const page = h('div', { class: 'stats-page' });
+    root.replaceChildren(page);
     const dataset = store.get();
     const today = clock.today();
     const filter = query.s ? parseFilter(query.s, today) : defaultFilter(dataset, today);
