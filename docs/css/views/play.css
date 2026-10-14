@@ -1,0 +1,123 @@
+/* Side colours: data-side="A" | "B" | "D" | "bench" is used on panels, buttons and chips. */
+[data-side="A"] { --side: var(--team-a); }
+[data-side="B"] { --side: var(--team-b); }
+[data-side="D"] { --side: var(--draw); }
+[data-side="bench"] { --side: var(--border); }
+
+.assign-list {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.assign-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--side);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+}
+
+.assign-side {
+  color: var(--side);
+  font-weight: 600;
+}
+
+.assign-row[data-side="bench"] .assign-side {
+  color: var(--text-muted);
+}
+
+.teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.team-panel {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid var(--border);
+  border-top: 6px solid var(--side);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+}
+
+.team-panel[data-winner="true"] {
+  border-color: var(--side);
+  box-shadow: 0 0 0 2px var(--side);
+}
+
+.team-names {
+  font-weight: 600;
+}
+
+.score {
+  font-size: var(--text-score);
+  font-weight: 750;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--side);
+}
+
+.sequence {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.sequence li {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--side);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.result-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.btn-result {
+  min-height: 88px;
+  padding: 0 var(--space-2);
+  border: 2px solid var(--side);
+  background: var(--surface);
+  font-size: var(--text-lg);
+}
+
+.btn-result:active {
+  background: var(--side);
+  color: var(--bg);
+}
+
+.winner-banner {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 2px solid var(--side);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
