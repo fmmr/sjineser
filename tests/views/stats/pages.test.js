@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { COMPARE_SECTIONS, PAGES, PAGE_SUBJECTS, deriveCompare, overlaySeries, sideBySideRows } from '../../../docs/js/views/stats/pages.js';
+import {
+  COMPARE_SECTIONS, PAGES, PAGE_SUBJECTS, deriveCompare, overlaySeries, sideBySideRows, tileTitleHidden,
+} from '../../../docs/js/views/stats/pages.js';
 import { STATS, statById } from '../../../docs/js/domain/stats/registry.js';
 import { t } from '../../../docs/js/i18n/nb.js';
 
@@ -57,4 +59,20 @@ test('overlay merges both players series with team colours; missing sides are sk
   assert.deepEqual(overlaySeries([a, b]), { value: { series: [...a.series, ...b.series] }, tones: ['team-a', 'team-b'] });
   assert.deepEqual(overlaySeries([null, b]), { value: { series: b.series }, tones: ['team-b'] });
   assert.equal(overlaySeries([null, null]), null);
+});
+
+test('every registered stat is shown somewhere: on a page or in the derived compare page', () => {
+  const { sideBySide, overlay, headToHead } = deriveCompare(STATS);
+  const shown = new Set([
+    ...Object.values(PAGES).flatMap((page) => page.sections.flatMap((section) => section.stats)),
+    ...[...sideBySide, ...overlay, ...headToHead].map((s) => s.id),
+  ]);
+  for (const { id } of STATS) assert.ok(shown.has(id), `${id} is registered but on no page (add it to PAGES in views/stats/pages.js)`);
+});
+
+test('a lone stat titled like its section hides its tile title; otherwise titles show', () => {
+  assert.equal(tileTitleHidden({ id: 'leaderboard', stats: ['leaderboard'] }), true);
+  assert.equal(tileTitleHidden({ id: 'streaks', stats: ['streaks'] }), true);
+  assert.equal(tileTitleHidden({ id: 'pairs', stats: ['pairsTable'] }), false);
+  assert.equal(tileTitleHidden({ id: 'rating', stats: ['rating', 'eloChart'] }), false);
 });

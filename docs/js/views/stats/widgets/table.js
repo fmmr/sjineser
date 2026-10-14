@@ -48,4 +48,5 @@ export function tableBody({ columns, rows }, { query }) {
 }
 
 /** @returns {{ el: HTMLElement }} */
-export const renderTable = (stat, value, ctx) => ({ el: statTile(stat, value && tableBody(value, ctx), { wide: true }) });
+export const renderTable = (stat, value, ctx) =>
+  ({ el: statTile(stat, value && tableBody(value, ctx), { wide: true, hideTitle: ctx.hideTitle }) });

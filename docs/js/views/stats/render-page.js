@@ -1,10 +1,11 @@
 import { h } from '../components/dom.js';
 import { t } from '../../i18n/nb.js';
 import { statById } from '../../domain/stats/registry.js';
-import { parseFilter } from '../../domain/stats/filter.js';
+import { defaultFilter, parseFilter } from '../../domain/stats/filter.js';
 import { factsFor } from './facts-cache.js';
 import { seasonFilter } from './season-filter.js';
 import { statsHref } from './links.js';
+import { tileTitleHidden } from './pages.js';
 import { WIDE_KINDS, renderWidget } from './widgets/index.js';
 
 /**
@@ -30,9 +31,11 @@ export const statsSection = (id, children, { wide = false } = {}) =>
  */
 export function renderPage(root, page, facts, subject, ctx) {
   const destroyers = [];
-  const sections = page.sections.map(({ id, stats: ids }) => {
+  const sections = page.sections.map((section) => {
+    const { id, stats: ids } = section;
     const stats = ids.map(statById);
-    const widgets = stats.map((stat) => renderWidget(stat, stat.compute(facts, subject), ctx));
+    const tileCtx = { ...ctx, hideTitle: tileTitleHidden(section) };
+    const widgets = stats.map((stat) => renderWidget(stat, stat.compute(facts, subject), tileCtx));
     destroyers.push(...widgets.map((w) => w.destroy).filter(Boolean));
     return statsSection(id, widgets.map((w) => w.el), { wide: stats.some((s) => WIDE_KINDS.includes(s.kind)) });
   });
@@ -62,8 +65,8 @@ export const notFound = (ctx) => [
 ];
 
 /**
- * Shared frame of the stats views: loading text, filter from ?s, memoized facts, and
- * re-rendering on store changes.
+ * Shared frame of the stats views: loading text, filter from ?s (without it: the latest
+ * season with games, see defaultFilter), memoized facts, and re-rendering on store changes.
  * @param {HTMLElement} root
  * @param {{ store: object, clock: { today(): string }, query: Record<string, string> }} ctx
  * @param {(page: HTMLElement, data: { dataset: object, facts: object, filter: object, today: string })
@@ -85,7 +88,7 @@ export function mountStatsView(root, ctx, render) {
     }
     const dataset = store.get();
     const today = clock.today();
-    const filter = parseFilter(query.s, today);
+    const filter = query.s ? parseFilter(query.s, today) : defaultFilter(dataset, today);
     cleanup = render(page, { dataset, facts: factsFor(dataset, filter), filter, today })?.destroy ?? null;
   }
 

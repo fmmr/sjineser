@@ -7,6 +7,8 @@ import { isValidSubject } from './subjects.js';
  * @typedef {'number' | 'wdl' | 'table' | 'record' | 'chart'} Kind
  * @typedef {'int' | 'percent' | 'rating' | 'signed' | 'decimal'} NumberFormat percent is 0–1; signed shows +/−
  * @typedef {NumberFormat | 'player' | 'pair' | 'label'} TableFormat label: an i18n key under t.statsLabels
+ * Table rows: one cell per column key, plus optional `subject` (the row links to it) and
+ * optional boolean `provisional` (the row's rating cell gets the "ny" marker).
  */
 
 /** @type {Kind[]} */
@@ -54,7 +56,8 @@ const VALUE_CHECKS = {
 
   table: ({ columns, rows }) => isColumns(columns) && Array.isArray(rows) && rows.every((row) => isObject(row)
     && columns.every(({ key, format }) => isCell(row[key], format))
-    && isOptional(row.subject, isValidSubject)),
+    && isOptional(row.subject, isValidSubject)
+    && isOptional(row.provisional, (p) => typeof p === 'boolean')),
 
   record: ({ value, format, holders, date, matchId }) => isFormattedNumber(value, format)
     && Array.isArray(holders) && holders.every(isName)

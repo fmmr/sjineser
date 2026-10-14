@@ -26,7 +26,8 @@ import { againstWdl } from './catalog/againstWdl.js';
 
 /**
  * The catalog of stat plugins (spec §9). Adding a stat = one file in catalog/, one import
- * and one entry here, and its title under t.stats in nb.js.
+ * and one entry here, its title under t.stats in nb.js, and its id in a page list in
+ * views/stats/pages.js (compare picks up player number/wdl/chart stats by itself).
  * @typedef {import('./subjects.js').SubjectType} SubjectType
  * @typedef {import('./kinds.js').Kind} Kind
  * @typedef {{ id: string, subjects: SubjectType[], kind: Kind,
@@ -46,10 +47,11 @@ export const STATS = [
 export const statById = (id) => STATS.find((s) => s.id === id) ?? null;
 
 /**
- * Registered stats that support a subject type, in catalog order.
+ * Stats that support a subject type, in catalog order.
  * @param {SubjectType} subjectType
  * @param {Kind[]} [kinds] only these kinds; all kinds when omitted
+ * @param {Stat[]} [stats] the catalog to pick from (tests pass their own)
  * @returns {Stat[]}
  */
-export const statsFor = (subjectType, kinds) =>
-  STATS.filter((s) => s.subjects.includes(subjectType) && (!kinds || kinds.includes(s.kind)));
+export const statsFor = (subjectType, kinds, stats = STATS) =>
+  stats.filter((s) => s.subjects.includes(subjectType) && (!kinds || kinds.includes(s.kind)));

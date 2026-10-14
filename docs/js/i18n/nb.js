@@ -92,7 +92,11 @@ export const t = {
     ],
   },
 
-  /** Per stat plugin id: { title, description? }; a description may be a function of { minGames }. The stats contract test requires a title for every stat. */
+  /**
+   * Per stat plugin id: { title, description? }. A description may be a function of the shared
+   * params in views/stats/description-params.js ({ minGames, provisionalGames, … }).
+   * The stats contract test requires a title for every stat.
+   */
   stats: {
     leaderboard: { title: 'Rangering', description: 'Rating etter siste spill i perioden, og endring i perioden.' },
     nightsCount: { title: 'Kvelder' },
@@ -141,7 +145,7 @@ export const t = {
     pairs: 'Par',
     versus: 'Mot andre par',
     sideBySide: 'Side om side',
-    overlay: 'Rating over tid',
+    overlay: 'Over tid',
     headToHead: 'Sammen og mot hverandre',
   },
   statsUi: {
@@ -164,9 +168,16 @@ export const t = {
 };
 
 const dateFormat = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short' });
+const longDateFormat = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** @param {string} iso YYYY-MM-DD @returns {Date} local midnight */
+function localDate(iso) {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
 
 /** "2026-10-14" → "14. okt." */
-export function formatDate(iso) {
-  const [year, month, day] = iso.split('-').map(Number);
-  return dateFormat.format(new Date(year, month - 1, day));
-}
+export const formatDate = (iso) => dateFormat.format(localDate(iso));
+
+/** "2025-10-14" → "14. okt. 2025" */
+export const formatDateLong = (iso) => longDateFormat.format(localDate(iso));

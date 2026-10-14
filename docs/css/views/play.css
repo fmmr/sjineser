@@ -1,9 +1,3 @@
-/* Side colours: data-side="A" | "B" | "D" | "bench" is used on panels, buttons and chips. */
-[data-side="A"] { --side: var(--team-a); }
-[data-side="B"] { --side: var(--team-b); }
-[data-side="D"] { --side: var(--draw); }
-[data-side="bench"] { --side: var(--border); }
-
 .assign-list {
   display: grid;
   gap: var(--space-2);

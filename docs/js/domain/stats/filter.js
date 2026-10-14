@@ -35,3 +35,18 @@ export function seasonsIn(dataset, today) {
   const texts = new Set([today, ...dataset.nights.map((n) => n.date)].map((date) => formatFilter(seasonFilter(seasonOf(date)))));
   return [...texts].sort().reverse().map((text) => parseFilter(text, today));
 }
+
+/**
+ * Filter when the URL has none: the current season if it has games, else the latest season
+ * that has games, else all (so a quiet start of a season does not show an empty page).
+ * @param {import('../match.js').Dataset} dataset
+ * @param {string} today YYYY-MM-DD
+ * @returns {Filter}
+ */
+export function defaultFilter(dataset, today) {
+  const played = new Set(dataset.games.map((g) => g.matchId));
+  const dates = dataset.matches.filter((m) => played.has(m.matchId)).map((m) => m.date).sort();
+  if (dates.length === 0) return { kind: 'all' };
+  const current = parseFilter(null, today);
+  return dates.some((date) => inFilter(date, current)) ? current : seasonFilter(seasonOf(dates.at(-1)));
+}

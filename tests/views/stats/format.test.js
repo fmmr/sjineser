@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatValue } from '../../../docs/js/views/stats/widgets/format.js';
+import { chartDateFormat, formatValue } from '../../../docs/js/views/stats/widgets/format.js';
+import { formatDate, formatDateLong } from '../../../docs/js/i18n/nb.js';
 
 // Intl nb-NO uses a no-break space (U+00A0) for grouping and before '%', and U+2212 for minus.
 const NBSP = ' ';
@@ -34,4 +35,15 @@ test('decimal: one decimal with a comma', () => {
 
 test('unknown formats fall back to the plain number', () => {
   assert.equal(formatValue(5, 'nope'), '5');
+});
+
+test('chart dates are short within one calendar year and long across years', () => {
+  assert.equal(chartDateFormat(['2026-01-05', '2026-12-30']), formatDate);
+  assert.equal(chartDateFormat(['2025-12-30', '2026-01-05']), formatDateLong);
+  assert.equal(chartDateFormat([]), formatDate);
+});
+
+test('formatDateLong includes the year', () => {
+  assert.equal(formatDateLong('2025-10-14'), '14. okt. 2025');
+  assert.equal(formatDate('2025-10-14'), '14. okt.');
 });

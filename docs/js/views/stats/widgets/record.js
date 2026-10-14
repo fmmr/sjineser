@@ -1,12 +1,13 @@
 import { h } from '../../components/dom.js';
-import { formatDate, t } from '../../../i18n/nb.js';
+import { formatDateLong, t } from '../../../i18n/nb.js';
 import { playerSubject } from '../../../domain/stats/subjects.js';
 import { statsHref, subjectPath } from '../links.js';
 import { formatValue } from './format.js';
 import { statTile } from './tile.js';
 
 /**
- * Record value, its holders (linked, joined with "og") and the date it was set.
+ * Record value, its holders (linked, joined with "og") and the date it was set (with the
+ * year: records span seasons).
  * @param {{ value: number, format: string, holders: string[], date?: string }} value
  * @param {{ query: Record<string, string> }} ctx
  */
@@ -18,8 +19,8 @@ export function recordBody({ value, format, holders, date }, { query }) {
   return h('div', { class: 'stat-record' },
     h('p', { class: 'stat-value' }, formatValue(value, format)),
     holders.length > 0 && h('p', {}, names),
-    date && h('p', { class: 'muted' }, formatDate(date)));
+    date && h('p', { class: 'muted' }, formatDateLong(date)));
 }
 
 /** @returns {{ el: HTMLElement }} */
-export const renderRecord = (stat, value, ctx) => ({ el: statTile(stat, value && recordBody(value, ctx)) });
+export const renderRecord = (stat, value, ctx) => ({ el: statTile(stat, value && recordBody(value, ctx), { hideTitle: ctx.hideTitle }) });

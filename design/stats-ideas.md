@@ -1,6 +1,9 @@
 # Stats ideas
 
-Each idea becomes one stat plugin (`docs/js/domain/stats/catalog/<id>.js`) — see spec §9.
+Each idea becomes one stat plugin — see spec §9. Shipping one = a catalog file
+(`docs/js/domain/stats/catalog/<id>.js`), one registry line (`domain/stats/registry.js`),
+its text in `nb.js` (`t.stats[id]`), and its id in a page list in `views/stats/pages.js`
+(compare picks up player `number` / `wdl` / `chart` stats automatically).
 Mark ideas `[x]` when shipped.
 
 ## Starter set (phase 3)

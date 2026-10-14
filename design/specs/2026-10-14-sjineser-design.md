@@ -268,7 +268,15 @@ Details:
 ## 9. Statistics
 
 Stats will keep growing, so they are **plugins**: adding a stat must not require
-touching pages or other stats. Ideas are tracked in `design/stats-ideas.md`.
+touching widgets or other stats. Adding a stat =
+1. one catalog file `domain/stats/catalog/<id>.js`,
+2. one import + entry in `domain/stats/registry.js`,
+3. its text in `nb.js` (`t.stats[id]`, plus any new `t.statsColumns` / `t.statsLabels`),
+4. its id in a page list in `views/stats/pages.js` (compare is automatic for player
+   `number` / `wdl` / `chart` stats).
+Tests enforce this: the registry contract test checks the shape of every value and that
+all its text exists in `nb.js`; the pages test fails for a registered stat shown nowhere.
+Ideas are tracked in `design/stats-ideas.md`.
 
 **Facts layer** (`domain/stats/facts.js`): computed once per dataset and filter.
 Elo is always replayed over *all* games (ratings are continuous); the season filter
@@ -291,21 +299,34 @@ rows are its games from one partner's perspective) and head-to-head rows.
 **kind**, or `null` when there is not enough data:
 - `number` — `{ value, format }` (format: `int`, `percent`, `rating`, `decimal`)
 - `wdl` — `{ W, D, L }` (D omitted/0 for match records)
-- `table` — `{ columns: [{ key, format }], rows: [{ …, subject? }] }` (rows may link to a subject)
+- `table` — `{ columns: [{ key, format }], rows: [{ …, subject?, provisional? }] }` (rows may
+  link to a subject; `provisional: true` marks the row's rating "ny")
 - `record` — `{ value, format, holders: [names], date?, matchId? }`
 - `chart` — `{ series: [{ name, points: [{ x: date, y }] }] }`
-Titles and explanations live in `nb.js` under `t.stats[id]`.
+Titles and explanations live in `nb.js` under `t.stats[id]`. An explanation that needs a
+domain constant (e.g. minimum games) is a function of one shared params object,
+`views/stats/description-params.js` (`{ minGames, provisionalGames, … }`, built from the
+exported domain constants); a new constant is added there, never in the widgets.
 
 **Pages are lists of stat ids** (`views/stats/pages.js`): overview, player, pair,
 compare. Generic widgets render each kind (`views/stats/widgets/`). Moving a stat
 between pages = editing a list.
 
+Each page section has a heading (`t.statsSections`); when a section holds a single stat
+whose title equals the heading, the tile title is dropped (the heading stays).
+
 **Compare** reuses the plugins: every `number`/`wdl` stat that supports `player` is
-shown side by side for both players; `chart` stats overlay both series; plus stats
-with subject `compare` (record together, record against).
+shown side by side for both players; `chart` stats overlay both series (under a neutral
+"Over tid" heading; each chart keeps its own title); plus stats with subject `compare`
+(record together, record against).
 
 **Season filter**: this season, any earlier season, all time. Applied to the facts,
-so stats never deal with seasons. Kept in the URL (`?s=2026-2` / `?s=all`).
+so stats never deal with seasons. Kept in the URL (`?s=2026-2` / `?s=all`); an explicit
+`s` is always respected. Without `s` the default is the current season if it has games,
+else the latest season with games, else all time.
+
+**Dates**: records show the full date with year ("14. okt. 2025"); chart axes use the
+short form ("14. okt.") when all points fall in one calendar year, the long form otherwise.
 
 **Routes**: `#/stats`, `#/stats/player/<name>`, `#/stats/pairs`,
 `#/stats/pair/<a>+<b>`, `#/stats/compare/<a>/<b>` (router supports `:params` and a

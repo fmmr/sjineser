@@ -1,4 +1,5 @@
-import { STATS } from '../../domain/stats/registry.js';
+import { STATS, statsFor } from '../../domain/stats/registry.js';
+import { t } from '../../i18n/nb.js';
 
 /**
  * Stats pages as lists of stat ids (spec §9). Moving a stat between pages = editing a list.
@@ -38,14 +39,19 @@ export const COMPARE_SECTIONS = { sideBySide: 'sideBySide', overlay: 'overlay', 
  * @param {Stat[]} [stats]
  * @returns {{ sideBySide: Stat[], overlay: Stat[], headToHead: Stat[] }}
  */
-export function deriveCompare(stats = STATS) {
-  const forPlayer = (kinds) => stats.filter((s) => s.subjects.includes('player') && kinds.includes(s.kind));
-  return {
-    sideBySide: forPlayer(['number', 'wdl']),
-    overlay: forPlayer(['chart']),
-    headToHead: stats.filter((s) => s.subjects.includes('compare')),
-  };
-}
+export const deriveCompare = (stats = STATS) => ({
+  sideBySide: statsFor('player', ['number', 'wdl'], stats),
+  overlay: statsFor('player', ['chart'], stats),
+  headToHead: statsFor('compare', undefined, stats),
+});
+
+/**
+ * Whether a section's tile drops its title: a lone stat titled like the section heading
+ * would otherwise say the same thing twice. The section heading always stays.
+ * @param {Section} section
+ */
+export const tileTitleHidden = ({ id, stats }) =>
+  stats.length === 1 && t.stats[stats[0]]?.title === t.statsSections[id];
 
 /**
  * One row per stat with both players' values; stats with no data on either side are left out.

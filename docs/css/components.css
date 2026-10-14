@@ -1,3 +1,9 @@
+/* Side colours (play and stats): data-side="A" | "B" | "D" | "bench" sets --side. */
+[data-side="A"] { --side: var(--team-a); }
+[data-side="B"] { --side: var(--team-b); }
+[data-side="D"] { --side: var(--draw); }
+[data-side="bench"] { --side: var(--border); }
+
 .btn {
   min-height: var(--tap);
   padding: 0 var(--space-5);

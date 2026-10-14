@@ -72,3 +72,11 @@ test('chart', () => {
   invalid('chart', { series: [{ name: 'Anne', points: [{ x: '2026-10-14', y: null }] }] });
   invalid('chart', { series: [{ points: [] }] });
 });
+
+test('table rows may carry an optional boolean provisional flag', () => {
+  const columns = [{ key: 'player', format: 'player' }, { key: 'rating', format: 'rating' }];
+  const row = { player: 'Anne', rating: 1012 };
+  valid('table', { columns, rows: [{ ...row, provisional: false }, { ...row, provisional: true }, row] });
+  invalid('table', { columns, rows: [{ ...row, provisional: 'yes' }] });
+  invalid('table', { columns, rows: [{ ...row, provisional: 1 }] });
+});

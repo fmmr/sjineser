@@ -88,3 +88,26 @@ test('statsFor selects by subject type and optionally by kind', () => {
   }
   assert.deepEqual(statsFor('team'), []);
 });
+
+test('a stat description, if any, is a string or a function', () => {
+  for (const { id } of STATS) {
+    const { description } = t.stats[id];
+    assert.ok(description === undefined || ['string', 'function'].includes(typeof description), `t.stats.${id}.description`);
+  }
+});
+
+test('every table column has a header and every label cell a text in nb.js', () => {
+  for (const stat of STATS.filter((s) => s.kind === 'table')) {
+    for (const type of stat.subjects) {
+      for (const facts of FACTS) {
+        const value = stat.compute(facts, SUBJECTS[type]);
+        if (value === null) continue;
+        for (const { key, format } of value.columns) {
+          assert.equal(typeof t.statsColumns[key], 'string', `${stat.id}: t.statsColumns.${key}`);
+          if (format !== 'label') continue;
+          for (const row of value.rows) assert.equal(typeof t.statsLabels[row[key]], 'string', `${stat.id}: t.statsLabels.${row[key]}`);
+        }
+      }
+    }
+  }
+});

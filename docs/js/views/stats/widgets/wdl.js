@@ -29,4 +29,4 @@ export function wdlBody(value, keys = wdlKeys([value])) {
 }
 
 /** @returns {{ el: HTMLElement }} */
-export const renderWdl = (stat, value) => ({ el: statTile(stat, value && wdlBody(value)) });
+export const renderWdl = (stat, value, { hideTitle } = {}) => ({ el: statTile(stat, value && wdlBody(value), { hideTitle }) });

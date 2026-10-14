@@ -10,7 +10,7 @@ const WIDGETS = { number: renderNumber, wdl: renderWdl, table: renderTable, reco
 /**
  * @param {import('../../../domain/stats/registry.js').Stat} stat
  * @param {object | null} value the stat's computed value; null → "Ikke nok data"
- * @param {{ query: Record<string, string>, tones?: string[] }} ctx
+ * @param {{ query: Record<string, string>, tones?: string[], hideTitle?: boolean }} ctx
  * @returns {{ el: HTMLElement, destroy?(): void }}
  */
 export const renderWidget = (stat, value, ctx) => WIDGETS[stat.kind](stat, value, ctx);

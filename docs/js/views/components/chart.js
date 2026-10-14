@@ -38,12 +38,17 @@ const defaultTones = (count) => (count === 1 ? ['accent'] : ['team-a', 'team-b',
  * Line chart with one line per series over the union of their x values.
  * @param {HTMLElement} container sets the height (the chart fills it)
  * @param {{ series: { name: string, points: { x: string, y: number }[] }[],
- *   tones?: string[], formatX?: (x: string) => string }} options
- *   tones: token names per series ('team-a', 'team-b', 'accent', …); formatX: axis/tooltip label of an x value
+ *   tones?: string[], formatX?: (x: string) => string, formatY?: (y: number) => string, label?: string }} options
+ *   tones: token names per series ('team-a', 'team-b', 'accent', …); formatX / formatY: axis and tooltip
+ *   text of an x / y value; label: accessible name of the chart image
  * @returns {{ destroy(): void }}
  */
-export function renderLineChart(container, { series, tones = defaultTones(series.length), formatX = String }) {
+export function renderLineChart(container, {
+  series, tones = defaultTones(series.length), formatX = String, formatY = String, label,
+}) {
   const canvas = document.createElement('canvas');
+  canvas.setAttribute('role', 'img');
+  if (label) canvas.setAttribute('aria-label', label);
   container.replaceChildren(canvas);
   let chart = null;
   let destroyed = false;
@@ -82,11 +87,14 @@ export function renderLineChart(container, { series, tones = defaultTones(series
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { ticks: { color: muted, maxRotation: 0, autoSkipPadding: 12 }, grid: { color: grid } },
-          y: { ticks: { color: muted }, grid: { color: grid } },
+          y: { ticks: { color: muted, callback: (y) => formatY(y) }, grid: { color: grid } },
         },
         plugins: {
           legend: { display: series.length > 1, labels: { color: muted, boxWidth: 12 } },
-          tooltip: { enabled: true },
+          tooltip: {
+            enabled: true,
+            callbacks: { label: (item) => `${item.dataset.label}: ${item.parsed.y === null ? '–' : formatY(item.parsed.y)}` },
+          },
         },
       },
     });

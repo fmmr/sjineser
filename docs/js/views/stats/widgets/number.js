@@ -10,4 +10,4 @@ export const numberBody = ({ value, format, marker }) =>
   h('p', { class: 'stat-value' }, formatValue(value, format), marker === 'provisional' && provisionalMarker());
 
 /** @returns {{ el: HTMLElement }} */
-export const renderNumber = (stat, value) => ({ el: statTile(stat, value && numberBody(value)) });
+export const renderNumber = (stat, value, { hideTitle } = {}) => ({ el: statTile(stat, value && numberBody(value), { hideTitle }) });

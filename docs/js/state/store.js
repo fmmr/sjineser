@@ -21,14 +21,15 @@ export function createStore({ storage, outbox, api }) {
 
   /**
    * Rebuilds the view. Listeners hear only about visible changes, so views are not rebuilt (and taps lost) for nothing.
+   * An unchanged view keeps its identity, so caches keyed on store.get() (stats facts) stay valid.
    * @returns {boolean} whether listeners were notified
    */
   function recompute() {
     const next = applyAll(base, outbox.pending());
-    const changed = JSON.stringify(next) !== JSON.stringify(view);
+    if (JSON.stringify(next) === JSON.stringify(view)) return false;
     view = next;
-    if (changed) notify();
-    return changed;
+    notify();
+    return true;
   }
 
   function setBase(dataset) {

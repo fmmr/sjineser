@@ -134,3 +134,14 @@ test('hasTried flips after the first refresh, success or failure, and notifies o
   await ok.store.refresh();
   assert.equal(ok.store.hasTried(), true);
 });
+
+test('an unchanged recompute keeps the previous view object, so caches keyed on it stay warm', async () => {
+  const { store } = setup({ cached: nightWithMatch(['A']), getAll: async () => ({ ok: true, data: nightWithMatch(['A']) }) });
+  const before = store.get();
+  store.recompute();
+  assert.equal(store.get(), before);
+  await store.refresh();
+  assert.equal(store.get(), before);
+  store.commit(addGame(2, 'B'));
+  assert.notEqual(store.get(), before);
+});
