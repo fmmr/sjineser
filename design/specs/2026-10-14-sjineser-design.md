@@ -381,3 +381,24 @@ One plan, delivered in phases that each end in something usable:
 2. **Elo + team proposal** — domain engines, proposal screen, About pages.
 3. **Statistics** — overall, player, pairs, compare; Chart.js wrapper.
 4. **PWA + polish** — manifest, service worker, mobile checklist.
+
+## 17. Sandbox mode (testing)
+
+Opened with `?sandbox` in the URL (e.g. `https://sjineser.rodland.no/?sandbox#/play`).
+
+- **Fake backend** (`js/sandbox/backend.js`) implements the same interface as
+  `js/api/client.js` (`getAll`, `post` → envelopes) on top of `domain/dataset.js`
+  `applyOp`, persisted in localStorage. Any PIN is accepted. The sheet is never touched.
+- **Generated history** (`js/sandbox/generate.js`, seeded PRNG in `js/sandbox/random.js`):
+  deterministic for a given seed. Six players with hidden skills; ~16 nights over three
+  half-year seasons; rosters of 4–6; 3–4 matches per night; teams chosen by
+  `proposeTeams`; game results drawn from hidden skills (≈35 % draws); occasional
+  abandoned last match. Built by folding ops through `applyOp`, so it is always valid.
+- **Pretend date** (`js/state/clock.js`): `today()` returns the real local date, or in
+  sandbox mode a stored pretend date (default: 14 days after the last generated night).
+  Actions and views get "today" only from the clock.
+- **Separate storage namespace** (`sjineser-sandbox:`), so real outbox/cache/PIN never
+  mix with sandbox data.
+- **Sandbox bar** under the header: "TESTMODUS" label, date picker for the pretend date,
+  "Nullstill" (regenerate data, clear sandbox outbox/cache, reload) and "Avslutt"
+  (link to the app without `?sandbox`).
