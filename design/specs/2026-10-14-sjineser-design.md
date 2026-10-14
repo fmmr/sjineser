@@ -414,6 +414,11 @@ Chart.js (§11), loaded only when a chart is shown.
 - iOS Safari and Android Chrome, both in browser and installed (PWA, standalone).
 - Safe-area insets; `dvh` units; tap targets ≥ 44 px; `touch-action: manipulation`
   on buttons; no hover-dependent interaction; works one-handed.
+- Installed on iOS the status bar is `black-translucent`: the header extends under it
+  (`safe-area-inset-top`); its text is always white, so the light theme paints a dark strip
+  exactly the inset's height. Header, main, tab bar, toasts, sheets and the sandbox bar
+  respect the left/right insets in landscape. No pull-to-refresh (`overscroll-behavior-y`),
+  no long-press callout or text selection on tap targets.
 - Responsive up to laptop widths; stats use extra width.
 
 ## 13. Testing

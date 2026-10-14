@@ -220,7 +220,11 @@ select.field {
 
 .toasts {
   position: fixed;
-  inset: auto var(--space-4) calc(var(--tabbar-height) + env(safe-area-inset-bottom) + var(--space-3));
+  inset:
+    auto
+    max(var(--space-4), env(safe-area-inset-right))
+    calc(var(--tabbar-height) + env(safe-area-inset-bottom) + var(--space-3))
+    max(var(--space-4), env(safe-area-inset-left));
   z-index: 20;
   display: grid;
   gap: var(--space-2);

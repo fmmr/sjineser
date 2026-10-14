@@ -32,6 +32,8 @@
   --danger: #e3807a;
   --on-danger: #0b0d10;
   --chart-grid: rgba(255, 255, 255, 0.06);
+  /* Behind the iOS status bar in standalone mode (black-translucent draws white text there). */
+  --status-bar: transparent;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -93,6 +95,7 @@
   --danger: #b3423c;
   --on-danger: #ffffff;
   --chart-grid: rgba(16, 22, 32, 0.07);
+  --status-bar: #111418;
 }
 
 @media (prefers-reduced-motion: reduce) {

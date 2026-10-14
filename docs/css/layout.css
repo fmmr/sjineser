@@ -26,6 +26,19 @@
   border-bottom: 1px solid var(--border);
 }
 
+/*
+ * Installed on iOS (black-translucent), the header runs under the status bar, whose text is
+ * always white. In the light theme a dark strip of exactly the inset's height keeps it legible;
+ * the inset is 0 in the browser and in landscape, so the strip only exists where it is needed.
+ */
+.app-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top);
+  background: var(--status-bar);
+}
+
 /* The logo and name are the home link; it presses in like the other controls. */
 .app-brand {
   display: inline-flex;
