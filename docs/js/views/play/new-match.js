@@ -64,18 +64,23 @@ export function mountNewMatch(root, { store, actions, navigate }) {
     navigate('/play/match');
   }
 
+  const benchLine = ({ bench, benchRule }) => {
+    if (bench.length === 0) return null;
+    const names = bench.join(t.and);
+    return benchRule ? t.proposal.bench(names, t.rules[benchRule].benchReason) : t.proposal.benchPlain(names);
+  };
+
   const reasons = (proposal) => [
-    proposal.bench.length > 0 && t.proposal.bench(proposal.bench.join(t.and), t.rules[proposal.benchRule].title),
+    benchLine(proposal),
     proposal.splitRule ? t.proposal.split(t.rules[proposal.splitRule].title) : t.proposal.splitTie,
   ].filter(Boolean);
 
   const playerRow = (name, rated) => {
     const side = sides.get(name) ?? 'bench';
-    const rating = Math.round(ratingOf(rated, name));
     return h('li', {},
       h('button', { class: 'assign-row', type: 'button', 'data-side': side, onclick: () => cycle(name) },
         h('span', { class: 'assign-name' }, name),
-        h('span', { class: 'assign-rating' }, isProvisional(rated, name) ? `${rating} · ${t.provisional}` : String(rating)),
+        h('span', { class: 'assign-rating' }, t.ratingLabel(Math.round(ratingOf(rated, name)), isProvisional(rated, name))),
         h('span', { class: 'assign-side' }, t.sides[side])));
   };
 

@@ -12,13 +12,14 @@ export const expectedScore = (rating, opponent) => 1 / (1 + 10 ** ((opponent - r
  * @typedef {{
  *   ratings: Map<string, number>,
  *   gamesPlayed: Map<string, number>,
- *   timeline: { game: import('./match.js').Game, changes: Map<string, number> }[],
+ *   timeline: { game: import('./match.js').Game, before: Map<string, number>, changes: Map<string, number> }[],
  * }} Rated
  */
 
 /**
  * Replays every game in canonical order. A team's rating is the mean of its players;
  * both partners receive K × (actual − expected). Games of unknown matches are skipped.
+ * Each timeline entry holds the four players' ratings before the game and their changes.
  * @param {import('./match.js').Dataset} dataset
  * @returns {Rated}
  */
@@ -36,12 +37,13 @@ export function rateGames(dataset) {
     const teamA = teamOf(match, 'A');
     const teamB = teamOf(match, 'B');
     const delta = ELO.K * (ACTUAL_SCORE[game.result] - expectedScore(teamRating(teamA), teamRating(teamB)));
+    const before = new Map([...teamA, ...teamB].map((name) => [name, rating(name)]));
     const changes = new Map([...teamA.map((name) => [name, delta]), ...teamB.map((name) => [name, -delta])]);
     for (const [name, change] of changes) {
       ratings.set(name, rating(name) + change);
       gamesPlayed.set(name, (gamesPlayed.get(name) ?? 0) + 1);
     }
-    timeline.push({ game, changes });
+    timeline.push({ game, before, changes });
   }
   return { ratings, gamesPlayed, timeline };
 }

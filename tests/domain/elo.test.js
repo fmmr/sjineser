@@ -60,3 +60,23 @@ test('timeline records each game with every player change; games of unknown matc
   assert.equal(timeline[0].game.matchId, M1);
   close(timeline[0].changes.get('Per'), -ELO.K / 2);
 });
+
+test('timeline records every player rating before each game', () => {
+  const { timeline } = rateGames(withGames(['A', 'B']));
+  assert.equal(timeline[0].before.get('Hans'), ELO.START);
+  close(timeline[1].before.get('Hans'), ELO.START + ELO.K / 2);
+  close(timeline[1].before.get('Hans'), timeline[0].before.get('Hans') + timeline[0].changes.get('Hans'));
+  close(timeline[1].before.get('Tor'), ELO.START - ELO.K / 2);
+});
+
+test('a draw between unequal teams moves the weaker team up', () => {
+  const rated = rateGames(withGames(['A', 'D']));
+  assert.ok(ratingOf(rated, 'Tor') > ELO.START - ELO.K / 2);
+  assert.ok(ratingOf(rated, 'Hans') < ELO.START + ELO.K / 2);
+});
+
+test('games of unknown matches do not count as played', () => {
+  const ds = withGames(['A']);
+  ds.games.push(game(`${DATE}#9`, 1, 'A'));
+  assert.equal(rateGames(ds).gamesPlayed.get('Hans'), 1);
+});

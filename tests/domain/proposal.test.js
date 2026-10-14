@@ -55,6 +55,29 @@ test('balance picks the most even split; small differences count as equal', () =
   assert.equal(p.splitRule, 'balance');
 });
 
+const withRatings = (entries) => ({ ratings: new Map(Object.entries(entries)), gamesPlayed: new Map(), timeline: [] });
+
+test('the reason is the rule that separated the choice from its closest competitor', () => {
+  const ds = build([night(FOUR)], [played(match(1, ['Frode', 'Hans'], ['Per', 'Tor']))]);
+  const p = proposeTeams(ds, withRatings({ Frode: 1100, Hans: 1050, Per: 1000, Tor: 900 }));
+  assert.deepEqual(pairKeys(p), ['Frode+Tor', 'Hans+Per']);
+  assert.equal(p.splitRule, 'balance');
+});
+
+test('balance rounds differences down to whole tolerance buckets', () => {
+  // Differences: Frode+Per vs Hans+Tor 19, Frode+Tor vs Hans+Per 12 — same bucket, so name order wins.
+  const sameBucket = withRatings({ Frode: 1000, Hans: 969, Per: 1057, Tor: 1050 });
+  assert.deepEqual(pairKeys(proposeTeams(build([night(FOUR)]), sameBucket)), ['Frode+Per', 'Hans+Tor']);
+  const history = build([night(FOUR, '2026-09-01'), night(FOUR)], [played(match(1, ['Frode', 'Per'], ['Hans', 'Tor'], '2026-09-01'))]);
+  const fallThrough = proposeTeams(history, sameBucket);
+  assert.deepEqual(pairKeys(fallThrough), ['Frode+Tor', 'Hans+Per']);
+  assert.equal(fallThrough.splitRule, 'seasonVariety');
+  // Differences 11 and 9 fall in different buckets, so balance decides.
+  const decided = proposeTeams(build([night(FOUR)]), withRatings({ Frode: 1000, Hans: 980, Per: 1052, Tor: 1050 }));
+  assert.deepEqual(pairKeys(decided), ['Frode+Tor', 'Hans+Per']);
+  assert.equal(decided.splitRule, 'balance');
+});
+
 test('five fresh players: the last name alphabetically sits out', () => {
   const p = propose(build([night(FIVE)]));
   assert.deepEqual(p.bench, ['Tor']);
@@ -75,7 +98,21 @@ test('earlier sit-outs this season give priority; last season does not count', (
   const thisSeason = propose(earlier('2026-09-01'));
   assert.ok([...thisSeason.A, ...thisSeason.B].includes('Tor'));
   assert.deepEqual(thisSeason.bench, ['Per']);
+  // Tor's sit-out lifted Tor above the cut; between Hans (last in) and Per only the name differs.
+  assert.equal(thisSeason.benchRule, 'alphabetical');
   assert.equal(propose(earlier('2026-05-01')).bench[0], 'Tor');
+});
+
+test('the bench reason is sit-outs when the benched player has sat out fewer times', () => {
+  const date = '2026-09-01';
+  const p = propose(build([night(FIVE, date), night(FIVE)], [
+    played(match(1, ['Anne', 'Frode'], ['Hans', 'Per'], date)),
+    played(match(2, ['Anne', 'Frode'], ['Per', 'Tor'], date)),
+    played(match(3, ['Anne', 'Hans'], ['Per', 'Tor'], date)),
+    played(match(4, ['Frode', 'Hans'], ['Per', 'Tor'], date)),
+  ]));
+  assert.deepEqual(p.bench, ['Per']);
+  assert.equal(p.benchRule, 'mostSitOutsSeason');
 });
 
 test('on equal counts, whoever waited longest tonight plays', () => {
@@ -86,9 +123,28 @@ test('on equal counts, whoever waited longest tonight plays', () => {
     played(match(3, ['Anne', 'Bjørn'], ['Cato', 'Dag'])),
   ]));
   assert.deepEqual(p.bench, ['Cato', 'Dag']);
+  // Erik and Finn waited longest; Bjørn (last in) and Cato differ only by name.
+  assert.equal(p.benchRule, 'alphabetical');
+});
+
+test('the bench reason is waiting time when it separates the last in from the benched', () => {
+  const EIGHT = ['Anne', 'Bjørn', 'Cato', 'Dag', 'Erik', 'Finn', 'Geir', 'Hege'];
+  const p = propose(build([night(EIGHT)], [
+    played(match(1, ['Anne', 'Bjørn'], ['Cato', 'Dag'])),
+    played(match(2, ['Erik', 'Finn'], ['Geir', 'Hege'])),
+  ]));
+  assert.deepEqual(p.bench, ['Erik', 'Finn', 'Geir', 'Hege']);
+  assert.equal(p.benchRule, 'longestSinceLastPlayed');
 });
 
 test('an empty open match is ignored, since starting the next one replaces it', () => {
   const ds = build([night(FOUR)], [[match(1, ['Frode', 'Hans'], ['Per', 'Tor']), []]]);
   assert.deepEqual(pairKeys(propose(ds)), ['Frode+Hans', 'Per+Tor']);
+});
+
+test('an empty match on an earlier night does not count as a sit-out', () => {
+  const date = '2026-09-01';
+  const p = propose(build([night(FIVE, date), night(FIVE)], [[match(1, ['Anne', 'Frode'], ['Hans', 'Per'], date), []]]));
+  assert.deepEqual(p.bench, ['Tor']);
+  assert.equal(p.benchRule, 'alphabetical');
 });

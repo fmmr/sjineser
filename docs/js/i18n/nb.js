@@ -51,22 +51,23 @@ export const t = {
   },
 
   proposal: {
-    bench: (names, rule) => `Står over: ${names} (${rule.toLowerCase()})`,
+    bench: (names, reason) => `Står over: ${names} – ${reason}`,
+    benchPlain: (names) => `Står over: ${names}`,
     split: (rule) => `Lagforslag: ${rule.toLowerCase()}`,
     splitTie: 'Lagforslag: alle oppsett er like gode',
     useProposal: 'Bruk forslaget',
   },
-  provisional: 'ny',
+  ratingLabel: (rating, provisional) => (provisional ? `${rating} · ny` : String(rating)),
 
   rules: {
-    fewestTonight: { title: 'Færrest kamper i kveld', description: 'De som har spilt færrest kamper i kveld, spiller først.' },
-    mostSitOutsSeason: { title: 'Flest ganger på benken', description: 'Ved likhet spiller de som har stått over flest kamper denne sesongen.' },
-    longestSinceLastPlayed: { title: 'Lengst siden sist', description: 'Ved likhet spiller de som har ventet lengst siden forrige kamp i kveld.' },
-    alphabetical: { title: 'Alfabetisk', description: 'Til slutt avgjøres det alfabetisk, så forslaget alltid blir det samme.' },
+    fewestTonight: { title: 'Færrest kamper i kveld', description: 'De som har spilt færrest kamper i kveld, spiller først.', benchReason: 'har spilt flest kamper i kveld' },
+    mostSitOutsSeason: { title: 'Flest ganger på benken', description: 'Ved likhet spiller de som har stått over flest kamper denne sesongen.', benchReason: 'har stått over færrest ganger denne sesongen' },
+    longestSinceLastPlayed: { title: 'Lengst siden sist', description: 'Ved likhet spiller de som har ventet lengst siden forrige kamp i kveld.', benchReason: 'spilte sist' },
+    alphabetical: { title: 'Alfabetisk', description: 'Til slutt avgjøres det alfabetisk, så forslaget alltid blir det samme.', benchReason: 'avgjort alfabetisk' },
     newPartners: { title: 'Nye makkere', description: 'Oppsett der noen allerede har vært makkere i kveld, unngås. Slik spiller alle med alle.' },
     balance: {
       title: 'Jevne lag',
-      description: ({ tolerance }) => `Oppsettet med minst forskjell i lagrating velges. Forskjeller under ${tolerance} poeng regnes som like.`,
+      description: ({ tolerance }) => `Oppsettet med minst forskjell i lagrating velges. Forskjellen rundes ned til nærmeste ${tolerance} poeng, så små forskjeller teller likt.`,
     },
     seasonVariety: { title: 'Variasjon', description: 'Par som sjelden har spilt sammen denne sesongen, foretrekkes.' },
   },

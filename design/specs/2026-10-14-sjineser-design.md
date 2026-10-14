@@ -244,12 +244,13 @@ With 4 players over 3 matches, each split occurs once; Elo decides order (most b
 
 Details:
 - Rules are compared lexicographically (rule 1 first; later rules only break ties).
-- "Balance" compares team-rating differences in buckets of `BALANCE_TOLERANCE` (10)
+- "Balance" rounds team-rating differences down to the nearest `BALANCE_TOLERANCE` (10)
   points, so near-equal splits fall through to the variety rule.
-- The reason shown is the most important rule on which the chosen option beats at
-  least one alternative (for the bench: last player in vs first player out); if all
-  options are equal, the screen says so.
-- An open match without games is ignored, since starting the next match replaces it.
+- The reason shown is the rule on which the chosen option first differs from its closest
+  competitor (the next-ranked option that is not a full tie; for the bench: last player in
+  vs the benched players in rank order); if all options are equal, the screen says so.
+- Matches without games are ignored everywhere in the counting (neither played nor sat
+  out); an empty open match is replaced by the next start anyway.
 
 ## 8. Elo
 

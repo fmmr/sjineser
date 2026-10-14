@@ -1,11 +1,11 @@
 import { ratingOf } from './elo.js';
-import { SEATS, currentMatch, currentNight, gamesOf, matchesOfNight, teamOf } from './match.js';
+import { SEATS, currentNight, matchesOfNight, teamOf } from './match.js';
 import { byName } from './players.js';
 import { inSeason, seasonOf } from './season.js';
 
 const PLAYERS_PER_MATCH = 4;
 
-/** Team rating differences within this many points count as equally balanced. */
+/** Team rating differences are rounded down to a multiple of this, so small differences count as equal. */
 export const BALANCE_TOLERANCE = 10;
 
 /**
@@ -28,7 +28,8 @@ export const SPLIT_RULES = [
 
 /**
  * @typedef {{ A: string[], B: string[], bench: string[], benchRule: string | null, splitRule: string | null }} Proposal
- * benchRule/splitRule: id of the most important rule that decided, or null if all options were equal.
+ * benchRule/splitRule: id of the rule on which the chosen option first differs from its closest
+ * competitor (the next-ranked option that is not a full tie), or null if every option ties.
  */
 
 /**
@@ -40,7 +41,7 @@ export const SPLIT_RULES = [
 export function proposeTeams(dataset, rated) {
   const night = currentNight(dataset);
   if (!night || night.players.length < PLAYERS_PER_MATCH) return null;
-  const ctx = buildContext(withoutEmptyOpenMatch(dataset), night, rated);
+  const ctx = buildContext(withoutEmptyMatches(dataset), night, rated);
 
   const players = rank(night.players, BENCH_RULES, ctx);
   const playing = players.slice(0, PLAYERS_PER_MATCH);
@@ -73,12 +74,17 @@ function rank(items, rules, ctx) {
     .sort((x, y) => compareKeys(x.keys, y.keys));
 }
 
-/** The most important rule on which `chosen` differs from at least one of `others`. */
+/**
+ * The rule that separated `chosen` from its closest competitor: the first of `others` (in rank
+ * order) whose keys differ from `chosen` at all, compared at the first rule where they differ.
+ * Null if every other option ties with `chosen`.
+ */
 function decidingRule(rules, chosen, others) {
-  const indexes = others
-    .map((other) => chosen.keys.findIndex((key, i) => key !== other.keys[i]))
-    .filter((i) => i !== -1);
-  return indexes.length ? rules[Math.min(...indexes)].id : null;
+  for (const other of others) {
+    const index = chosen.keys.findIndex((key, i) => key !== other.keys[i]);
+    if (index !== -1) return rules[index].id;
+  }
+  return null;
 }
 
 /** The three ways to split four players (sorted by name) into two teams. */
@@ -87,11 +93,13 @@ function splitsOf([p0, p1, p2, p3]) {
     .map(([A, B]) => ({ A, B, pairs: [A, B] }));
 }
 
-/** An open match without games will be replaced by the next start, so it must not count. */
-function withoutEmptyOpenMatch(dataset) {
-  const open = currentMatch(dataset);
-  if (!open || gamesOf(dataset, open.matchId).length > 0) return dataset;
-  return { ...dataset, matches: dataset.matches.filter((m) => m.matchId !== open.matchId) };
+/**
+ * Matches without games were never played (an empty open match is replaced by the next start),
+ * so they count neither as played nor as sat out.
+ */
+function withoutEmptyMatches(dataset) {
+  const withGames = new Set(dataset.games.map((g) => g.matchId));
+  return { ...dataset, matches: dataset.matches.filter((m) => withGames.has(m.matchId)) };
 }
 
 function countPairs(matches) {
