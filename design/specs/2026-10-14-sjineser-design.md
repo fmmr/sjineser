@@ -267,34 +267,65 @@ Details:
 
 ## 9. Statistics
 
-All views take a season filter. Match-level stats use complete matches only;
-game-level stats and Elo use all games.
+Stats will keep growing, so they are **plugins**: adding a stat must not require
+touching pages or other stats. Ideas are tracked in `design/stats-ideas.md`.
 
-**Overall**
-- Leaderboard: Elo, provisional marker, season change, sparkline.
-- Season summary: nights, matches, games, draw %.
-- Records: longest match (games), longest draw streak, most draws in a match,
-  clean sweeps (3–0 with no draws), comebacks (0–2 → 3–2), biggest upset (per game:
-  largest pre-game team-Elo gap overcome by the winner), highest Elo ever, longest
-  win streak.
-- Night winners: largest Elo gain per night.
+**Facts layer** (`domain/stats/facts.js`): computed once per dataset and filter.
+Elo is always replayed over *all* games (ratings are continuous); the season filter
+is applied afterwards. Facts contain:
+- `rows` — one row per player per game: player, partner, opponents, side, result
+  (`W`/`D`/`L`), match, game number, date, season, rating before/after, delta, team
+  and opponent team rating before the game.
+- `games` — one per game (teams, result, pre-game team ratings).
+- `matches` — one per match (teams, games, score, winner, complete).
+- `nights` — one per night (roster, matches).
+- `players`, plus the full Elo result.
+Match-level stats use complete matches only; game-level stats and Elo use all games.
 
-**Player** (list → detail)
-- Elo over time (chart).
-- Games and matches played; W/D/L; game win %; match win %.
-- Streaks, current and longest: wins, unbeaten, losses.
-- Form (last 10 games), nights attended, sit-outs.
-- Partners table → best/worst partner. Opponents table → nemesis / favourite victim.
+**Subjects** (`domain/stats/subjects.js`): `overall`, `player` (name), `pair` (two
+names, sorted), `compare` (two players). Helpers select a subject's rows (a pair's
+rows are its games from one partner's perspective) and head-to-head rows.
 
-**Pairs** (list → detail)
-- Sortable: matches W/L, games W/D/L, win %, combined Elo.
-- Detail: head-to-head against other pairs.
+**Stat plugin** (`domain/stats/catalog/<id>.js`, listed in `domain/stats/registry.js`):
+`{ id, subjects: [...], kind, compute(facts, subject) }` returning a value of a known
+**kind**, or `null` when there is not enough data:
+- `number` — `{ value, format }` (format: `int`, `percent`, `rating`, `decimal`)
+- `wdl` — `{ W, D, L }` (D omitted/0 for match records)
+- `table` — `{ columns: [{ key, format }], rows: [{ …, subject? }] }` (rows may link to a subject)
+- `record` — `{ value, format, holders: [names], date?, matchId? }`
+- `chart` — `{ series: [{ name, points: [{ x: date, y }] }] }`
+Titles and explanations live in `nb.js` under `t.stats[id]`.
 
-**Compare** — pick two players: record as partners, record as opponents, Elo curves
-overlaid, key numbers side by side.
+**Pages are lists of stat ids** (`views/stats/pages.js`): overview, player, pair,
+compare. Generic widgets render each kind (`views/stats/widgets/`). Moving a stat
+between pages = editing a list.
 
-Layout: stacked cards on mobile; multi-column with full tables and charts on wide
-screens. Charts per §11.
+**Compare** reuses the plugins: every `number`/`wdl` stat that supports `player` is
+shown side by side for both players; `chart` stats overlay both series; plus stats
+with subject `compare` (record together, record against).
+
+**Season filter**: this season, any earlier season, all time. Applied to the facts,
+so stats never deal with seasons. Kept in the URL (`?s=2026-2` / `?s=all`).
+
+**Routes**: `#/stats`, `#/stats/player/<name>`, `#/stats/pairs`,
+`#/stats/pair/<a>+<b>`, `#/stats/compare/<a>/<b>` (router supports `:params` and a
+query string).
+
+**Starter set**
+- Overview: Elo leaderboard (provisional marker, change in the selected season);
+  season summary (nights, matches, games, draw %); records: longest match, longest
+  draw streak, clean sweeps (3–0 without draws), comebacks (0–2 → 3–2), biggest upset
+  (largest pre-game team-rating gap overcome by the game winner).
+- Player: Elo over time; games W/D/L and win %; matches W/L and win %; draw rate;
+  streaks (current and longest win / unbeaten / loss); partners and opponents tables;
+  best partner and nemesis (minimum games apply).
+- Pairs: table of all pairs; pair page with W/D/L, win %, head-to-head vs other pairs.
+- Compare: the shared player stats side by side, Elo curves overlaid, record together,
+  record against.
+
+**Layout**: mobile first — headline numbers and one chart, details one tap deeper;
+wide screens add columns (tiles in an auto-fit grid, tables full width). Charts use
+Chart.js (§11), loaded only when a chart is shown.
 
 ## 10. Sync and error handling
 
@@ -334,8 +365,8 @@ screens. Charts per §11.
 - **Dark and light theme**, following the device setting (`prefers-color-scheme`).
   Dark is the default: light applies only when the device explicitly prefers light.
 - **Match screen is the exception:** big score and big buttons, readable across the table.
-- **Charts: Chart.js**, a pinned ES module build vendored into `vendor/` (no CDN at
-  runtime; works offline). Only `views/components/chart.js` imports it; views request
+- **Charts: Chart.js** 4.5.1, the UMD build (`chart.umd.min.js`, no dependencies) vendored
+  into `docs/vendor/` (no CDN at runtime; works offline), loaded lazily by the wrapper. Only `views/components/chart.js` imports it; views request
   semantic charts (e.g. "Elo over time") and colours come from the design tokens.
   Swapping libraries touches one file.
 
