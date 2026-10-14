@@ -4,6 +4,7 @@ import { createStorage } from './state/storage.js';
 import { createOutbox } from './state/outbox.js';
 import { createStore } from './state/store.js';
 import { createActions } from './state/actions.js';
+import { createClock } from './state/clock.js';
 import { createRouter, navigate } from './router.js';
 import { routes } from './views/routes.js';
 import { markActiveTab, mountShell } from './views/shell.js';
@@ -14,6 +15,7 @@ import { t } from './i18n/nb.js';
 
 const storage = createStorage();
 const api = createApiClient({ url: API_URL });
+const clock = createClock();
 
 let store;
 let updateBadge;
@@ -32,13 +34,13 @@ const outbox = createOutbox({
   onPinRequired: () => askForPin({ storage, outbox }),
 });
 store = createStore({ storage, outbox, api });
-const actions = createActions({ store, outbox });
+const actions = createActions({ store, outbox, today: clock.today });
 
 updateBadge = mountShell({ outbox, storage });
 createRouter({
   root: document.getElementById('view'),
   routes,
-  ctx: { store, actions, navigate },
+  ctx: { store, actions, navigate, clock },
   onRoute: markActiveTab,
 }).start();
 
