@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#101317">
+  <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+  <title>Sjineser</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/views/play.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <span class="app-title" data-text="appName"></span>
+    <button id="sync-badge" class="badge" type="button" hidden></button>
+  </header>
+  <main id="view" class="app-main"></main>
+  <nav class="tabbar">
+    <a href="#/play" data-tab="play"></a>
+    <a href="#/stats" data-tab="stats"></a>
+  </nav>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</body>
+</html>
