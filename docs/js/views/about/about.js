@@ -1,5 +1,4 @@
 import { h } from '../components/dom.js';
-import { sandboxUrl } from '../components/sandbox-toggle.js';
 import { formatValue } from '../stats/widgets/format.js';
 import { formatDateLong, t } from '../../i18n/nb.js';
 import { REPO_URL, SHEET_URL } from '../../config.js';
@@ -8,22 +7,7 @@ import { WINS_NEEDED } from '../../domain/match.js';
 import { datasetSummary } from '../../domain/summary.js';
 import { STATS } from '../../domain/stats/registry.js';
 import { KINDS } from '../../domain/stats/kinds.js';
-
-const CACHE_PREFIX = 'sjineser-';
-
-/**
- * VERSION of the service-worker cache (`sjineser-<VERSION>`, spec §10), or null without one.
- * @returns {Promise<string | null>}
- */
-async function cacheVersion() {
-  try {
-    const keys = (await globalThis.caches?.keys()) ?? [];
-    const key = keys.find((name) => name.startsWith(CACHE_PREFIX));
-    return key ? key.slice(CACHE_PREFIX.length) : null;
-  } catch {
-    return null;
-  }
-}
+import { appVersion } from '../../pwa.js';
 
 /** A labelled number (or short text) in the stats tile style. */
 const tile = (label, value, valueClass = 'stat-value') =>
@@ -40,7 +24,7 @@ const section = (heading, ...children) =>
 const external = (href, text) => h('a', { class: 'link', href, target: '_blank', rel: 'noopener' }, text);
 
 /** #/about: what the app is, links, live data counts, code statistics and the installed version. */
-export function mountAbout(root, { store, sandbox }) {
+export function mountAbout(root, { store }) {
   const labels = t.about.dataLabels;
   const code = t.about.codeLabels;
   let version = null;
@@ -56,12 +40,7 @@ export function mountAbout(root, { store, sandbox }) {
           section(t.about.linksHeading,
             h('ul', { class: 'about-links' },
               h('li', {}, external(REPO_URL, t.about.repoLink)),
-              h('li', {}, external(SHEET_URL, t.about.sheetLink), h('p', { class: 'muted' }, t.about.sheetNote)),
-              h('li', {}, h('a', { class: 'link', href: '#/about/teams' }, t.about.teamsLink)),
-              h('li', {}, h('a', { class: 'link', href: '#/about/rating' }, t.about.ratingLink)),
-              h('li', {},
-                h('a', { class: 'link', href: sandboxUrl(location, !sandbox) }, sandbox ? t.about.sandboxLeave : t.about.sandboxEnter),
-                !sandbox && h('p', { class: 'muted' }, t.about.sandboxNote)))),
+              h('li', {}, external(SHEET_URL, t.about.sheetLink), h('p', { class: 'muted' }, t.about.sheetNote)))),
           section(t.about.dataHeading,
             h('div', { class: 'stat-grid' },
               tile(labels.players, count(data.players)),
@@ -87,13 +66,11 @@ export function mountAbout(root, { store, sandbox }) {
     );
   }
 
-  const show = (found) => {
+  update();
+  appVersion().then((found) => {
     version = found;
     if (!destroyed && found) update();
-  };
-  update();
-  // On a first visit the worker may still be installing: look again once it is active.
-  cacheVersion().then((found) => (found ? show(found) : globalThis.navigator.serviceWorker?.ready.then(cacheVersion).then(show)));
+  });
   return {
     update,
     destroy() {

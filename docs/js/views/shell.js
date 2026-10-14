@@ -2,19 +2,18 @@ import { t } from '../i18n/nb.js';
 import { h } from './components/dom.js';
 import { logoMark, tabIcon } from './components/icons.js';
 import { askForPin } from './components/pin-prompt.js';
-import { themeToggle } from './components/theme-toggle.js';
-import { sandboxToggle } from './components/sandbox-toggle.js';
+import { activeTab } from '../routing.js';
 
 /**
- * Fills static shell text, sets up the home link, test-mode and theme switches and sync badge.
+ * Fills static shell text, the home link, the tab bar and the sync badge. Settings live on
+ * the Mer page, so the header holds only the logo and the badge.
  * @returns {() => void} refreshes the badge; call it on every outbox change
  */
-export function mountShell({ outbox, storage, sandbox }) {
+export function mountShell({ outbox, storage }) {
   document.querySelector('[data-text="appName"]').textContent = t.appName;
   document.querySelector('.app-logo').replaceChildren(logoMark());
   // A hash-only href keeps ?sandbox, so the logo goes home in either mode.
   document.querySelector('.app-brand').setAttribute('aria-label', t.homeLink);
-  document.querySelector('.app-actions').append(sandboxToggle({ sandbox }), themeToggle());
   document.querySelectorAll('[data-tab]').forEach((link) => {
     const { tab } = link.dataset;
     link.replaceChildren(h('span', { class: 'tab-icon' }, tabIcon(tab)), h('span', {}, t.tabs[tab]));
@@ -37,7 +36,7 @@ export function mountShell({ outbox, storage, sandbox }) {
 
 /** @param {string} path */
 export function markActiveTab(path) {
-  const active = path.startsWith('/stats') ? 'stats' : 'play';
+  const active = activeTab(path);
   document.querySelectorAll('[data-tab]').forEach((link) => {
     if (link.dataset.tab === active) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');

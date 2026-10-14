@@ -1,7 +1,7 @@
 /*
  * Classic (non-module) script loaded synchronously in <head>, so the right theme is set
- * before first paint. Same rules as js/theme.js (tests check they agree): an explicit
- * choice in localStorage wins, otherwise the device preference, dark when unknown.
+ * before first paint. Same rules as js/theme.js (tests check they agree): a stored Mørk/Lys
+ * wins; with nothing stored (System, the default) the device decides, dark when unknown.
  */
 (function () {
   var colors = { dark: '#0b0d10', light: '#f5f6f8' };

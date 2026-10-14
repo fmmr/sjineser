@@ -66,3 +66,28 @@ export function buildHash(path, query = {}) {
   const pairs = Object.entries(query).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
   return pairs.length ? `#${path}?${pairs.join('&')}` : `#${path}`;
 }
+
+/** @typedef {'play' | 'stats' | 'more'} Tab */
+
+/**
+ * The tab bar entry a route belongs to: stats pages → Statistikk; the Mer page and the
+ * explanation pages it links to → Mer; everything else (play screens, unknown paths) → Spill.
+ * @param {string} path e.g. '/stats/player/Anne'
+ * @returns {Tab}
+ */
+export function activeTab(path) {
+  const inSection = (section) => path === section || path.startsWith(`${section}/`);
+  if (inSection('/stats')) return 'stats';
+  if (inSection('/more') || inSection('/about')) return 'more';
+  return 'play';
+}
+
+/**
+ * URL of the current screen with test mode switched on or off (spec §17: `?sandbox`).
+ * @param {{ pathname: string, hash: string }} location
+ * @param {boolean} enable
+ * @returns {string}
+ */
+export function sandboxUrl({ pathname, hash }, enable) {
+  return `${pathname}${enable ? '?sandbox' : ''}${hash}`;
+}

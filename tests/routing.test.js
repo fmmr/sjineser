@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildHash, matchRoute, parseHash } from '../docs/js/routing.js';
+import { activeTab, buildHash, matchRoute, parseHash, sandboxUrl } from '../docs/js/routing.js';
 
 const home = () => 'home';
 const stats = () => 'stats';
@@ -59,4 +59,18 @@ test('buildHash omits an empty query and encodes values', () => {
 test('buildHash and parseHash round-trip', () => {
   const query = { s: '2026-2', who: 'Bjørn + Æse & co' };
   assert.deepEqual(parseHash(buildHash('/stats/pairs', query)), { path: '/stats/pairs', query });
+});
+
+test('activeTab: stats pages → stats; Mer and the explanation pages → more; the rest → play', () => {
+  for (const path of ['/stats', '/stats/player/Anne', '/stats/pairs', '/stats/compare/A/B']) assert.equal(activeTab(path), 'stats', path);
+  for (const path of ['/more', '/about', '/about/teams', '/about/rating']) assert.equal(activeTab(path), 'more', path);
+  for (const path of ['/', '/play', '/play/night', '/play/new-match', '/play/match', '/unknown', '/statsx', '/aboutx']) {
+    assert.equal(activeTab(path), 'play', path);
+  }
+});
+
+test('sandboxUrl switches test mode on and off and keeps the current screen', () => {
+  assert.equal(sandboxUrl({ pathname: '/', hash: '#/stats/player/Anne' }, true), '/?sandbox#/stats/player/Anne');
+  assert.equal(sandboxUrl({ pathname: '/', hash: '#/play' }, false), '/#/play');
+  assert.equal(sandboxUrl({ pathname: '/app/', hash: '' }, true), '/app/?sandbox');
 });

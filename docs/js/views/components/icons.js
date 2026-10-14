@@ -1,5 +1,5 @@
 /**
- * Inline SVG icons: the card-suit logo mark, the tab bar glyphs and the theme switch. Icons are decorative
+ * Inline SVG icons: the card-suit logo mark, the tab bar glyphs and the list-row arrows. Icons are decorative
  * (aria-hidden); the text next to them carries the meaning. Colours come from CSS.
  */
 
@@ -56,31 +56,17 @@ const TAB_ICONS = {
     svgEl('rect', { x: '10', y: '4', width: '4', height: '16', rx: '1.2', class: 'icon-fill', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6' }),
     svgEl('rect', { x: '16', y: '9', width: '4', height: '11', rx: '1.2', class: 'icon-fill', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6' }),
   ]),
+  more: () => svg(['5', '12', '19'].map((cx) =>
+    svgEl('circle', { cx, cy: '12', r: '1.9', class: 'icon-fill', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6' }))),
 };
 
-/** @param {'play' | 'stats'} tab @returns {SVGElement} */
+/** @param {import('../../routing.js').Tab} tab @returns {SVGElement} */
 export const tabIcon = (tab) => TAB_ICONS[tab]();
 
 const stroke = { fill: 'none', stroke: 'currentColor', 'stroke-width': '1.6', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
 
-/** Eight short rays around the sun's disc. */
-const SUN_RAYS = Array.from({ length: 8 }, (_, i) => {
-  const angle = (i * Math.PI) / 4;
-  const at = (r) => [12 + r * Math.cos(angle), 12 + r * Math.sin(angle)].map((v) => v.toFixed(2)).join(' ');
-  return `M${at(7)}L${at(9)}`;
-}).join('');
+/** Trailing arrow of a list row that opens another screen. */
+export const chevronIcon = () => svg([svgEl('path', { d: 'M9.5 6l6 6-6 6', ...stroke })]);
 
-/** Theme switch glyph: the sun in the light theme, the moon in the dark one. */
-const THEME_ICONS = {
-  light: () => svg([svgEl('circle', { cx: '12', cy: '12', r: '4', ...stroke }), svgEl('path', { d: SUN_RAYS, ...stroke })]),
-  dark: () => svg([svgEl('path', { d: 'M19.5 14.6A7.5 7.5 0 0 1 9.4 4.5a7.5 7.5 0 1 0 10.1 10.1z', ...stroke })]),
-};
-
-/** @param {'dark' | 'light'} theme @returns {SVGElement} */
-export const themeIcon = (theme) => THEME_ICONS[theme]();
-
-/** Sandbox switch glyph: a test tube. */
-export const sandboxIcon = () => svg([
-  svgEl('path', { d: 'M9 3h6M10 3v11.5a2 2 0 0 0 4 0V3', ...stroke }),
-  svgEl('path', { d: 'M10 10h4', ...stroke }),
-]);
+/** Trailing arrow of a list row that opens another site in a new tab. */
+export const externalIcon = () => svg([svgEl('path', { d: 'M8 16 16 8M10 8h6v6', ...stroke })]);

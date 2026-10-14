@@ -248,18 +248,3 @@
   font-weight: 650;
   letter-spacing: -0.015em;
 }
-
-/* Discreet link to the about page at the bottom of the front page. */
-.home-about {
-  margin-top: var(--space-6);
-}
-
-.home-about a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--tap);
-  padding: 0 var(--space-3);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  text-decoration: none;
-}

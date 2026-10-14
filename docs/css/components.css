@@ -8,7 +8,6 @@
 .btn,
 .chip,
 .badge,
-.icon-btn,
 .assign-row {
   transition:
     transform var(--duration) var(--ease),
@@ -21,7 +20,6 @@
 .btn:active:not(:disabled),
 .chip:active,
 .badge:active,
-.icon-btn:active,
 .assign-row:active {
   transform: scale(var(--press-scale));
 }
@@ -170,34 +168,6 @@ select.field {
     linear-gradient(45deg, transparent 50%, var(--text-muted) 50%) no-repeat calc(100% - 20px) 52% / 5px 5px,
     linear-gradient(-45deg, transparent 50%, var(--text-muted) 50%) no-repeat calc(100% - 15px) 52% / 5px 5px,
     var(--surface);
-}
-
-/* A borderless round button holding one icon (header theme switch). */
-.icon-btn {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: var(--tap);
-  height: var(--tap);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-muted);
-}
-
-.icon-btn:active {
-  background: var(--surface-raised);
-  color: var(--text);
-}
-
-.icon-btn svg {
-  width: 22px;
-  height: 22px;
-}
-
-.sandbox-toggle[aria-pressed="true"] {
-  color: var(--warning);
 }
 
 .badge {

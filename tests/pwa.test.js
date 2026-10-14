@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { canRegisterServiceWorker, registerServiceWorker } from '../docs/js/pwa.js';
+import { appVersion, cacheVersion, canRegisterServiceWorker, registerServiceWorker } from '../docs/js/pwa.js';
 import {
   ABOUT_DATA, codeStats, computeVersion, countLines, isShippable, renderAboutData, shippableFiles,
 } from '../scripts/stamp-sw.mjs';
@@ -229,4 +229,24 @@ test('registerServiceWorker waits for the load event, or registers at once after
   assert.deepEqual(registered, ['sw.js', 'sw.js']);
   registerServiceWorker({ container, location: { protocol: 'http:', hostname: '10.0.0.2' }, window, document: { readyState: 'complete' } });
   assert.equal(registered.length, 2);
+});
+
+test('cacheVersion reads VERSION from the sjineser-* cache name, null without one or on errors', async () => {
+  assert.equal(await cacheVersion({ keys: async () => ['other', 'sjineser-abc123def456'] }), 'abc123def456');
+  assert.equal(await cacheVersion({ keys: async () => ['other'] }), null);
+  assert.equal(await cacheVersion({ keys: async () => { throw new Error('denied'); } }), null);
+  assert.equal(await cacheVersion(undefined), null);
+});
+
+test('appVersion looks again once the worker is active when the cache is not there yet', async () => {
+  const names = [];
+  const caches = { keys: async () => [...names] };
+  let activate;
+  const container = { ready: new Promise((resolve) => { activate = resolve; }) };
+  const pending = appVersion({ caches, container });
+  names.push('sjineser-0123456789ab');
+  activate();
+  assert.equal(await pending, '0123456789ab');
+  assert.equal(await appVersion({ caches: { keys: async () => ['sjineser-fedcba'] }, container: { ready: new Promise(() => {}) } }), 'fedcba');
+  assert.equal(await appVersion({ caches: { keys: async () => [] }, container: undefined }), null);
 });

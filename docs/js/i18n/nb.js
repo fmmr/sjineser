@@ -2,8 +2,7 @@
 export const t = {
   appName: 'Sjineser',
   homeLink: 'Sjineser, til forsiden',
-  theme: { light: 'Lyst tema' },
-  tabs: { play: 'Spill', stats: 'Statistikk' },
+  tabs: { play: 'Spill', stats: 'Statistikk', more: 'Mer' },
   loading: 'Laster …',
   offline: 'Får ikke kontakt med serveren. Viser lagrede data.',
 
@@ -108,9 +107,6 @@ export const t = {
     repoLink: 'Kildekoden på GitHub',
     sheetLink: 'Dataene i Google Regneark',
     sheetNote: 'Bare de som har fått tilgang, kan åpne regnearket.',
-    sandboxEnter: 'Prøv testmodus',
-    sandboxLeave: 'Avslutt testmodus',
-    sandboxNote: 'Testmodus bruker oppdiktede data og lagrer ingenting i regnearket.',
     dataHeading: 'Data',
     dataLabels: {
       players: 'Spillere', nights: 'Kvelder', matches: 'Kamper', games: 'Spill',
@@ -125,6 +121,21 @@ export const t = {
     versionHeading: 'Versjon',
     versionLabel: 'Appversjon',
     none: '—',
+  },
+
+  more: {
+    title: 'Mer',
+    settingsHeading: 'Innstillinger',
+    theme: 'Tema',
+    themeChoices: { system: 'System', dark: 'Mørk', light: 'Lys' },
+    sandbox: 'Testmodus',
+    sandboxNote: 'Bruker oppdiktede data og lagrer ingenting i regnearket.',
+    explainHeading: 'Forklaringer',
+    aboutHeading: 'Om',
+    repo: 'GitHub',
+    sheet: 'Google Regneark',
+    version: 'Versjon',
+    newTab: ' (åpnes i ny fane)',
   },
 
   /**
@@ -203,7 +214,7 @@ export const t = {
     notFound: 'Fant ikke dette i dataene.',
   },
 
-  sandbox: { toggle: 'Testmodus', label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', resetMessage: 'Testdataene genereres på nytt, og endringer i testmodus forsvinner.', exit: 'Avslutt', date: 'Dato' },
+  sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', resetMessage: 'Testdataene genereres på nytt, og endringer i testmodus forsvinner.', exit: 'Avslutt', date: 'Dato' },
 };
 
 const dateFormat = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short' });

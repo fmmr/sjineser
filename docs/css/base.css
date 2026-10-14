@@ -65,9 +65,10 @@ button,
 .btn,
 .chip,
 .badge,
-.icon-btn,
 .app-brand,
-.tabbar a {
+.tabbar a,
+.list-row,
+.segment {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
