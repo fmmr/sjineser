@@ -9,7 +9,7 @@
   height: var(--sandbox-height);
   padding: 0 var(--space-4);
   background: var(--warning);
-  color: #15191e;
+  color: var(--on-warning);
   font-size: var(--text-sm);
 }
 

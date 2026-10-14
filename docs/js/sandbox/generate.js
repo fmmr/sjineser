@@ -5,11 +5,11 @@ import { byName } from '../domain/players.js';
 import { proposeTeams } from '../domain/proposal.js';
 import { createRandom } from './random.js';
 
-export const SANDBOX_SEED = 2026;
+export const SANDBOX_SEED = 1;
 export const SANDBOX_PLAYERS = ['Anne', 'Bjørn', 'Cato', 'Dag', 'Erik', 'Frida'];
 
 /** Hidden skill per player as an offset from ELO.START. Never stored; only drives results. */
-const SKILL = { Anne: 80, Bjørn: 40, Cato: 10, Dag: -10, Erik: -40, Frida: -80 };
+const SKILL = { Anne: 200, Bjørn: 110, Cato: 40, Dag: -40, Erik: -110, Frida: -200 };
 
 const FIRST_NIGHT = '2025-08-21';
 const LAST_NIGHT_BEFORE = '2026-10-01';

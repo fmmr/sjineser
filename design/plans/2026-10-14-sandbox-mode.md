@@ -58,12 +58,12 @@ export function createRandom(seed) {
 
 **Files:** Create `docs/js/sandbox/generate.js`; Test `tests/sandbox/generate.test.js`
 
-Export `SANDBOX_SEED = 2026`, `SANDBOX_PLAYERS` (six names: `Anne`, `Bjørn`, `Cato`, `Dag`, `Erik`, `Frida`), and `generateHistory(seed = SANDBOX_SEED)` returning `{ dataset, nextDate }`.
+Export `SANDBOX_SEED = 1`, `SANDBOX_PLAYERS` (six names: `Anne`, `Bjørn`, `Cato`, `Dag`, `Erik`, `Frida`), and `generateHistory(seed = SANDBOX_SEED)` returning `{ dataset, nextDate }`.
 
 Requirements:
 - Build the dataset **only** by folding ops through `applyOp` starting from `emptyDataset()`; throw if any op's outcome is not `'applied'` (a generator bug must fail loudly in tests).
 - Players: `addPlayer` for all six.
-- Hidden skill per player (not stored): `Anne +80, Bjørn +40, Cato +10, Dag −10, Erik −40, Frida −80` (rating offsets around `ELO.START`).
+- Hidden skill per player (not stored): `Anne +200, Bjørn +110, Cato +40, Dag −40, Erik −110, Frida −200` (rating offsets around `ELO.START`).
 - Nights: first night `2025-08-21`; each next night 14–35 days later (`random.int`); stop before `2026-10-01` (gives ~15–18 nights over seasons 2025 H2, 2026 H1, 2026 H2). Write a small date helper (add days to `YYYY-MM-DD` using UTC to avoid DST issues).
 - Roster per night: 4 players (60 %), 5 (30 %), 6 (10 %), chosen with `shuffle`, then sorted by name; `startNight`.
 - Matches per night: 3 (70 %) or 4. For each: `proposeTeams(ds, rateGames(ds))` gives the teams; `startMatch` with `matchId = makeMatchId(date, n)`.

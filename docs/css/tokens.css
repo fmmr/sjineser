@@ -15,6 +15,7 @@
   --draw: #8f9aa6;
   --on-side: var(--bg);
   --warning: #f2c94c;
+  --on-warning: #1d1600;
   --danger: #ef6b6b;
 
   --space-1: 4px;

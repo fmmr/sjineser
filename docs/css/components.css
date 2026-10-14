@@ -92,7 +92,7 @@
 
 .badge-warning {
   background: var(--warning);
-  color: #1d1600;
+  color: var(--on-warning);
 }
 
 .toasts {
