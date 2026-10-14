@@ -6,7 +6,7 @@ const valid = (kind, value) => assert.equal(isValidValue(kind, value), true, JSO
 const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, JSON.stringify(value));
 
 test('known kinds and formats', () => {
-  assert.deepEqual(KINDS, ['number', 'wdl', 'table', 'record', 'chart']);
+  assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart']);
   assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal']);
   assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label']);
 });
@@ -14,6 +14,15 @@ test('known kinds and formats', () => {
 test('unknown kinds and null are never valid', () => {
   invalid('pie', { value: 1, format: 'int' });
   for (const kind of KINDS) invalid(kind, null);
+});
+
+test('duel', () => {
+  valid('duel', { left: { name: 'Anne', wins: 32 }, right: { name: 'Erik', wins: 12 }, draws: 24 });
+  valid('duel', { left: { name: 'Anne', wins: 0 }, right: { name: 'Erik', wins: 0 }, draws: 1 });
+  invalid('duel', { left: { name: 'Anne', wins: 1 }, draws: 0 });
+  invalid('duel', { left: { name: '', wins: 1 }, right: { name: 'Erik', wins: 1 }, draws: 0 });
+  invalid('duel', { left: { name: 'Anne', wins: -1 }, right: { name: 'Erik', wins: 1 }, draws: 0 });
+  invalid('duel', { left: { name: 'Anne', wins: 1 }, right: { name: 'Erik', wins: 1 }, draws: 0.5 });
 });
 
 test('number', () => {

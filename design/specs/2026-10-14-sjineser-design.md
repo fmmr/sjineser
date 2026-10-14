@@ -303,6 +303,7 @@ rows are its games from one partner's perspective) and head-to-head rows.
 **kind**, or `null` when there is not enough data:
 - `number` — `{ value, format }` (format: `int`, `percent`, `rating`, `decimal`)
 - `wdl` — `{ W, D, L }` (D omitted/0 for match records)
+- `duel` — `{ left: { name, wins }, right: { name, wins }, draws }` (head-to-head; shown with names in the compare colours)
 - `table` — `{ columns: [{ key, format }], rows: [{ …, subject?, provisional? }] }` (rows may
   link to a subject; `provisional: true` marks the row's rating "ny")
 - `record` — `{ value, format, holders: [names], date?, matchId? }`

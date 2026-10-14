@@ -107,6 +107,66 @@
   background: var(--outcome);
 }
 
+/* Head-to-head: each side's wins in its compare colour (--side from [data-side]). */
+.duel {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.duel-score {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.duel-side {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.duel-side[data-side="B"] {
+  text-align: right;
+}
+
+.duel-name {
+  overflow: hidden;
+  color: var(--side);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-wins {
+  font-size: var(--text-stat);
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.duel-bar {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+}
+
+.duel-segment {
+  flex: var(--share) 0 0;
+  background: var(--side);
+}
+
+.duel-draws {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
 /*
  * Tables: scroll sideways on narrow screens (the page does the vertical scrolling, no nested
  * scroll). On wide screens tables fit, so the wrap stops being a scroll container and the

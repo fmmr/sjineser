@@ -129,12 +129,14 @@ export const t = {
     nemesis: { title: 'Erkefiende', description: ({ minGames }) => `Lavest seiersandel mot, minst ${minGames} spill.` },
     pairsTable: { title: 'Alle par' },
     pairVsPairs: { title: 'Mot andre par' },
-    togetherWdl: { title: 'Sammen' },
-    againstWdl: { title: 'Mot hverandre' },
+    togetherWdl: { title: 'Sammen', description: 'Spill der de var makkere: S/U/T for laget.' },
+    headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag: hvem som vant, og hvor mange som endte uavgjort.' },
   },
   /** Label cells in stat tables (format 'label'). */
   statsLabels: { streak_win: 'Seire', streak_unbeaten: 'Ubeseiret', streak_loss: 'Tap' },
-  /** Stat table headers by column key; W/D/L also label win/draw/loss counts. */
+  /** Full names for abbreviated table headers (shown as a tooltip / read by screen readers). */
+  statsColumnTitles: { W: 'Vunnet', D: 'Uavgjort', L: 'Tapt' },
+  /** Stat table headers by column key. */
   statsColumns: {
     rank: '#', player: 'Spiller', rating: 'Rating', change: 'Endring', games: 'Spill',
     partner: 'Makker', opponent: 'Motstander', pair: 'Par',
@@ -158,6 +160,8 @@ export const t = {
   },
   statsUi: {
     title: 'Statistikk',
+    draws: (n) => (n === 1 ? '1 uavgjort' : `${n} uavgjort`),
+    duel: (left, right, draws) => `${left.name} vant ${left.wins}, ${right.name} vant ${right.wins}, ${draws} uavgjort`,
     noData: 'Ikke nok data',
     provisional: 'ny',
     pair: (a, b) => `${a} & ${b}`,

@@ -11,8 +11,8 @@ test('togetherWdl: games as partners', () => {
   assert.equal(compute('togetherWdl', FACTS, compareSubject('Hans', 'Ola')), null);
 });
 
-test('againstWdl: games against each other, from the first player’s perspective', () => {
-  assert.deepEqual(compute('againstWdl', FACTS, compareSubject('Per', 'Hans')), { W: 3, D: 2, L: 5 });
-  assert.deepEqual(compute('againstWdl', FACTS, compareSubject('Hans', 'Ola')), { W: 0, D: 2, L: 3 });
-  assert.equal(compute('againstWdl', FACTS, compareSubject('Hans', 'Frode')), null);
+test('headToHead: each player’s wins against the other, plus draws', () => {
+  assert.deepEqual(compute('headToHead', FACTS, compareSubject('Per', 'Hans')), { left: { name: 'Per', wins: 3 }, right: { name: 'Hans', wins: 5 }, draws: 2 });
+  assert.deepEqual(compute('headToHead', FACTS, compareSubject('Hans', 'Ola')), { left: { name: 'Hans', wins: 0 }, right: { name: 'Ola', wins: 3 }, draws: 2 });
+  assert.equal(compute('headToHead', FACTS, compareSubject('Hans', 'Frode')), null);
 });

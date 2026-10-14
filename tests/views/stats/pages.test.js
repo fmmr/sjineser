@@ -27,7 +27,7 @@ test('compare derives from the catalog: player numbers/wdl side by side, player 
   const { sideBySide, overlay, headToHead } = deriveCompare(STATS);
   assert.deepEqual(sideBySide.map((s) => s.id), ['drawRate', 'rating', 'gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate']);
   assert.deepEqual(overlay.map((s) => s.id), ['eloChart']);
-  assert.deepEqual(headToHead.map((s) => s.id), ['togetherWdl', 'againstWdl']);
+  assert.deepEqual(headToHead.map((s) => s.id), ['togetherWdl', 'headToHead']);
 });
 
 test('a new stat shows up in compare without editing pages', () => {

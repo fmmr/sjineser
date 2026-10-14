@@ -4,7 +4,7 @@ import { isValidSubject } from './subjects.js';
 
 /**
  * Value kinds a stat can return (spec §9). Each kind has one generic widget.
- * @typedef {'number' | 'wdl' | 'table' | 'record' | 'chart'} Kind
+ * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart'} Kind
  * @typedef {'int' | 'percent' | 'rating' | 'signed' | 'decimal'} NumberFormat percent is 0–1; signed shows +/−
  * @typedef {NumberFormat | 'player' | 'pair' | 'label'} TableFormat label: an i18n key under t.statsLabels
  * Table rows: one cell per column key, plus optional `subject` (the row links to it) and
@@ -12,7 +12,7 @@ import { isValidSubject } from './subjects.js';
  */
 
 /** @type {Kind[]} */
-export const KINDS = ['number', 'wdl', 'table', 'record', 'chart'];
+export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart'];
 
 /** @type {NumberFormat[]} */
 export const NUMBER_FORMATS = ['int', 'percent', 'rating', 'signed', 'decimal'];
@@ -53,6 +53,10 @@ const VALUE_CHECKS = {
   number: ({ value, format, marker }) => isFormattedNumber(value, format) && isOptional(marker, (m) => MARKERS.includes(m)),
 
   wdl: (value) => WDL_KEYS.every((key) => isCount(value[key])),
+
+  /** Head-to-head between two named sides: each side's wins plus the draws. */
+  duel: ({ left, right, draws }) => [left, right].every((side) => isObject(side) && isName(side.name) && isCount(side.wins))
+    && isCount(draws),
 
   table: ({ columns, rows }) => isColumns(columns) && Array.isArray(rows) && rows.every((row) => isObject(row)
     && columns.every(({ key, format }) => isCell(row[key], format))

@@ -1,11 +1,12 @@
 import { renderNumber } from './number.js';
 import { renderWdl } from './wdl.js';
+import { renderDuel } from './duel.js';
 import { renderTable } from './table.js';
 import { renderRecord } from './record.js';
 import { renderChart } from './chart.js';
 
 /** One generic widget per value kind (spec §9). */
-const WIDGETS = { number: renderNumber, wdl: renderWdl, table: renderTable, record: renderRecord, chart: renderChart };
+const WIDGETS = { number: renderNumber, wdl: renderWdl, duel: renderDuel, table: renderTable, record: renderRecord, chart: renderChart };
 
 /**
  * @param {import('../../../domain/stats/registry.js').Stat} stat

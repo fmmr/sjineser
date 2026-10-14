@@ -5,6 +5,11 @@ import { statsHref, subjectPath } from '../links.js';
 import { formatValue } from './format.js';
 import { provisionalMarker, statTile } from './tile.js';
 
+/** Column header; abbreviated ones (S/U/T) carry their full name as a tooltip. */
+const header = (key) => (Object.hasOwn(t.statsColumnTitles, key)
+  ? h('abbr', { title: t.statsColumnTitles[key] }, t.statsColumns[key])
+  : t.statsColumns[key] ?? key);
+
 const LINK_FORMATS = ['player', 'pair'];
 
 /** The subject a player or pair cell stands for. */
@@ -47,7 +52,7 @@ export function tableBody({ columns, rows }, { query }) {
   return h('div', { class: 'stat-table-wrap' },
     h('table', { class: 'stat-table' },
       h('thead', {}, h('tr', {}, columns.map(({ key, format }) =>
-        h('th', { scope: 'col', class: isNumber(format) ? 'num' : null, 'data-col': key }, t.statsColumns[key] ?? key)))),
+        h('th', { scope: 'col', class: isNumber(format) ? 'num' : null, 'data-col': key }, header(key))))),
       h('tbody', {}, rows.map((row) => h('tr', {}, columns.map((column) => cell(row, column)))))));
 }
 
