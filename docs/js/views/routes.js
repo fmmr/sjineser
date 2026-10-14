@@ -2,7 +2,11 @@ import { mountHome } from './play/home.js';
 import { mountStartNight } from './play/start-night.js';
 import { mountNewMatch } from './play/new-match.js';
 import { mountMatch } from './play/match.js';
-import { mountStats } from './stats/stats.js';
+import { mountStatsOverview } from './stats/overview.js';
+import { mountStatsPlayer } from './stats/player.js';
+import { mountStatsPairs } from './stats/pairs.js';
+import { mountStatsPair } from './stats/pair.js';
+import { mountStatsCompare } from './stats/compare.js';
 import { mountAboutTeams } from './about/teams.js';
 import { mountAboutRating } from './about/rating.js';
 
@@ -13,7 +17,11 @@ export const routes = [
   ['/play/night', mountStartNight],
   ['/play/new-match', mountNewMatch],
   ['/play/match', mountMatch],
-  ['/stats', mountStats],
+  ['/stats', mountStatsOverview],
+  ['/stats/player/:name', mountStatsPlayer],
+  ['/stats/pairs', mountStatsPairs],
+  ['/stats/pair/:pair', mountStatsPair],
+  ['/stats/compare/:a/:b', mountStatsCompare],
   ['/about/teams', mountAboutTeams],
   ['/about/rating', mountAboutRating],
 ];

@@ -16,7 +16,7 @@ Mark ideas `[x]` when shipped.
 - [x] Player: streaks (win / unbeaten / loss; current and longest)
 - [x] Player: partners and opponents tables; best partner; nemesis
 - [x] Pairs table; pair W/D/L, win %, head-to-head vs other pairs
-- [ ] Compare: player stats side by side, Elo overlay, record together / against
+- [x] Compare: player stats side by side, Elo overlay, record together / against
 
 ## Ideas
 - Night winners (largest Elo gain per night)

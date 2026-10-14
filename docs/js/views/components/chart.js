@@ -78,6 +78,7 @@ export function renderLineChart(container, { series, tones = defaultTones(series
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        locale: 'nb-NO',
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { ticks: { color: muted, maxRotation: 0, autoSkipPadding: 12 }, grid: { color: grid } },

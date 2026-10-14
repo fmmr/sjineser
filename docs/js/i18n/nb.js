@@ -92,7 +92,6 @@ export const t = {
     ],
   },
 
-  statsComingSoon: 'Statistikk kommer snart.',
   /** Per stat plugin id: { title, description? }; a description may be a function of { minGames }. The stats contract test requires a title for every stat. */
   stats: {
     leaderboard: { title: 'Rangering', description: 'Rating etter siste spill i perioden, og endring i perioden.' },
@@ -130,10 +129,35 @@ export const t = {
     W: 'S', D: 'U', L: 'T', winRate: 'Seier %',
     kind: 'Rekke', current: 'Nå', longest: 'Lengst',
   },
+  /** Section headings on the stats pages. */
+  statsSections: {
+    leaderboard: 'Rangering',
+    summary: 'Oppsummering',
+    records: 'Rekorder',
+    rating: 'Rating',
+    results: 'Resultater',
+    streaks: 'Rekker',
+    people: 'Makkere og motstandere',
+    pairs: 'Par',
+    versus: 'Mot andre par',
+    sideBySide: 'Side om side',
+    overlay: 'Rating over tid',
+    headToHead: 'Sammen og mot hverandre',
+  },
   statsUi: {
+    title: 'Statistikk',
     noData: 'Ikke nok data',
     provisional: 'ny',
     pair: (a, b) => `${a} & ${b}`,
+    versus: 'mot',
+    seasonLabel: 'Periode',
+    thisSeason: 'Denne sesongen',
+    allSeasons: 'Alle sesonger',
+    season: ({ year, half }) => (half === 1 ? `Vår ${year}` : `Høst ${year}`),
+    pairsLink: 'Alle par',
+    back: '← Statistikk',
+    compareWith: 'Sammenlign med …',
+    notFound: 'Fant ikke dette i dataene.',
   },
 
   sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', exit: 'Avslutt', date: 'Dato' },

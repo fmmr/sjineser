@@ -164,3 +164,136 @@
     height: 280px;
   }
 }
+
+/* Stats pages */
+.stats-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.stats-header {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.stats-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats-title-row h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stats-filter {
+  flex: 0 1 auto;
+  color: inherit;
+  font: inherit;
+}
+
+.stats-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+}
+
+.stats-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-5);
+}
+
+.stats-links .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+}
+
+.stats-sections {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.stats-section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.stats-section h2 {
+  margin: 0;
+}
+
+/* Compare: a in team A colour (left), b in team B colour (right). */
+.compare-title {
+  overflow-wrap: anywhere;
+}
+
+.compare-name {
+  color: var(--side);
+  text-decoration: none;
+}
+
+.compare-table {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-3);
+}
+
+.compare-row .stat-title {
+  grid-column: 1 / -1;
+}
+
+.compare-head {
+  font-weight: 650;
+}
+
+.compare-head .compare-name {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+}
+
+.compare-cell {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--side);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.compare-cell .stat-value {
+  font-size: var(--text-lg);
+}
+
+.compare-cell .wdl-counts {
+  gap: var(--space-3);
+}
+
+/* Wide screens: stats use the extra width; narrow sections sit two by two. */
+@media (min-width: 900px) {
+  .app-main:has(> .stats-page) {
+    max-width: 1100px;
+  }
+
+  .stats-sections {
+    grid-template-columns: 1fr 1fr;
+    grid-auto-flow: row dense;
+    align-items: start;
+  }
+
+  .stats-section-wide {
+    grid-column: 1 / -1;
+  }
+}
