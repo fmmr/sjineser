@@ -3,17 +3,18 @@ import { h } from './components/dom.js';
 import { logoMark, tabIcon } from './components/icons.js';
 import { askForPin } from './components/pin-prompt.js';
 import { themeToggle } from './components/theme-toggle.js';
+import { sandboxToggle } from './components/sandbox-toggle.js';
 
 /**
- * Fills static shell text, sets up the home link, theme switch and sync badge.
+ * Fills static shell text, sets up the home link, test-mode and theme switches and sync badge.
  * @returns {() => void} refreshes the badge; call it on every outbox change
  */
-export function mountShell({ outbox, storage }) {
+export function mountShell({ outbox, storage, sandbox }) {
   document.querySelector('[data-text="appName"]').textContent = t.appName;
   document.querySelector('.app-logo').replaceChildren(logoMark());
   // A hash-only href keeps ?sandbox, so the logo goes home in either mode.
   document.querySelector('.app-brand').setAttribute('aria-label', t.homeLink);
-  document.querySelector('.app-actions').append(themeToggle());
+  document.querySelector('.app-actions').append(sandboxToggle({ sandbox }), themeToggle());
   document.querySelectorAll('[data-tab]').forEach((link) => {
     const { tab } = link.dataset;
     link.replaceChildren(h('span', { class: 'tab-icon' }, tabIcon(tab)), h('span', {}, t.tabs[tab]));

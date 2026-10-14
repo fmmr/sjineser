@@ -172,7 +172,7 @@ export const t = {
     notFound: 'Fant ikke dette i dataene.',
   },
 
-  sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', resetMessage: 'Testdataene genereres på nytt, og endringer i testmodus forsvinner.', exit: 'Avslutt', date: 'Dato' },
+  sandbox: { toggle: 'Testmodus', label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', resetMessage: 'Testdataene genereres på nytt, og endringer i testmodus forsvinner.', exit: 'Avslutt', date: 'Dato' },
 };
 
 const dateFormat = new Intl.DateTimeFormat('nb-NO', { day: 'numeric', month: 'short' });

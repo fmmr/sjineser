@@ -45,7 +45,7 @@ const outbox = createOutbox({
 store = createStore({ storage, outbox, api });
 const actions = createActions({ store, outbox, today: clock.today });
 
-updateBadge = mountShell({ outbox, storage });
+updateBadge = mountShell({ outbox, storage, sandbox });
 if (sandbox) {
   sandboxModules[1].mountSandboxBar({
     clock,

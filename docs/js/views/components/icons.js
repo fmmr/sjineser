@@ -78,3 +78,9 @@ const THEME_ICONS = {
 
 /** @param {'dark' | 'light'} theme @returns {SVGElement} */
 export const themeIcon = (theme) => THEME_ICONS[theme]();
+
+/** Sandbox switch glyph: a test tube. */
+export const sandboxIcon = () => svg([
+  svgEl('path', { d: 'M9 3h6M10 3v11.5a2 2 0 0 0 4 0V3', ...stroke }),
+  svgEl('path', { d: 'M10 10h4', ...stroke }),
+]);
