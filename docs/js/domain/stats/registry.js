@@ -8,6 +8,21 @@ import { longestDrawStreak } from './catalog/longestDrawStreak.js';
 import { cleanSweeps } from './catalog/cleanSweeps.js';
 import { comebacks } from './catalog/comebacks.js';
 import { biggestUpset } from './catalog/biggestUpset.js';
+import { rating } from './catalog/rating.js';
+import { eloChart } from './catalog/eloChart.js';
+import { gamesWdl } from './catalog/gamesWdl.js';
+import { gameWinRate } from './catalog/gameWinRate.js';
+import { matchesWdl } from './catalog/matchesWdl.js';
+import { matchWinRate } from './catalog/matchWinRate.js';
+import { streaks } from './catalog/streaks.js';
+import { partners } from './catalog/partners.js';
+import { opponents } from './catalog/opponents.js';
+import { bestPartner } from './catalog/bestPartner.js';
+import { nemesis } from './catalog/nemesis.js';
+import { pairsTable } from './catalog/pairsTable.js';
+import { pairVsPairs } from './catalog/pairVsPairs.js';
+import { togetherWdl } from './catalog/togetherWdl.js';
+import { againstWdl } from './catalog/againstWdl.js';
 
 /**
  * The catalog of stat plugins (spec §9). Adding a stat = one file in catalog/, one import
@@ -23,6 +38,8 @@ import { biggestUpset } from './catalog/biggestUpset.js';
 export const STATS = [
   leaderboard, nightsCount, matchesCount, gamesCount, drawRate,
   longestMatch, longestDrawStreak, cleanSweeps, comebacks, biggestUpset,
+  rating, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, streaks,
+  partners, opponents, bestPartner, nemesis, pairsTable, pairVsPairs, togetherWdl, againstWdl,
 ];
 
 /** @param {string} id @returns {Stat | null} */

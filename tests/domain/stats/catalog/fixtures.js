@@ -1,6 +1,9 @@
+import assert from 'node:assert/strict';
 import { buildFacts } from '../../../../docs/js/domain/stats/facts.js';
 import { makeMatchId } from '../../../../docs/js/domain/match.js';
 import { dataset } from '../../../helpers.js';
+import { statById } from '../../../../docs/js/domain/stats/registry.js';
+import { isValidValue } from '../../../../docs/js/domain/stats/kinds.js';
 
 export const ALL = { kind: 'all' };
 
@@ -41,3 +44,12 @@ export const factsOf = (nights, filter = ALL) => buildFacts(history(nights), fil
 export const HF_TP = 'Hans Frode - Tor Per';
 export const HT_FP = 'Hans Tor - Frode Per';
 export const HP_FT = 'Hans Per - Frode Tor';
+
+/** Computes a registered stat and checks a non-null value against its kind. */
+export function compute(id, facts, subject) {
+  const stat = statById(id);
+  assert.ok(stat, `stat ${id} is registered`);
+  const value = stat.compute(facts, subject);
+  if (value !== null) assert.ok(isValidValue(stat.kind, value), `${id}: ${JSON.stringify(value)}`);
+  return value;
+}

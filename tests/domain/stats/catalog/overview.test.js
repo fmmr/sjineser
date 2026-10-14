@@ -1,9 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { statById } from '../../../../docs/js/domain/stats/registry.js';
 import { overallSubject, pairSubject, playerSubject } from '../../../../docs/js/domain/stats/subjects.js';
-import { isValidValue } from '../../../../docs/js/domain/stats/kinds.js';
-import { HF_TP, factsOf } from './fixtures.js';
+import { HF_TP, compute as computeStat, factsOf } from './fixtures.js';
 
 const OVERALL = overallSubject();
 const N1 = '2026-09-02';
@@ -14,14 +12,7 @@ const AUTUMN = { kind: 'season', year: 2026, half: 2 };
 const SPRING_FILTER = { kind: 'season', year: 2026, half: 1 };
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} ≉ ${expected}`);
 
-/** Computes a stat and checks the value against its kind. */
-function compute(id, facts, subject = OVERALL) {
-  const stat = statById(id);
-  assert.ok(stat, `stat ${id} is registered`);
-  const value = stat.compute(facts, subject);
-  if (value !== null) assert.ok(isValidValue(stat.kind, value), `${id}: ${JSON.stringify(value)}`);
-  return value;
-}
+const compute = (id, facts, subject = OVERALL) => computeStat(id, facts, subject);
 
 const EMPTY = factsOf([]);
 

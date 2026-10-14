@@ -96,3 +96,27 @@ export const wdlColumns = (key, format) => [
   { key: 'W', format: 'int' }, { key: 'D', format: 'int' }, { key: 'L', format: 'int' },
   { key: 'winRate', format: 'percent' },
 ];
+
+/** The side a player or pair played on in a match, or null. */
+function sideOf(match, subject) {
+  const has = (side) => (subject.type === 'player'
+    ? match[side].includes(subject.name)
+    : subject.names.every((name) => match[side].includes(name)));
+  return has('A') ? 'A' : has('B') ? 'B' : null;
+}
+
+/**
+ * Finished matches of a player, or of a pair playing as partners, won and lost.
+ * Unfinished (abandoned or ongoing) matches never count.
+ * @param {Facts} facts
+ * @param {import('./subjects.js').Subject} subject player or pair
+ * @returns {{ won: number, lost: number }}
+ */
+export function subjectMatches(facts, subject) {
+  const totals = { won: 0, lost: 0 };
+  for (const match of facts.matches) {
+    const side = match.complete ? sideOf(match, subject) : null;
+    if (side) totals[side === match.winner ? 'won' : 'lost'] += 1;
+  }
+  return totals;
+}

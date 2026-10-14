@@ -1,3 +1,5 @@
+import { MIN_GAMES_TOGETHER } from '../domain/stats/constants.js';
+
 /** All user-visible Norwegian text. */
 export const t = {
   appName: 'Sjineser',
@@ -104,7 +106,24 @@ export const t = {
     cleanSweeps: { title: 'Rene seire (3–0)', description: 'Kamper vunnet 3–0 uten uavgjort.' },
     comebacks: { title: 'Comebacks (0–2 → 3–2)', description: 'Kamper vunnet 3–2 etter å ha ligget under 0–2.' },
     biggestUpset: { title: 'Største overraskelse', description: 'Største forskjell i lagrating før spillet, vunnet av det svakeste laget.' },
+    rating: { title: 'Rating' },
+    eloChart: { title: 'Rating over tid' },
+    gamesWdl: { title: 'Spill' },
+    gameWinRate: { title: 'Seier i spill' },
+    matchesWdl: { title: 'Kamper', description: 'Bare ferdigspilte kamper.' },
+    matchWinRate: { title: 'Seier i kamper', description: 'Bare ferdigspilte kamper.' },
+    streaks: { title: 'Rekker' },
+    partners: { title: 'Makkere' },
+    opponents: { title: 'Motstandere' },
+    bestPartner: { title: 'Beste makker', description: `Høyest seiersandel, minst ${MIN_GAMES_TOGETHER} spill sammen.` },
+    nemesis: { title: 'Erkefiende', description: `Lavest seiersandel mot, minst ${MIN_GAMES_TOGETHER} spill.` },
+    pairsTable: { title: 'Alle par' },
+    pairVsPairs: { title: 'Mot andre par' },
+    togetherWdl: { title: 'Sammen' },
+    againstWdl: { title: 'Mot hverandre' },
   },
+  /** Label cells in stat tables (format 'label'). */
+  statsLabels: { streak_win: 'Seire', streak_unbeaten: 'Ubeseiret', streak_loss: 'Tap' },
 
   sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', exit: 'Avslutt', date: 'Dato' },
 };

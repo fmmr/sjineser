@@ -11,11 +11,11 @@ Mark ideas `[x]` when shipped.
 - [x] Record: clean sweeps (3–0 without draws)
 - [x] Record: comebacks (0–2 → 3–2)
 - [x] Record: biggest upset
-- [ ] Player: Elo over time
-- [ ] Player: games W/D/L, win %; matches W/L, win %; draw rate
-- [ ] Player: streaks (win / unbeaten / loss; current and longest)
-- [ ] Player: partners and opponents tables; best partner; nemesis
-- [ ] Pairs table; pair W/D/L, win %, head-to-head vs other pairs
+- [x] Player: Elo over time
+- [x] Player: games W/D/L, win %; matches W/L, win %; draw rate
+- [x] Player: streaks (win / unbeaten / loss; current and longest)
+- [x] Player: partners and opponents tables; best partner; nemesis
+- [x] Pairs table; pair W/D/L, win %, head-to-head vs other pairs
 - [ ] Compare: player stats side by side, Elo overlay, record together / against
 
 ## Ideas
