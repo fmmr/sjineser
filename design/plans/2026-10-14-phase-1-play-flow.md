@@ -1632,7 +1632,8 @@ const HANDLERS = {
       const same = SEATS.every((seat, i) => existing.value[seat] === seats[i]);
       return same ? done('noop') : fail('conflict', 'Match exists with other players');
     }
-    if (!MATCH_ID.test(payload.matchId) || seats.some((s) => !s) || new Set(seats).size !== 4) {
+    const validId = MATCH_ID.test(payload.matchId) && payload.matchId.split('#')[0] === payload.date;
+    if (!validId || seats.some((s) => !s) || new Set(seats).size !== 4) {
       return fail('invalid', 'Invalid match');
     }
     append('Matches', [payload.matchId, payload.date].concat(seats));
@@ -1641,7 +1642,7 @@ const HANDLERS = {
 
   addGame({ matchId, gameNo, result, timestamp }) {
     const number = Number(gameNo);
-    if (!RESULTS.includes(result) || !(number >= 1)) return fail('invalid', 'Invalid game');
+    if (!RESULTS.includes(result) || !Number.isInteger(number) || number < 1) return fail('invalid', 'Invalid game');
     if (!readTab('Matches').some((r) => r.value.matchId === matchId)) return fail('invalid', 'Unknown match');
     const existing = readTab('Games').find((r) => r.value.matchId === matchId && r.value.gameNo === number);
     if (existing) {

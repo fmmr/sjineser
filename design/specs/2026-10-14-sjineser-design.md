@@ -86,7 +86,8 @@ match), seasons, all stats.
 **Latest match** = the highest-numbered match of the current night.
 **Current match** = the latest match, *if* it is incomplete; otherwise there is none. **Abandoning** a match is implicit: starting the
 next match leaves it incomplete. If the abandoned match has 0 games it is deleted
-(`deleteMatch`) instead.
+instead. Its number is reused only if its `startMatch` was never sent; otherwise a
+`deleteMatch` is queued and the new match takes the next number (gaps are fine).
 
 **Canonical game order** (used by Elo, streaks, records — everywhere): night date,
 then numeric match number (parsed from `matchId`; never a string sort, `#10` > `#2`),
@@ -215,9 +216,10 @@ Bottom tab bar: **Spill** (Play) and **Statistikk** (Stats). Hash routes; links 
    rule and constant definitions in `domain/`.
 
 Undo acts on the **latest match** (§3) — including a just-completed one, so a
-mis-tapped winning game can be undone — and removes its last game. If that op is still queued and
-**not in flight**, it is removed from the outbox; otherwise (sent or in flight) a
-`deleteGame` is enqueued. With no games, undo removes the match itself the same way.
+mis-tapped winning game can be undone — and removes its last game. If that op has
+**never been sent** (the outbox persists a `sent` flag before the first attempt), it is
+removed from the outbox; otherwise — even if the reply was lost — a `deleteGame` is
+enqueued. With no games, undo removes the match itself the same way.
 
 ## 7. Team proposal
 
@@ -287,6 +289,7 @@ screens. Charts per §11.
 - **Optimistic UI + outbox:** every action is applied locally at once and queued in
   `localStorage`. Input is never lost to network errors.
 - **Strictly serial flushing:** one request in flight at a time, in queue order.
+  Requests time out after 15 s and count as network errors (retried).
   Triggers: enqueue, `online`, `visibilitychange`, and backoff timer. An unsynced
   badge shows the queue length.
 - **Cascade on drop:** when an op is dropped (`conflict` / `invalid`), every later
