@@ -79,12 +79,12 @@ find-and-replace).
 `result` ∈ `A`, `B`, `D`. `timestamp` is set by the client when the result is
 entered (informational only; never used for ordering).
 
-**Derived, never stored:** match completion and score, current night (latest Nights
-row), current match (see below), sit-outs (players on the night roster but not in a
+**Derived, never stored:** match completion and score, current night (the Nights
+row with the latest date), latest match and current match (see below), sit-outs (players on the night roster but not in a
 match), seasons, all stats.
 
-**Current match** = the highest-numbered match of the current night, *if* it is
-incomplete; otherwise there is none. **Abandoning** a match is implicit: starting the
+**Latest match** = the highest-numbered match of the current night.
+**Current match** = the latest match, *if* it is incomplete; otherwise there is none. **Abandoning** a match is implicit: starting the
 next match leaves it incomplete. If the abandoned match has 0 games it is deleted
 (`deleteMatch`) instead.
 
@@ -92,7 +92,7 @@ next match leaves it incomplete. If the abandoned match has 0 games it is delete
 then numeric match number (parsed from `matchId`; never a string sort, `#10` > `#2`),
 then `gameNo`. The domain layer exposes one sort function for this.
 
-**Player names** are trimmed, must not contain commas (Nights joins them with `, `),
+**Player names** are trimmed, must be non-empty, must not contain commas (Nights joins them with `, `),
 and are unique case-insensitively. Enforced in both UI and `addPlayer`.
 
 **Sheet hygiene** (enforced by `setup()` and the script):
@@ -116,8 +116,8 @@ its format is known. Not part of the first version.
 
 | Method | Action | Payload | Behaviour |
 |---|---|---|---|
-| GET | — | — | Returns `{ players, nights, matches, games }` as JSON. |
-| POST | `addPlayer` | `{ name }` | `noop` if exists (case-insensitive); `invalid` if name breaks the rules. |
+| GET | — | — | Returns the envelope with `data: { players, nights, matches, games }`. |
+| POST | `addPlayer` | `{ name }` | `noop` if exists (case-insensitive); `invalid` if name breaks the rules. `data.name` returns the canonical stored name, which the client adopts. |
 | POST | `startNight` | `{ date, players }` | `noop` if identical night exists; `conflict` if date exists with a different roster. |
 | POST | `startMatch` | `{ matchId, date, A1, A2, B1, B2 }` | `noop` if identical; `conflict` if `matchId` exists with different players. |
 | POST | `addGame` | `{ matchId, gameNo, result, timestamp }` | `noop` if `(matchId, gameNo)` exists with the same result; `conflict` if different result; `invalid` if the match does not exist. |
@@ -132,7 +132,7 @@ its format is known. Not part of the first version.
 - Every write is idempotent, keyed on its natural key, so the outbox can retry freely.
 
 **Response envelope.** Apps Script cannot set HTTP status codes (every reply is 200),
-so outcome is carried in the body:
+so outcome is carried in the body. GET and POST use the same envelope:
 
 ```json
 { "ok": true,  "result": "created" | "noop", "data": { … } }
@@ -153,7 +153,7 @@ so outcome is carried in the body:
 index.html            markup shell only — no inline CSS or JS
 manifest.webmanifest  PWA manifest
 sw.js                 service worker: caches the app shell
-css/                  base.css, layout.css, components.css, views/*.css
+css/                  tokens.css, base.css, layout.css, components.css, views/*.css
 js/
   main.js             bootstraps app, router
   config.js           Apps Script URL and other constants
@@ -207,7 +207,8 @@ Bottom tab bar: **Spill** (Play) and **Statistikk** (Stats). Hash routes; links 
 6. **About** — "Slik foreslås lag" and "Slik fungerer rating", generated from the
    rule and constant definitions in `domain/`.
 
-Undo removes the last game of the current match. If that op is still queued and
+Undo acts on the **latest match** (§3) — including a just-completed one, so a
+mis-tapped winning game can be undone — and removes its last game. If that op is still queued and
 **not in flight**, it is removed from the outbox; otherwise (sent or in flight) a
 `deleteGame` is enqueued. With no games, undo removes the match itself the same way.
 
@@ -282,8 +283,9 @@ screens. Charts per §11.
   Triggers: enqueue, `online`, `visibilitychange`, and backoff timer. An unsynced
   badge shows the queue length.
 - **Cascade on drop:** when an op is dropped (`conflict` / `invalid`), every later
-  queued op that depends on it is dropped too — ops on the same `matchId` for a
-  match op, ops on the same night date (its matches and games) for a night op.
+  queued op that depends on it is dropped too: dropping any op on a `matchId`
+  (`startMatch`, `addGame`, `deleteGame`, `deleteMatch`) drops all later ops on that
+  `matchId`; dropping a night op drops all later ops for that night date.
   Example: phone 1 started match #2 offline and logged games, but phone 2 had
   already started #2 with other teams → phone 1's `startMatch` and its `addGame`s are
   all dropped, a toast says "Noen andre startet kamp 2", and the app refetches.
