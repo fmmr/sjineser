@@ -8,3 +8,44 @@
 .rule-list p {
   margin-top: var(--space-1);
 }
+
+/* About page: links as a hairline list; counts reuse the stat tiles (stats.css, loaded after this file). */
+.about-links {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  list-style: none;
+}
+
+.about-links li {
+  display: grid;
+  padding: var(--space-2) var(--space-4);
+}
+
+.about-links li + li {
+  border-top: 1px solid var(--border);
+}
+
+.about-links .link {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+}
+
+.about-links .muted {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.stat-value.about-date {
+  font-size: var(--text-lg);
+  letter-spacing: -0.02em;
+}
+
+.stat-value.about-version {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-lg);
+  letter-spacing: 0;
+}

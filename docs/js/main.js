@@ -63,7 +63,7 @@ if (sandbox) {
 const router = createRouter({
   root: document.getElementById('view'),
   routes,
-  ctx: { store, actions, navigate, clock, tapCooldownMs: sandbox ? SANDBOX_TAP_COOLDOWN_MS : TAP_COOLDOWN_MS },
+  ctx: { store, actions, navigate, clock, sandbox, tapCooldownMs: sandbox ? SANDBOX_TAP_COOLDOWN_MS : TAP_COOLDOWN_MS },
   onRoute: markActiveTab,
 });
 router.start();

@@ -98,6 +98,33 @@ export const t = {
       `Med ${SCALE} poeng i forskjell er det sterke laget forventet å vinne omtrent 10 av 11 spill.`,
       `De første ${PROVISIONAL_GAMES} spillene er ratingen foreløpig og merket «ny».`,
     ],
+    aboutLink: 'Om Sjineser',
+    aboutTitle: 'Om Sjineser',
+    aboutIntro: ({ winsNeeded }) => [
+      'Sjineser registrerer kortspillet sjineser: to mot to, kamp etter kamp, og regner ut statistikk og rating.',
+      `En kamp vinnes av laget som først vinner ${winsNeeded} spill; spill kan ende uavgjort. Lagene byttes mellom kampene, og ratingen (Elo) oppdateres etter hvert spill.`,
+    ],
+    linksHeading: 'Lenker',
+    repoLink: 'Kildekoden på GitHub',
+    sheetLink: 'Dataene i Google Regneark',
+    sheetNote: 'Bare de som har fått tilgang, kan åpne regnearket.',
+    sandboxEnter: 'Prøv testmodus',
+    sandboxLeave: 'Avslutt testmodus',
+    sandboxNote: 'Testmodus bruker oppdiktede data og lagrer ingenting i regnearket.',
+    dataHeading: 'Data',
+    dataLabels: {
+      players: 'Spillere', nights: 'Kvelder', matches: 'Kamper', games: 'Spill',
+      firstDate: 'Første kveld', latestDate: 'Siste kveld',
+    },
+    codeHeading: 'Kode',
+    codeLabels: {
+      files: 'Filer i appen', js: 'Linjer JS', css: 'Linjer CSS', html: 'Linjer HTML',
+      appsScript: 'Linjer Apps Script', testFiles: 'Testfiler', testCases: 'Tester',
+      stats: 'Statistikk-moduler', kinds: 'Visningstyper',
+    },
+    versionHeading: 'Versjon',
+    versionLabel: 'Appversjon',
+    none: '—',
   },
 
   /**

@@ -14,7 +14,8 @@ export function mountStatsOverview(root, ctx) {
       back: false,
       extra: [h('nav', { class: 'stats-links' },
         h('a', { class: 'link', href: statsHref(PAIRS_PATH, ctx.query) }, t.statsUi.pairsLink),
-        h('a', { class: 'link', href: '#/about/rating' }, t.about.ratingLink))],
+        h('a', { class: 'link', href: '#/about/rating' }, t.about.ratingLink),
+        h('a', { class: 'link', href: '#/about' }, t.about.aboutLink))],
     }, ctx, data));
     return renderPage(page, PAGES.overview, data.facts, overallSubject(), ctx);
   });

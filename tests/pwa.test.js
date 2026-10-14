@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { canRegisterServiceWorker, registerServiceWorker } from '../docs/js/pwa.js';
-import { computeVersion, isShippable, shippableFiles } from '../scripts/stamp-sw.mjs';
+import {
+  ABOUT_DATA, codeStats, computeVersion, countLines, isShippable, renderAboutData, shippableFiles,
+} from '../scripts/stamp-sw.mjs';
 
 const SW_SOURCE = readFileSync(new URL('../docs/sw.js', import.meta.url), 'utf8');
 const SCOPE = 'https://sjineser.rodland.no/';
@@ -118,9 +120,21 @@ test('shippable files: everything under docs/ except the worker, CNAME, dotfiles
   const files = shippableFiles();
   for (const path of ['index.html', 'manifest.webmanifest', 'favicon.ico', 'js/theme-init.js', 'js/main.js',
     'js/sandbox/backend.js', 'js/views/sandbox-bar.js', 'vendor/chart.js/4.5.1/chart.umd.min.js',
-    'css/components.css', 'icons/apple-touch-icon.png']) {
+    'css/components.css', 'icons/apple-touch-icon.png', ABOUT_DATA]) {
     assert.ok(files.includes(path), path);
   }
+});
+
+test('countLines: newline-separated, a final newline does not add a line', () => {
+  assert.equal(countLines(''), 0);
+  assert.equal(countLines('a'), 1);
+  assert.equal(countLines('a\nb\n'), 2);
+  assert.equal(countLines('a\n\nb'), 3);
+});
+
+test('js/about-data.js holds the code statistics the stamp script would generate now', () => {
+  const source = readFileSync(new URL(`../docs/${ABOUT_DATA}`, import.meta.url), 'utf8');
+  assert.equal(source, renderAboutData(codeStats()), 'code statistics are stale: run `npm run stamp` and commit docs/js/about-data.js');
 });
 
 test('PRECACHE in sw.js lists exactly the shippable files on disk', () => {

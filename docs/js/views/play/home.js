@@ -18,7 +18,8 @@ export function mountHome(root, { store, navigate, clock }) {
         night && nightCard(night),
         !night && (store.isLoaded() || store.hasTried() ? h('p', { class: 'muted' }, t.noNights) : nightCardSkeleton()),
         h('button', { class: 'btn', type: 'button', disabled: startedToday, onclick: () => navigate('/play/night') }, t.newNight),
-        startedToday && h('p', { class: 'muted center' }, t.nightAlreadyStarted)),
+        startedToday && h('p', { class: 'muted center' }, t.nightAlreadyStarted),
+        h('p', { class: 'center home-about' }, h('a', { href: '#/about' }, t.about.aboutLink))),
     );
   }
 

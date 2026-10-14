@@ -9,3 +9,9 @@ export const TAP_COOLDOWN_MS = 800;
 
 /** Shorter in sandbox mode, where test data is entered quickly on purpose. */
 export const SANDBOX_TAP_COOLDOWN_MS = 150;
+
+/** Source code (about page). */
+export const REPO_URL = 'https://github.com/fmmr/sjineser/';
+
+/** The Google Sheet holding the data (about page); opens only for people it is shared with. */
+export const SHEET_URL = 'https://docs.google.com/spreadsheets/d/170on0ejd0VDtE9G3fg8fNirwNvpRsbzm6odd-EuA7Wk/edit';

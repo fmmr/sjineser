@@ -9,6 +9,7 @@ import { mountStatsPair } from './stats/pair.js';
 import { mountStatsCompare } from './stats/compare.js';
 import { mountAboutTeams } from './about/teams.js';
 import { mountAboutRating } from './about/rating.js';
+import { mountAbout } from './about/about.js';
 
 /** @type {import('../routing.js').Routes} */
 export const routes = [
@@ -22,6 +23,7 @@ export const routes = [
   ['/stats/pairs', mountStatsPairs],
   ['/stats/pair/:pair', mountStatsPair],
   ['/stats/compare/:a/:b', mountStatsCompare],
+  ['/about', mountAbout],
   ['/about/teams', mountAboutTeams],
   ['/about/rating', mountAboutRating],
 ];
