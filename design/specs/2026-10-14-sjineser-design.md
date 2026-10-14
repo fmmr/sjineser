@@ -29,7 +29,7 @@ Browser (GitHub Pages, static)  ──HTTPS/JSON──▶  Apps Script web app  
 ```
 
 - **Frontend:** plain HTML, CSS and JavaScript ES modules. No build step, no runtime
-  dependencies. JSDoc type annotations. Served by GitHub Pages from the repo.
+  dependencies. JSDoc type annotations. Served by GitHub Pages from the `docs/` folder.
 - **Backend:** a standalone Google Apps Script project, deployed as a web app
   ("execute as me, anyone can access"). It locates the sheet by an ID stored in
   Script Properties — never in code. Pushed from the repo with `clasp`.
@@ -150,35 +150,38 @@ so outcome is carried in the body. GET and POST use the same envelope:
 ## 5. Frontend structure
 
 ```
-index.html            markup shell only — no inline CSS or JS
-manifest.webmanifest  PWA manifest
-sw.js                 service worker: caches the app shell
-css/                  tokens.css, base.css, layout.css, components.css, views/*.css
-js/
-  main.js             bootstraps app, router
-  config.js           Apps Script URL and other constants
-  router.js           hash routing (#/play, #/stats/players/Hans, …)
-  api/                the only code that knows the backend exists
-    client.js         fetch wrapper (GET all, POST action)
-  state/              persistence on the phone
-    cache.js          last fetched dataset
-    outbox.js         queued writes, retry, unsynced count
-    store.js          dataset = cache + pending outbox ops applied optimistically
-  domain/             pure functions; no DOM, no network, no storage
-    match.js          score, completion, current night/match, sit-outs
-    season.js         season of a date, season ranges
-    elo.js            rating engine + documented constants
-    proposal.js       team proposal rules (as data) + engine
-    stats/            one module per area: overall, records, player, pairs, compare
-  views/              rendering only; read from store, call domain, dispatch actions
-    play/             home, start-night, new-match, match
-    stats/            overall, players, player, pairs, pair, compare
-    about/            how-teams-are-proposed, how-ratings-work
-    components/       shared UI pieces (chips, tables, toasts, chart.js wrapper)
-  i18n/nb.js          all user-visible Norwegian text
-vendor/               pinned third-party ES modules (Chart.js)
-apps-script/          Code.gs, appsscript.json, .clasp.json
-tests/                node --test suites for domain/ (and state/ where pure)
+docs/                   the published site (GitHub Pages: branch main, folder /docs)
+  CNAME                 sjineser.rodland.no
+  index.html            markup shell only — no inline CSS or JS
+  manifest.webmanifest  PWA manifest
+  sw.js                 service worker: caches the app shell
+  css/                  tokens.css, base.css, layout.css, components.css, views/*.css
+  js/
+    main.js             bootstraps app, router
+    config.js           Apps Script URL and other constants
+    router.js           hash routing (#/play, #/stats/players/Hans, …)
+    api/                the only code that knows the backend exists
+      client.js         fetch wrapper (GET all, POST action)
+    state/              persistence on the phone
+      cache.js          last fetched dataset
+      outbox.js         queued writes, retry, unsynced count
+      store.js          dataset = cache + pending outbox ops applied optimistically
+    domain/             pure functions; no DOM, no network, no storage
+      match.js          score, completion, current night/match, sit-outs
+      season.js         season of a date, season ranges
+      elo.js            rating engine + documented constants
+      proposal.js       team proposal rules (as data) + engine
+      stats/            one module per area: overall, records, player, pairs, compare
+    views/              rendering only; read from store, call domain, dispatch actions
+      play/             home, start-night, new-match, match
+      stats/            overall, players, player, pairs, pair, compare
+      about/            how-teams-are-proposed, how-ratings-work
+      components/       shared UI pieces (chips, tables, toasts, chart.js wrapper)
+    i18n/nb.js          all user-visible Norwegian text
+  vendor/               pinned third-party ES modules (Chart.js)
+apps-script/            Code.gs, appsscript.json, .clasp.json — not published
+tests/                  node --test suites for docs/js/domain (and state/ where pure)
+design/                 specs and plans — not published
 ```
 
 Rules:
@@ -334,7 +337,12 @@ screens. Charts per §11.
 
 ## 14. Deployment
 
-- GitHub repo; GitHub Pages serves the repo root from `main`.
+- GitHub repo; GitHub Pages serves branch `main`, folder `/docs` (no Actions needed).
+- Custom domain `sjineser.rodland.no`: `docs/CNAME` in the repo, a DNS CNAME record
+  `sjineser` → `<github-user>.github.io` at rodland.no, and "Enforce HTTPS" in the
+  Pages settings.
+- All asset paths, the manifest scope and the service worker scope are relative, so
+  the app works both on the custom domain and on `<user>.github.io/<repo>/`.
 - Apps Script pushed with `clasp`, deployed as a web app; URL in `js/config.js`.
 - Script Properties: `SHEET_ID`, `PIN`.
 
