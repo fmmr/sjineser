@@ -1,5 +1,3 @@
-import { MIN_GAMES_TOGETHER } from '../domain/stats/constants.js';
-
 /** All user-visible Norwegian text. */
 export const t = {
   appName: 'Sjineser',
@@ -95,7 +93,7 @@ export const t = {
   },
 
   statsComingSoon: 'Statistikk kommer snart.',
-  /** Per stat plugin id: { title, description? }. The stats contract test requires a title for every stat. */
+  /** Per stat plugin id: { title, description? }; a description may be a function of { minGames }. The stats contract test requires a title for every stat. */
   stats: {
     leaderboard: { title: 'Rangering', description: 'Rating etter siste spill i perioden, og endring i perioden.' },
     nightsCount: { title: 'Kvelder' },
@@ -116,8 +114,8 @@ export const t = {
     streaks: { title: 'Rekker' },
     partners: { title: 'Makkere' },
     opponents: { title: 'Motstandere' },
-    bestPartner: { title: 'Beste makker', description: `Høyest seiersandel, minst ${MIN_GAMES_TOGETHER} spill sammen.` },
-    nemesis: { title: 'Erkefiende', description: `Lavest seiersandel mot, minst ${MIN_GAMES_TOGETHER} spill.` },
+    bestPartner: { title: 'Beste makker', description: ({ minGames }) => `Høyest seiersandel, minst ${minGames} spill sammen.` },
+    nemesis: { title: 'Erkefiende', description: ({ minGames }) => `Lavest seiersandel mot, minst ${minGames} spill.` },
     pairsTable: { title: 'Alle par' },
     pairVsPairs: { title: 'Mot andre par' },
     togetherWdl: { title: 'Sammen' },
@@ -125,6 +123,18 @@ export const t = {
   },
   /** Label cells in stat tables (format 'label'). */
   statsLabels: { streak_win: 'Seire', streak_unbeaten: 'Ubeseiret', streak_loss: 'Tap' },
+  /** Stat table headers by column key; W/D/L also label win/draw/loss counts. */
+  statsColumns: {
+    rank: '#', player: 'Spiller', rating: 'Rating', change: 'Endring', games: 'Spill',
+    partner: 'Makker', opponent: 'Motstander', pair: 'Par',
+    W: 'S', D: 'U', L: 'T', winRate: 'Seier %',
+    kind: 'Rekke', current: 'Nå', longest: 'Lengst',
+  },
+  statsUi: {
+    noData: 'Ikke nok data',
+    provisional: 'ny',
+    pair: (a, b) => `${a} & ${b}`,
+  },
 
   sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', exit: 'Avslutt', date: 'Dato' },
 };
