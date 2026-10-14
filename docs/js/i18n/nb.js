@@ -9,6 +9,7 @@ export const t = {
   nightOf: (date) => `Kveld ${date}`,
   continueNight: 'Fortsett kvelden',
   newNight: 'Ny kveld',
+  nightAlreadyStarted: 'Kvelden i dag er allerede startet.',
 
   choosePlayers: 'Hvem spiller i kveld?',
   newPlayerPlaceholder: 'Ny spiller',

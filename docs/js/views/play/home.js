@@ -16,7 +16,8 @@ export function mountHome(root, { store, navigate }) {
     root.replaceChildren(
       h('section', { class: 'stack' },
         night ? nightCard(night) : h('p', { class: 'muted' }, store.isLoaded() || store.hasTried() ? t.noNights : t.loading),
-        h('button', { class: 'btn', type: 'button', disabled: startedToday, onclick: () => navigate('/play/night') }, t.newNight)),
+        h('button', { class: 'btn', type: 'button', disabled: startedToday, onclick: () => navigate('/play/night') }, t.newNight),
+        startedToday && h('p', { class: 'muted center' }, t.nightAlreadyStarted)),
     );
   }
 
