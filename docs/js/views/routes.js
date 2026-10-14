@@ -6,13 +6,14 @@ import { mountStats } from './stats/stats.js';
 import { mountAboutTeams } from './about/teams.js';
 import { mountAboutRating } from './about/rating.js';
 
-export const routes = {
-  '/': mountHome,
-  '/play': mountHome,
-  '/play/night': mountStartNight,
-  '/play/new-match': mountNewMatch,
-  '/play/match': mountMatch,
-  '/stats': mountStats,
-  '/about/teams': mountAboutTeams,
-  '/about/rating': mountAboutRating,
-};
+/** @type {import('../routing.js').Routes} */
+export const routes = [
+  ['/', mountHome],
+  ['/play', mountHome],
+  ['/play/night', mountStartNight],
+  ['/play/new-match', mountNewMatch],
+  ['/play/match', mountMatch],
+  ['/stats', mountStats],
+  ['/about/teams', mountAboutTeams],
+  ['/about/rating', mountAboutRating],
+];
