@@ -5,8 +5,8 @@ import { currentNight } from '../../domain/match.js';
 export function mountHome(root, { store, navigate, clock }) {
   const nightCard = (night) =>
     h('div', { class: 'card stack' },
-      h('p', { class: 'muted' }, t.nightOf(formatDate(night.date))),
-      h('p', {}, night.players.join(', ')),
+      h('p', { class: 'eyebrow' }, t.nightOf(formatDate(night.date))),
+      h('p', { class: 'night-players' }, night.players.join(', ')),
       h('button', { class: 'btn btn-primary', type: 'button', onclick: () => navigate('/play/match') }, t.continueNight));
 
   function update() {

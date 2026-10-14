@@ -72,7 +72,7 @@ export function mountMatch(root, { store, actions, navigate, tapCooldownMs = TAP
       h('section', { class: 'match stack' },
         h('h1', {}, t.matchTitle(parseMatchId(match.matchId).number)),
         h('div', { class: 'teams' }, teamPanel(match, 'A', totals.A, winner), teamPanel(match, 'B', totals.B, winner)),
-        h('p', { class: 'muted center' }, t.draws(totals.D)),
+        h('p', { class: 'draws center' }, t.draws(totals.D)),
         h('ol', { class: 'sequence' }, games.map((g) => h('li', { 'data-side': g.result }, t.resultShort[g.result]))),
         winner ? winnerBanner(match, winner, totals) : resultButtons(),
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: undo }, t.undo)),

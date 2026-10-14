@@ -1,22 +1,35 @@
+/*
+ * Design tokens. Dark is the default; light applies only when the device asks for it.
+ * Surfaces are close steps on a cool near-black; borders are low-alpha hairlines.
+ * Team A (cool blue) and team B (warm sand) differ in hue and lightness, so they stay
+ * apart for colour-blind eyes too.
+ */
 :root {
   color-scheme: dark;
 
-  --bg: #101317;
-  --surface: #181c22;
-  --surface-raised: #20262e;
-  --border: #2b323c;
-  --text: #e9edf1;
-  --text-muted: #8f9aa6;
+  --bg: #0b0d10;
+  --surface: #12151a;
+  --surface-raised: #1a1e24;
+  --surface-pressed: #22272f;
+  --border: rgb(255 255 255 / 0.075);
+  --border-strong: rgb(255 255 255 / 0.13);
+  --highlight: rgb(255 255 255 / 0.04);
+  --glass: rgb(11 13 16 / 0.72);
+  --text: #eceff3;
+  --text-muted: #8e98a5;
 
-  --accent: #3fbfa8;
-  --accent-text: #06201b;
-  --team-a: #5c9df5;
-  --team-b: #f2a24a;
-  --draw: #8f9aa6;
-  --on-side: var(--bg);
-  --warning: #f2c94c;
+  --accent: #7cc4ae;
+  --accent-text: #08201a;
+  --primary: #eceff3;
+  --primary-text: #0b0d10;
+  --team-a: #84a9e0;
+  --team-b: #d6ac70;
+  --draw: #8e98a5;
+  --suit-red: #d97a6c;
+  --warning: #e0bd68;
   --on-warning: #1d1600;
-  --danger: #ef6b6b;
+  --danger: #e3807a;
+  --chart-grid: rgba(255, 255, 255, 0.06);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -25,20 +38,29 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --radius-sm: 8px;
-  --radius: 14px;
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 22px;
   --radius-pill: 999px;
 
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --text-xs: 0.6875rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
   --text-lg: 1.25rem;
-  --text-xl: 1.75rem;
-  --text-score: 4.5rem;
+  --text-xl: 2rem;
+  --text-stat: 2.25rem;
+  --text-score: 6.5rem;
+  --tracking-tight: -0.025em;
+  --tracking-label: 0.08em;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration: 160ms;
+  --press-scale: 0.97;
 
   --tap: 48px;
-  --header-height: 52px;
-  --tabbar-height: 60px;
+  --header-height: 56px;
+  --tabbar-height: 64px;
   --sandbox-height: var(--tap);
   --content-width: 640px;
 }
@@ -46,17 +68,34 @@
 @media (prefers-color-scheme: light) {
   :root {
     color-scheme: light;
-    --bg: #f4f5f7;
+    --bg: #f5f6f8;
     --surface: #ffffff;
     --surface-raised: #eef0f3;
-    --border: #dde1e6;
-    --text: #15191e;
-    --text-muted: #5f6b77;
-    --accent: #0f7a68;
+    --surface-pressed: #e4e7ec;
+    --border: rgb(16 22 32 / 0.09);
+    --border-strong: rgb(16 22 32 / 0.16);
+    --highlight: rgb(255 255 255 / 0.6);
+    --glass: rgb(245 246 248 / 0.78);
+    --text: #111418;
+    --text-muted: #5a636f;
+    --accent: #186a58;
     --accent-text: #ffffff;
-    --team-a: #2f74d6;
-    --team-b: #b06200;
-    --draw: #6b7682;
-    --on-side: #ffffff;
+    --primary: #111418;
+    --primary-text: #ffffff;
+    --team-a: #2f5fa8;
+    --team-b: #87570b;
+    --draw: #5f6874;
+    --suit-red: #c24a3c;
+    --warning: #775400;
+    --on-warning: #ffffff;
+    --danger: #b3423c;
+    --chart-grid: rgba(16, 22, 32, 0.07);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+    --press-scale: 1;
   }
 }

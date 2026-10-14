@@ -1,4 +1,6 @@
 import { t } from '../i18n/nb.js';
+import { h } from './components/dom.js';
+import { logoMark, tabIcon } from './components/icons.js';
 import { askForPin } from './components/pin-prompt.js';
 
 /**
@@ -7,8 +9,10 @@ import { askForPin } from './components/pin-prompt.js';
  */
 export function mountShell({ outbox, storage }) {
   document.querySelector('[data-text="appName"]').textContent = t.appName;
+  document.querySelector('.app-logo').replaceChildren(logoMark());
   document.querySelectorAll('[data-tab]').forEach((link) => {
-    link.textContent = t.tabs[link.dataset.tab];
+    const { tab } = link.dataset;
+    link.replaceChildren(h('span', { class: 'tab-icon' }, tabIcon(tab)), h('span', {}, t.tabs[tab]));
   });
 
   const badge = document.getElementById('sync-badge');

@@ -10,6 +10,9 @@ const LINK_FORMATS = ['player', 'pair'];
 /** The subject a player or pair cell stands for. */
 const cellSubject = (value, format) => (format === 'player' ? playerSubject(value) : pairSubject(...value));
 
+/** Styling hook for signed numbers (e.g. rating change). */
+const signOf = (value) => (value > 0 ? 'up' : value < 0 ? 'down' : null);
+
 /** Text of a cell; pairs read "Anne & Bjørn", labels come from t.statsLabels. */
 function cellText(value, format) {
   if (format === 'player') return value;
@@ -21,7 +24,7 @@ function cellText(value, format) {
 /**
  * A stat table. The first player/pair cell links to the row's subject (e.g. a partner → the
  * pair), other player/pair cells to their own page. Rows marked `provisional` get the "ny"
- * marker after the rating.
+ * marker after the rating; ranks get a small marker (top three slightly brighter).
  * @param {{ columns: { key: string, format: string }[], rows: object[] }} value
  * @param {{ query: Record<string, string> }} ctx
  */
@@ -36,14 +39,15 @@ export function tableBody({ columns, rows }, { query }) {
       const subject = key === linkKey && row.subject ? row.subject : cellSubject(row[key], format);
       content = h('a', { class: 'link', href: statsHref(subjectPath(subject), query) }, text);
     }
-    return h('td', { class: isNumber(format) ? 'num' : null },
+    if (key === 'rank') content = h('span', { class: 'stat-rank', 'data-rank': String(row[key]) }, text);
+    return h('td', { class: isNumber(format) ? 'num' : null, 'data-col': key, 'data-sign': format === 'signed' ? signOf(row[key]) : null },
       content, format === 'rating' && row.provisional && provisionalMarker());
   };
 
   return h('div', { class: 'stat-table-wrap' },
     h('table', { class: 'stat-table' },
       h('thead', {}, h('tr', {}, columns.map(({ key, format }) =>
-        h('th', { scope: 'col', class: isNumber(format) ? 'num' : null }, t.statsColumns[key] ?? key)))),
+        h('th', { scope: 'col', class: isNumber(format) ? 'num' : null, 'data-col': key }, t.statsColumns[key] ?? key)))),
       h('tbody', {}, rows.map((row) => h('tr', {}, columns.map((column) => cell(row, column)))))));
 }
 

@@ -59,7 +59,8 @@ export function renderLineChart(container, {
     const token = (name) => style.getPropertyValue(`--${name}`).trim();
     const xs = [...new Set(series.flatMap((s) => s.points.map((p) => p.x)))].sort();
     const muted = token('text-muted');
-    const grid = token('border');
+    const grid = token('chart-grid');
+    const font = { family: token('font'), size: 11 };
     chart = new Chart(canvas, {
       type: 'line',
       data: {
@@ -72,10 +73,14 @@ export function renderLineChart(container, {
             data: xs.map((x) => ys.get(x) ?? null),
             borderColor: colour,
             backgroundColor: colour,
-            borderWidth: 2,
-            tension: 0.25,
+            borderWidth: 1.75,
+            tension: 0.3,
             spanGaps: true,
-            pointRadius: s.points.length > DENSE_POINTS ? 0 : 3,
+            pointRadius: s.points.length > DENSE_POINTS ? 0 : 2.5,
+            pointBorderWidth: 0,
+            pointHoverRadius: 4,
+            pointHoverBorderWidth: 2,
+            pointHoverBorderColor: token('surface'),
             pointHitRadius: 12,
           };
         }),
@@ -86,13 +91,36 @@ export function renderLineChart(container, {
         locale: 'nb-NO',
         interaction: { mode: 'index', intersect: false },
         scales: {
-          x: { ticks: { color: muted, maxRotation: 0, autoSkipPadding: 12 }, grid: { color: grid } },
-          y: { ticks: { color: muted, callback: (y) => formatY(y) }, grid: { color: grid } },
+          x: {
+            ticks: { color: muted, font, maxRotation: 0, autoSkipPadding: 16 },
+            grid: { display: false },
+            border: { color: grid },
+          },
+          y: {
+            ticks: { color: muted, font, padding: 8, maxTicksLimit: 5, callback: (y) => formatY(y) },
+            grid: { color: grid },
+            border: { display: false },
+          },
         },
         plugins: {
-          legend: { display: series.length > 1, labels: { color: muted, boxWidth: 12 } },
+          legend: {
+            display: series.length > 1,
+            align: 'start',
+            labels: { color: muted, font: { ...font, size: 12, weight: '600' }, boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle' },
+          },
           tooltip: {
             enabled: true,
+            backgroundColor: token('surface-raised'),
+            borderColor: token('border-strong'),
+            borderWidth: 1,
+            titleColor: muted,
+            bodyColor: token('text'),
+            titleFont: { ...font, weight: '600' },
+            bodyFont: { ...font, size: 12, weight: '600' },
+            padding: 10,
+            cornerRadius: 10,
+            boxPadding: 4,
+            usePointStyle: true,
             callbacks: { label: (item) => `${item.dataset.label}: ${item.parsed.y === null ? '–' : formatY(item.parsed.y)}` },
           },
         },

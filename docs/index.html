@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#101317">
-  <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
   <title>Sjineser</title>
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
@@ -24,7 +24,10 @@
 </head>
 <body>
   <header class="app-header">
-    <span class="app-title" data-text="appName"></span>
+    <span class="app-brand">
+      <span class="app-logo" aria-hidden="true"></span>
+      <span class="app-title" data-text="appName"></span>
+    </span>
     <button id="sync-badge" class="badge" type="button" hidden></button>
   </header>
   <div id="sandbox-bar" class="sandbox-bar" hidden></div>
