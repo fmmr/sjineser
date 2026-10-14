@@ -44,6 +44,7 @@ export const t = {
   errors: {
     empty: 'Skriv inn et navn',
     comma: 'Navn kan ikke inneholde komma',
+    plus: 'Navn kan ikke inneholde +',
     duplicate: 'Spilleren finnes allerede',
     invalid: 'Ugyldig valg',
     conflict: 'Kolliderer med eksisterende data',

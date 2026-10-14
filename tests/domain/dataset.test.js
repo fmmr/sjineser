@@ -13,6 +13,7 @@ test('addPlayer trims, dedupes case-insensitively and rejects bad names', () => 
   assert.deepEqual(ds.players, [{ name: 'Kari', active: true }]);
   assert.equal(outcome(ds, 'addPlayer', { name: 'kari' }), 'noop');
   assert.equal(outcome(ds, 'addPlayer', { name: 'A, B' }), 'invalid');
+  assert.equal(outcome(ds, 'addPlayer', { name: 'A+B' }), 'invalid');
   assert.equal(outcome(ds, 'addPlayer', { name: ' ' }), 'invalid');
 });
 

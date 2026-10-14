@@ -16,17 +16,19 @@ export function findPlayer(players, name) {
 }
 
 /**
- * Names are trimmed, non-empty and comma-free (Nights joins names with ", ").
- * @returns {null | 'empty' | 'comma'}
+ * Names are trimmed, non-empty, comma-free (Nights joins names with ", ") and plus-free
+ * (pair links join two names with '+').
+ * @returns {null | 'empty' | 'comma' | 'plus'}
  */
 export function nameFormatError(raw) {
   const name = raw.trim();
   if (!name) return 'empty';
   if (name.includes(',')) return 'comma';
+  if (name.includes('+')) return 'plus';
   return null;
 }
 
-/** @returns {null | 'empty' | 'comma' | 'duplicate'} */
+/** @returns {null | 'empty' | 'comma' | 'plus' | 'duplicate'} */
 export function validateNewName(raw, players) {
   return nameFormatError(raw) ?? (findPlayer(players, raw) ? 'duplicate' : null);
 }

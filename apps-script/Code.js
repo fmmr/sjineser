@@ -54,7 +54,8 @@ const HANDLERS = {
   addPlayer({ name }) {
     if (typeof name !== 'string') return fail('invalid', 'Invalid name');
     const clean = name.trim();
-    if (!clean || clean.includes(',')) return fail('invalid', 'Invalid name');
+    // ',' joins names in Nights; '+' joins a pair in stats links.
+    if (!clean || clean.includes(',') || clean.includes('+')) return fail('invalid', 'Invalid name');
     const existing = readTab('Players').find((r) => r.value.name.toLowerCase() === clean.toLowerCase());
     if (existing) return done('noop', { name: existing.value.name });
     append('Players', [clean, true]);

@@ -15,15 +15,17 @@ test('findPlayer is case-insensitive and ignores surrounding space', () => {
   assert.equal(findPlayer(players, 'Nobody'), null);
 });
 
-test('nameFormatError rejects empty and comma names', () => {
+test('nameFormatError rejects empty, comma and plus names', () => {
   assert.equal(nameFormatError('   '), 'empty');
   assert.equal(nameFormatError('Per, Pål'), 'comma');
+  assert.equal(nameFormatError('Per+Pål'), 'plus');
   assert.equal(nameFormatError(' Kari '), null);
 });
 
 test('validateNewName also rejects duplicates', () => {
   assert.equal(validateNewName('hans', players), 'duplicate');
   assert.equal(validateNewName('Kari', players), null);
+  assert.equal(validateNewName('Ka+ri', players), 'plus');
 });
 
 test('activePlayers drops inactive and sorts in Norwegian order', () => {
