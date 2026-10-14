@@ -44,8 +44,8 @@ export const t = {
   pinNeeded: 'PIN trengs',
   pin: { title: 'PIN', message: 'Skriv inn PIN for å lagre resultater', label: 'PIN', save: 'Lagre' },
   sheet: { cancel: 'Avbryt' },
-  matchTaken: (n) => `Noen andre startet kamp ${n}. Henter siste data.`,
-  rejected: { conflict: 'En endring kolliderte med data fra en annen telefon. Henter siste data.', invalid: 'En endring ble avvist. Henter siste data.' },
+  matchTaken: (n) => `Kamp ${n} ble startet på en annen enhet eller i et annet vindu. Henter siste data.`,
+  rejected: { conflict: 'En endring kolliderte med data fra en annen enhet eller et annet vindu. Henter siste data.', invalid: 'En endring ble avvist. Henter siste data.' },
 
   errors: {
     empty: 'Skriv inn et navn',

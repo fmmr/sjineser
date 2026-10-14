@@ -24,25 +24,43 @@ const STATUS_FORMULA =
 // ---------- HTTP entry points ----------
 
 function doGet() {
-  return json(done('noop', readAll()));
+  return respond(() => done('noop', readAll()));
 }
 
 function doPost(e) {
+  return respond(() => handlePost(e));
+}
+
+/**
+ * Runs a request and always answers with a JSON envelope. An uncaught exception would make
+ * Google return an HTML error page without CORS headers, which the browser reports as a
+ * CORS failure; this turns it into a retryable 'server' error and logs it to Executions.
+ */
+function respond(run) {
+  try {
+    return json(run());
+  } catch (err) {
+    console.error(err);
+    return json(fail('server', String(err && err.message ? err.message : err)));
+  }
+}
+
+function handlePost(e) {
   let request;
   try {
     request = JSON.parse(e.postData.contents);
   } catch (err) {
-    return json(fail('invalid', 'Malformed JSON'));
+    return fail('invalid', 'Malformed JSON');
   }
   const pin = PropertiesService.getScriptProperties().getProperty('PIN');
-  if (!pin || request.pin !== pin) return json(fail('pin', 'Wrong PIN'));
+  if (!pin || request.pin !== pin) return fail('pin', 'Wrong PIN');
   const handler = HANDLERS[request.action];
-  if (!handler) return json(fail('invalid', 'Unknown action'));
+  if (!handler) return fail('invalid', 'Unknown action');
 
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(LOCK_TIMEOUT_MS)) return json(fail('busy', 'Busy, try again'));
+  if (!lock.tryLock(LOCK_TIMEOUT_MS)) return fail('busy', 'Busy, try again');
   try {
-    return json(handler(request.payload || {}));
+    return handler(request.payload || {});
   } finally {
     lock.releaseLock();
   }
