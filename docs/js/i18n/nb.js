@@ -14,7 +14,7 @@ export const t = {
   newPlayerPlaceholder: 'Ny spiller',
   addPlayer: 'Legg til',
   startNight: 'Start kvelden',
-  minPlayers: (n) => `Velg minst 4 spillere (${n} valgt)`,
+  minPlayers: (n, min) => `Velg minst ${min} spillere (${n} valgt)`,
 
   newMatch: 'Ny kamp',
   pickTeams: 'Trykk på en spiller for å flytte: benk → Lag A → Lag B',

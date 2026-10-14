@@ -1,8 +1,11 @@
 import { t } from '../i18n/nb.js';
 import { askForPin } from './components/pin-prompt.js';
 
-/** Fills static shell text and keeps the sync badge current. */
-export function mountShell({ store, outbox, storage }) {
+/**
+ * Fills static shell text and sets up the sync badge.
+ * @returns {() => void} refreshes the badge; call it on every outbox change
+ */
+export function mountShell({ outbox, storage }) {
   document.querySelector('[data-text="appName"]').textContent = t.appName;
   document.querySelectorAll('[data-tab]').forEach((link) => {
     link.textContent = t.tabs[link.dataset.tab];
@@ -19,8 +22,8 @@ export function mountShell({ store, outbox, storage }) {
     badge.textContent = outbox.isHeld() ? t.pinNeeded : t.unsynced(count);
     badge.classList.toggle('badge-warning', outbox.isHeld());
   }
-  store.subscribe(update);
   update();
+  return update;
 }
 
 /** @param {string} path */

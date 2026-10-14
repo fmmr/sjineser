@@ -86,7 +86,7 @@
   height: 28px;
   border-radius: var(--radius-sm);
   background: var(--side);
-  color: var(--bg);
+  color: var(--on-side);
   font-size: var(--text-sm);
   font-weight: 700;
 }
@@ -107,7 +107,7 @@
 
 .btn-result:active {
   background: var(--side);
-  color: var(--bg);
+  color: var(--on-side);
 }
 
 .winner-banner {

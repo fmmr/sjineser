@@ -4,7 +4,7 @@ import { t } from '../../i18n/nb.js';
 import { POLL_MS } from '../../config.js';
 import { currentNight, gamesOf, latestMatch, parseMatchId, score, teamOf, winnerOf } from '../../domain/match.js';
 
-/** Ignores a second tap this soon after the first, so a double tap does not record two games. */
+/** Ignores a second tap this soon after the first, so a double tap does not record two games (or undo two). */
 const TAP_COOLDOWN_MS = 800;
 const RESULT_ORDER = ['A', 'D', 'B'];
 
@@ -14,18 +14,25 @@ export function mountMatch(root, { store, actions, navigate }) {
     if (document.visibilityState === 'visible') store.refresh();
   }, POLL_MS);
 
-  function record(result) {
+  /** Wraps a tap handler so all match-screen actions share one cooldown. */
+  const guardTap = (fn) => (...args) => {
     const now = Date.now();
     if (now - lastTap < TAP_COOLDOWN_MS) return;
     lastTap = now;
+    fn(...args);
+  };
+
+  const record = guardTap((result) => {
     const outcome = actions.recordGame(result);
     if (!outcome.ok) showToast(t.errors[outcome.error]);
-  }
+  });
 
-  function undo() {
+  const undo = guardTap(() => {
     const outcome = actions.undo();
     if (!outcome.ok) showToast(t.errors[outcome.error]);
-  }
+  });
+
+  const nextMatch = guardTap(() => navigate('/play/new-match'));
 
   const teamPanel = (match, side, wins, winner) =>
     h('div', { class: 'team-panel', 'data-side': side, 'data-winner': String(winner === side) },
@@ -39,17 +46,18 @@ export function mountMatch(root, { store, actions, navigate }) {
   const winnerBanner = (match, winner, totals) =>
     h('div', { class: 'winner-banner', 'data-side': winner },
       h('p', {}, t.matchWon(teamOf(match, winner).join(t.and), totals[winner], totals[winner === 'A' ? 'B' : 'A'])),
-      h('button', { class: 'btn btn-primary', onclick: () => navigate('/play/new-match') }, t.nextMatch));
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: nextMatch }, t.nextMatch));
 
   const noMatch = () =>
     h('section', { class: 'stack' },
       h('p', { class: 'muted' }, t.noMatch),
-      h('button', { class: 'btn btn-primary', onclick: () => navigate('/play/new-match') }, t.newMatch));
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: () => navigate('/play/new-match') }, t.newMatch));
 
   function update() {
     const ds = store.get();
     if (!currentNight(ds)) {
-      if (store.isLoaded()) navigate('/play');
+      // Nothing cached and the first fetch is done (or failed offline): nothing to show here.
+      if (store.isLoaded() || store.hasTried()) navigate('/play');
       else root.replaceChildren(h('p', { class: 'muted' }, t.loading));
       return;
     }

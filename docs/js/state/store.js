@@ -13,12 +13,22 @@ export function createStore({ storage, outbox, api }) {
   let base = cached ?? emptyDataset();
   let loaded = cached !== null;
   let view = applyAll(base, outbox.pending());
+  let tried = false;
   let fetching = null;
   let sentDuringFetch = [];
 
+  const notify = () => listeners.forEach((listener) => listener(view));
+
+  /**
+   * Rebuilds the view. Listeners hear only about visible changes, so views are not rebuilt (and taps lost) for nothing.
+   * @returns {boolean} whether listeners were notified
+   */
   function recompute() {
-    view = applyAll(base, outbox.pending());
-    listeners.forEach((listener) => listener(view));
+    const next = applyAll(base, outbox.pending());
+    const changed = JSON.stringify(next) !== JSON.stringify(view);
+    view = next;
+    if (changed) notify();
+    return changed;
   }
 
   function setBase(dataset) {
@@ -31,18 +41,20 @@ export function createStore({ storage, outbox, api }) {
     const response = await api.getAll();
     if (!response.ok) return false;
     // Ops the server accepted after this request started may be missing from the response.
-    const fresh = applyAll(response.data, sentDuringFetch);
-    const changed = !loaded || JSON.stringify(fresh) !== JSON.stringify(base);
-    setBase(fresh);
+    setBase(applyAll(response.data, sentDuringFetch));
+    const firstLoad = !loaded;
     loaded = true;
-    // Polling must not rebuild views (and swallow taps) when nothing changed.
-    if (changed) recompute();
+    tried = true;
+    // Views showing "Laster …" must hear about the first load even if the data equals the cache.
+    if (!recompute() && firstLoad) notify();
     return true;
   }
 
   return {
     get: () => view,
     isLoaded: () => loaded,
+    /** True once the first refresh has finished, whether it succeeded or not. */
+    hasTried: () => tried,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -52,6 +64,10 @@ export function createStore({ storage, outbox, api }) {
     refresh() {
       fetching ??= load().finally(() => {
         fetching = null;
+        if (tried) return;
+        // First attempt failed: views waiting on it can stop saying "Laster …".
+        tried = true;
+        notify();
       });
       return fetching;
     },

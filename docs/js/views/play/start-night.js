@@ -9,7 +9,7 @@ export function mountStartNight(root, { store, actions, navigate }) {
   const selected = new Set();
   const chips = h('div', { class: 'chips' });
   const input = h('input', { class: 'field', type: 'text', placeholder: t.newPlayerPlaceholder, autocomplete: 'off', enterkeyhint: 'done' });
-  const startButton = h('button', { class: 'btn btn-primary', onclick: start });
+  const startButton = h('button', { class: 'btn btn-primary', type: 'button', onclick: start });
 
   function toggle(name) {
     if (selected.has(name)) selected.delete(name);
@@ -37,7 +37,7 @@ export function mountStartNight(root, { store, actions, navigate }) {
       h('button', { class: 'chip', type: 'button', 'aria-pressed': String(selected.has(p.name)), onclick: () => toggle(p.name) }, p.name)));
     const enough = selected.size >= MIN_PLAYERS;
     startButton.disabled = !enough;
-    startButton.textContent = enough ? t.startNight : t.minPlayers(selected.size);
+    startButton.textContent = enough ? t.startNight : t.minPlayers(selected.size, MIN_PLAYERS);
   }
 
   root.replaceChildren(

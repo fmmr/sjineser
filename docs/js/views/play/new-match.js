@@ -10,6 +10,8 @@ const NEXT_SIDE = { bench: 'A', A: 'B', B: 'bench' };
 export function mountNewMatch(root, { store, actions, navigate }) {
   /** @type {Map<string, 'A' | 'B'>} players not in the map are on the bench */
   const sides = new Map();
+  /** Set once a start is under way, so a second tap cannot start another match. */
+  let starting = false;
   const count = (side) => [...sides.values()].filter((s) => s === side).length;
   const team = (side) => [...sides].filter(([, s]) => s === side).map(([name]) => name).sort(byName);
 
@@ -32,11 +34,17 @@ export function mountNewMatch(root, { store, actions, navigate }) {
   }
 
   function start() {
-    if (!confirmAbandon()) return;
+    if (starting || !confirmAbandon()) return;
+    starting = true;
+    update();
     const [A1, A2] = team('A');
     const [B1, B2] = team('B');
     const result = actions.startMatch({ A1, A2, B1, B2 });
-    if (!result.ok) return showToast(t.errors[result.error]);
+    if (!result.ok) {
+      starting = false;
+      update();
+      return showToast(t.errors[result.error]);
+    }
     navigate('/play/match');
   }
 
@@ -58,7 +66,7 @@ export function mountNewMatch(root, { store, actions, navigate }) {
               h('span', {}, name),
               h('span', { class: 'assign-side' }, t.sides[side])));
         })),
-        h('button', { class: 'btn btn-primary', disabled: !ready, onclick: start }, t.startMatch)),
+        h('button', { class: 'btn btn-primary', type: 'button', disabled: !ready || starting, onclick: start }, t.startMatch)),
     );
   }
 

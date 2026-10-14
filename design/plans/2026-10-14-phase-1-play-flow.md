@@ -2887,7 +2887,7 @@ export function mountMatch(root, { store, actions, navigate }) {
 5. "Angre" on the completed match removes the last game and brings the buttons back.
 6. "Neste kamp" → new match → start → "Kamp 2".
 7. Start a match, record one game, go to new match and start another → confirm dialog "Kampen står 1–0…". Cancel keeps it; OK creates the next match.
-8. Start a match, record nothing, go to new match and start another → no dialog; the empty match is replaced (same number).
+8. Start a match, record nothing, go to new match and start another → no dialog; offline (never sent) the empty match is replaced with the same number; once it was sent, a deleteMatch is queued and the new match takes the next number.
 9. Narrow viewport (DevTools iPhone SE, 375 px): nothing overflows; buttons are reachable with the tab bar visible.
 
 - [ ] **Step 5: Commit**

@@ -16,11 +16,15 @@ const storage = createStorage();
 const api = createApiClient({ url: API_URL });
 
 let store;
+let updateBadge;
 const outbox = createOutbox({
   storage,
   send: (op) => api.post(op.action, op.payload, storage.get('pin', '')),
   onSent: (op) => store.commit(op),
-  onChange: () => store?.recompute(),
+  onChange: () => {
+    store?.recompute();
+    updateBadge?.();
+  },
   onDrop: (op, response) => {
     showToast(describeDrop(op, response));
     store.refresh();
@@ -30,7 +34,7 @@ const outbox = createOutbox({
 store = createStore({ storage, outbox, api });
 const actions = createActions({ store, outbox });
 
-mountShell({ store, outbox, storage });
+updateBadge = mountShell({ outbox, storage });
 createRouter({
   root: document.getElementById('view'),
   routes,
@@ -38,7 +42,7 @@ createRouter({
   onRoute: markActiveTab,
 }).start();
 
-store.refresh().then((ok) => {
+store.refresh().catch(() => false).then((ok) => {
   if (!ok) showToast(t.offline);
 });
 outbox.flush();

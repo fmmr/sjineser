@@ -13,6 +13,7 @@
   --team-a: #5c9df5;
   --team-b: #f2a24a;
   --draw: #8f9aa6;
+  --on-side: var(--bg);
   --warning: #f2c94c;
   --danger: #ef6b6b;
 
@@ -49,10 +50,11 @@
     --border: #dde1e6;
     --text: #15191e;
     --text-muted: #5f6b77;
-    --accent: #138a76;
+    --accent: #0f7a68;
     --accent-text: #ffffff;
     --team-a: #2f74d6;
-    --team-b: #d9801c;
+    --team-b: #b06200;
     --draw: #6b7682;
+    --on-side: #ffffff;
   }
 }

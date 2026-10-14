@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStore } from '../../docs/js/state/store.js';
 import { createStorage } from '../../docs/js/state/storage.js';
+import { emptyDataset } from '../../docs/js/domain/dataset.js';
 import { MATCH_1, memoryBackend, nightWithMatch } from '../helpers.js';
 
 const addGame = (gameNo, result = 'A') => ({ id: `g${gameNo}`, action: 'addGame', payload: { matchId: MATCH_1, gameNo, result, timestamp: 'T' } });
@@ -89,4 +90,47 @@ test('a deleteGame committed while a refresh is in flight is reapplied to the re
   respond({ ok: true, data: nightWithMatch(['A', 'B']) });
   await refreshing;
   assert.deepEqual(store.get().games.map((g) => g.gameNo), [1]);
+});
+
+test('recompute with an unchanged view does not notify subscribers', () => {
+  const { store } = setup({ cached: nightWithMatch(['A']) });
+  let notified = 0;
+  store.subscribe(() => { notified += 1; });
+  store.recompute();
+  assert.equal(notified, 0);
+});
+
+test('recompute notifies subscribers when a pending op changes the view', () => {
+  const { store, pending } = setup({ cached: nightWithMatch(['A']) });
+  let notified = 0;
+  store.subscribe(() => { notified += 1; });
+  pending.push(addGame(2, 'B'));
+  store.recompute();
+  assert.equal(notified, 1);
+  assert.equal(store.get().games.length, 2);
+});
+
+test('the first successful refresh notifies even when data equals the current view', async () => {
+  const { store } = setup({ getAll: async () => ({ ok: true, data: emptyDataset() }) });
+  let notified = 0;
+  store.subscribe(() => { notified += 1; });
+  await store.refresh();
+  assert.equal(store.isLoaded(), true);
+  assert.equal(notified, 1);
+});
+
+test('hasTried flips after the first refresh, success or failure, and notifies once', async () => {
+  const failing = setup();
+  let notified = 0;
+  failing.store.subscribe(() => { notified += 1; });
+  assert.equal(failing.store.hasTried(), false);
+  assert.equal(await failing.store.refresh(), false);
+  assert.equal(failing.store.hasTried(), true);
+  assert.equal(notified, 1);
+  await failing.store.refresh();
+  assert.equal(notified, 1);
+
+  const ok = setup({ getAll: async () => ({ ok: true, data: nightWithMatch() }) });
+  await ok.store.refresh();
+  assert.equal(ok.store.hasTried(), true);
 });
