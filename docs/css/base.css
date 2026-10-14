@@ -45,3 +45,9 @@ button {
 a {
   color: inherit;
 }
+
+h2 {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-lg);
+  font-weight: 650;
+}

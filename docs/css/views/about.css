@@ -1,0 +1,10 @@
+.rule-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.rule-list p {
+  margin-top: var(--space-1);
+}
