@@ -76,14 +76,38 @@ find-and-replace).
 |---|---|---|---|
 | 2026-10-14#1 | 1 | D | 2026-10-14T20:13:05Z |
 
-`result` ∈ `A`, `B`, `D`.
+`result` ∈ `A`, `B`, `D`. `timestamp` is set by the client when the result is
+entered (informational only; never used for ordering).
 
 **Derived, never stored:** match completion and score, current night (latest Nights
-row), current match (latest incomplete match of the current night), sit-outs
-(players on the night roster but not in a match), seasons, all stats.
+row), current match (see below), sit-outs (players on the night roster but not in a
+match), seasons, all stats.
 
-`setup()` in the Apps Script creates tabs, headers, the status formula and data
-validation. It is idempotent and is run once per sheet.
+**Current match** = the highest-numbered match of the current night, *if* it is
+incomplete; otherwise there is none. **Abandoning** a match is implicit: starting the
+next match leaves it incomplete. If the abandoned match has 0 games it is deleted
+(`deleteMatch`) instead.
+
+**Canonical game order** (used by Elo, streaks, records — everywhere): night date,
+then numeric match number (parsed from `matchId`; never a string sort, `#10` > `#2`),
+then `gameNo`. The domain layer exposes one sort function for this.
+
+**Player names** are trimmed, must not contain commas (Nights joins them with `, `),
+and are unique case-insensitively. Enforced in both UI and `addPlayer`.
+
+**Sheet hygiene** (enforced by `setup()` and the script):
+- Date and timestamp columns are formatted as plain text so Sheets does not coerce
+  them to Date objects; the GET handler still normalises values defensively
+  (dates → `YYYY-MM-DD` strings, `active` → boolean).
+- The status ARRAYFORMULA leaves unused rows truly blank (e.g. `IF(A2:A="",,…)`).
+- The script computes the next row from column A rather than relying on
+  `appendRow`/`getLastRow`, and writes only columns A–F of Matches.
+
+`setup()` in the Apps Script creates tabs, headers, formats, the status formula and
+data validation. It is idempotent and is run once per sheet.
+
+A night's roster is fixed once started. A late arrival requires editing the sheet;
+roster editing in the app is out of scope.
 
 Historical data from the existing sheet is imported later by a one-off script, once
 its format is known. Not part of the first version.
@@ -93,17 +117,35 @@ its format is known. Not part of the first version.
 | Method | Action | Payload | Behaviour |
 |---|---|---|---|
 | GET | — | — | Returns `{ players, nights, matches, games }` as JSON. |
-| POST | `addPlayer` | `{ name }` | No-op if exists. |
-| POST | `startNight` | `{ date, players }` | No-op if identical night exists; error if date exists with a different roster. |
-| POST | `startMatch` | `{ matchId, date, A1, A2, B1, B2 }` | No-op if identical; `conflict` error if `matchId` exists with different players. |
-| POST | `addGame` | `{ matchId, gameNo, result }` | No-op if `(matchId, gameNo)` exists with the same result; `conflict` otherwise. |
-| POST | `deleteGame` | `{ matchId, gameNo }` | Deletes the row if present. |
-| POST | `deleteMatch` | `{ matchId }` | Only allowed when the match has no games. |
+| POST | `addPlayer` | `{ name }` | `noop` if exists (case-insensitive); `invalid` if name breaks the rules. |
+| POST | `startNight` | `{ date, players }` | `noop` if identical night exists; `conflict` if date exists with a different roster. |
+| POST | `startMatch` | `{ matchId, date, A1, A2, B1, B2 }` | `noop` if identical; `conflict` if `matchId` exists with different players. |
+| POST | `addGame` | `{ matchId, gameNo, result, timestamp }` | `noop` if `(matchId, gameNo)` exists with the same result; `conflict` if different result; `invalid` if the match does not exist. |
+| POST | `deleteGame` | `{ matchId, gameNo }` | Deletes the row; `noop` if absent. |
+| POST | `deleteMatch` | `{ matchId }` | Deletes the row; `noop` if absent; `invalid` if the match has games. |
 
 - Every POST carries `pin`; checked against Script Property `PIN`. Reads are public.
-- POST bodies are sent as `text/plain` JSON to avoid CORS preflight.
-- All writes run under `LockService` to serialise concurrent phones.
+- POST bodies are sent as `text/plain` JSON with no custom headers (a CORS "simple
+  request"; fetch follows Apps Script's 302 redirect).
+- All writes run under `LockService.getScriptLock()` with `waitLock` and a timeout;
+  failure to acquire returns `busy`.
 - Every write is idempotent, keyed on its natural key, so the outbox can retry freely.
+
+**Response envelope.** Apps Script cannot set HTTP status codes (every reply is 200),
+so outcome is carried in the body:
+
+```json
+{ "ok": true,  "result": "created" | "noop", "data": { … } }
+{ "ok": false, "error": "conflict" | "pin" | "invalid" | "busy", "message": "…" }
+```
+
+| Outcome | Outbox behaviour |
+|---|---|
+| `ok` (`created` / `noop`) | Remove op, continue. |
+| `conflict` | Drop op **and cascade** (§10), toast, refetch. |
+| `invalid` | Drop op and cascade, toast (indicates a bug or a hand edit), refetch. |
+| `pin` | Hold the whole outbox; prompt for PIN; resume. |
+| `busy`, network error, non-JSON reply | Keep op; retry with backoff. |
 
 ## 5. Frontend structure
 
@@ -132,8 +174,9 @@ js/
     play/             home, start-night, new-match, match
     stats/            overall, players, player, pairs, pair, compare
     about/            how-teams-are-proposed, how-ratings-work
-    components/       shared UI pieces (chips, tables, svg charts, toasts)
+    components/       shared UI pieces (chips, tables, toasts, chart.js wrapper)
   i18n/nb.js          all user-visible Norwegian text
+vendor/               pinned third-party ES modules (Chart.js)
 apps-script/          Code.gs, appsscript.json, .clasp.json
 tests/                node --test suites for domain/ (and state/ where pure)
 ```
@@ -164,8 +207,9 @@ Bottom tab bar: **Spill** (Play) and **Statistikk** (Stats). Hash routes; links 
 6. **About** — "Slik foreslås lag" and "Slik fungerer rating", generated from the
    rule and constant definitions in `domain/`.
 
-Undo removes the last game of the current match (from the outbox if unsent, otherwise
-via `deleteGame`). With no games, undo removes the match itself.
+Undo removes the last game of the current match. If that op is still queued and
+**not in flight**, it is removed from the outbox; otherwise (sent or in flight) a
+`deleteGame` is enqueued. With no games, undo removes the match itself the same way.
 
 ## 7. Team proposal
 
@@ -193,7 +237,9 @@ With 4 players over 3 matches, each split occurs once; Elo decides order (most b
   `E = 1 / (1 + 10^((Rb − Ra) / 400))`. Actual score: win 1, draw ½, loss 0.
 - Both partners receive `K × (S − E)`.
 - Constants (in `domain/elo.js`, shown on the About page): start **1000**, **K = 24**,
-  provisional for the first **10** games.
+  provisional for the first **10** games. "Provisional" is a display marker only;
+  it does not change K.
+- Games are processed in the canonical game order (§3).
 - One continuous rating, never reset. Season views show rating at season end and
   the change during the season.
 
@@ -206,8 +252,9 @@ game-level stats and Elo use all games.
 - Leaderboard: Elo, provisional marker, season change, sparkline.
 - Season summary: nights, matches, games, draw %.
 - Records: longest match (games), longest draw streak, most draws in a match,
-  clean sweeps (3–0 with no draws), comebacks (0–2 → 3–2), biggest upset (largest
-  Elo gap beaten), highest Elo ever, longest win streak.
+  clean sweeps (3–0 with no draws), comebacks (0–2 → 3–2), biggest upset (per game:
+  largest pre-game team-Elo gap overcome by the winner), highest Elo ever, longest
+  win streak.
 - Night winners: largest Elo gain per night.
 
 **Player** (list → detail)
@@ -225,28 +272,57 @@ game-level stats and Elo use all games.
 overlaid, key numbers side by side.
 
 Layout: stacked cards on mobile; multi-column with full tables and charts on wide
-screens. Charts are hand-rolled SVG components.
+screens. Charts per §11.
 
 ## 10. Sync and error handling
 
 - **Optimistic UI + outbox:** every action is applied locally at once and queued in
-  `localStorage`; the outbox flushes in order, retries on `online`/visibility events,
-  and shows an unsynced badge. Input is never lost to network errors.
-- **Conflicts:** a `conflict` response (e.g. another phone started match #2 with
-  different teams) drops the op, shows a toast ("Noen andre startet kamp 2") and
-  refetches.
-- **Wrong PIN:** writes are held in the outbox; the user is prompted for the PIN.
+  `localStorage`. Input is never lost to network errors.
+- **Strictly serial flushing:** one request in flight at a time, in queue order.
+  Triggers: enqueue, `online`, `visibilitychange`, and backoff timer. An unsynced
+  badge shows the queue length.
+- **Cascade on drop:** when an op is dropped (`conflict` / `invalid`), every later
+  queued op that depends on it is dropped too — ops on the same `matchId` for a
+  match op, ops on the same night date (its matches and games) for a night op.
+  Example: phone 1 started match #2 offline and logged games, but phone 2 had
+  already started #2 with other teams → phone 1's `startMatch` and its `addGame`s are
+  all dropped, a toast says "Noen andre startet kamp 2", and the app refetches.
+- **Optimistic apply is idempotent:** `store.js` applies pending ops on top of a
+  refetched dataset with the same natural-key rules as the server, so ops already
+  present in fresh data are not duplicated.
+- **Wrong PIN:** the outbox is held; the user is prompted for the PIN.
 - **Freshness:** full dataset cached locally for instant start; refreshed on open,
-  and polled every ~5 s while a match screen is visible.
+  and polled every ~5 s while a match screen is visible. A poll is skipped if the
+  previous request is still pending.
+- **Service worker:** versioned cache of the app shell only; never caches Apps
+  Script requests. A new version activates on next launch.
 
-## 11. Mobile requirements
+## 11. Visual design
+
+- **Clean first, drill down:** every stats page opens with a few headline numbers and
+  at most one chart. Tables, streaks and breakdowns are one tap away (leaderboard row
+  → player; pair → pair detail). No page shows everything at once.
+- **Restrained palette:** one accent colour plus fixed team A / team B colours used
+  consistently on the match screen, in charts and in head-to-heads.
+- System font stack, a short type scale, generous whitespace.
+- **Design tokens:** all colours, spacing, radii and type sizes are CSS custom
+  properties in one file (`css/tokens.css`).
+- **Dark and light theme**, following the device setting (`prefers-color-scheme`).
+  Dark is the default: light applies only when the device explicitly prefers light.
+- **Match screen is the exception:** big score and big buttons, readable across the table.
+- **Charts: Chart.js**, a pinned ES module build vendored into `vendor/` (no CDN at
+  runtime; works offline). Only `views/components/chart.js` imports it; views request
+  semantic charts (e.g. "Elo over time") and colours come from the design tokens.
+  Swapping libraries touches one file.
+
+## 12. Mobile requirements
 
 - iOS Safari and Android Chrome, both in browser and installed (PWA, standalone).
 - Safe-area insets; `dvh` units; tap targets ≥ 44 px; `touch-action: manipulation`
   on buttons; no hover-dependent interaction; works one-handed.
 - Responsive up to laptop widths; stats use extra width.
 
-## 12. Testing
+## 13. Testing
 
 - `node --test` suites for all of `domain/` using small hand-built fixture datasets:
   match state, seasons, Elo, proposal rules, every stat.
@@ -254,14 +330,25 @@ screens. Charts are hand-rolled SVG components.
 - Apps Script kept thin; verified manually against the dev sheet.
 - Manual checklist for iOS Safari and Android Chrome before each release.
 
-## 13. Deployment
+## 14. Deployment
 
 - GitHub repo; GitHub Pages serves the repo root from `main`.
 - Apps Script pushed with `clasp`, deployed as a web app; URL in `js/config.js`.
 - Script Properties: `SHEET_ID`, `PIN`.
 
-## 14. Out of scope (first version)
+## 15. Out of scope (first version)
 
 - Import of historical data (separate task once the real sheet is available).
 - Editing history in the app (edit the sheet directly).
 - Accounts / per-user login.
+- Editing a night's roster in the app (late arrivals: edit the sheet).
+
+## 16. Delivery phases
+
+One plan, delivered in phases that each end in something usable:
+
+1. **Backend + sync + play flow** — `setup()`, API, outbox/store, players, nights,
+   matches, games, undo. Teams picked manually.
+2. **Elo + team proposal** — domain engines, proposal screen, About pages.
+3. **Statistics** — overall, player, pairs, compare; Chart.js wrapper.
+4. **PWA + polish** — manifest, service worker, mobile checklist.
