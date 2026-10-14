@@ -372,8 +372,20 @@ Chart.js (§11), loaded only when a chart is shown.
 - **Freshness:** full dataset cached locally for instant start; refreshed on open,
   and polled every ~5 s while a match screen is visible. A poll is skipped if the
   previous request is still pending.
-- **Service worker:** versioned cache of the app shell only; never caches Apps
-  Script requests. A new version activates on next launch.
+- **Service worker (`sw.js`, offline start):** one cache, `sjineser-vN`. Install
+  precaches a minimal shell (`./`, `index.html`, the manifest and icons, the CSS files,
+  `js/theme-init.js`, `js/main.js`), then activates at once (`skipWaiting`, `clients.claim`)
+  and deletes older `sjineser-*` caches. Navigations are network-first; the fresh page is
+  cached as `index.html`, which is served when offline (also for `?sandbox`). Every other
+  same-origin GET without a query is stale-while-revalidate, so lazily loaded files
+  (view modules, Chart.js, sandbox code) work offline after their first use; on a first
+  visit the page also hands the worker the files it loaded before the worker took control.
+  Cross-origin requests (the Apps Script backend) and non-GET requests are never
+  intercepted or cached. `js/pwa.js` registers the worker on https and on
+  localhost/127.0.0.1 only; registration failures are ignored. A deploy reaches users on
+  the second launch after it (served from cache once, refreshed in the background).
+- **Releasing:** bump `sjineser-vN` in `sw.js` only when the precache list changes;
+  ordinary file changes need no bump.
 
 ## 11. Visual design
 

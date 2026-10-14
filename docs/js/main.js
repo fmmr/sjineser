@@ -14,6 +14,7 @@ import { askForPin } from './views/components/pin-prompt.js';
 import { describeDrop } from './views/sync-messages.js';
 import { t } from './i18n/nb.js';
 import { followSystemTheme } from './theme.js';
+import { registerServiceWorker } from './pwa.js';
 
 // ?sandbox: fake backend, generated data, pretend date, own storage namespace (spec §17).
 // Sandbox code is only loaded in sandbox mode.
@@ -74,6 +75,7 @@ store.refresh().catch(() => false).then((ok) => {
   if (!ok) showToast(t.offline);
 });
 outbox.flush();
+registerServiceWorker();
 
 function resync() {
   outbox.flush();
