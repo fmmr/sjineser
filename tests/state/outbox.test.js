@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createOutbox } from '../../docs/js/state/outbox.js';
+import { createOutbox, randomId } from '../../docs/js/state/outbox.js';
 import { createStorage } from '../../docs/js/state/storage.js';
 import { DATE, memoryBackend } from '../helpers.js';
 
@@ -220,4 +220,17 @@ test('malformed persisted entries are discarded', () => {
   storage.set('outbox', [null, {}, { id: 'op2', action: 'addPlayer', payload: null }, valid]);
   const { outbox } = setup({ storage });
   assert.deepEqual(outbox.pending(), [valid]);
+});
+
+test('randomId works without crypto.randomUUID (insecure origins, older Safari)', () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis.crypto, 'randomUUID');
+  Object.defineProperty(globalThis.crypto, 'randomUUID', { value: undefined, configurable: true });
+  try {
+    const a = randomId();
+    assert.match(a, /^[0-9a-f]{32}$/);
+    assert.notEqual(a, randomId());
+  } finally {
+    if (original) Object.defineProperty(globalThis.crypto, 'randomUUID', original);
+    else delete globalThis.crypto.randomUUID;
+  }
 });

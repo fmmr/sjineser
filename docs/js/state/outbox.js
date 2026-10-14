@@ -4,6 +4,12 @@ const DROP_ERRORS = new Set(['conflict', 'invalid']);
 const RETRY_DELAYS_MS = [1000, 2000, 5000, 10000, 30000];
 
 const isObject = (value) => typeof value === 'object' && value !== null;
+/** Unique op id. crypto.randomUUID only exists in secure contexts (https/localhost) and newer Safari. */
+export function randomId() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID().replaceAll('-', '');
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 const isOp = (op) => isObject(op) && typeof op.id === 'string' && typeof op.action === 'string' && isObject(op.payload);
 
 /** The night and match an op belongs to. */
@@ -37,7 +43,7 @@ export function createOutbox({
   onDrop = () => {},
   onPinRequired = () => {},
   schedule = (fn, ms) => setTimeout(fn, ms),
-  newId = () => crypto.randomUUID(),
+  newId = randomId,
 }) {
   const saved = storage.get('outbox', []);
   let queue = Array.isArray(saved) ? saved.filter(isOp) : [];
