@@ -218,6 +218,28 @@ select.field {
   animation: toast-in 220ms var(--ease);
 }
 
+.toast-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-1);
+  pointer-events: auto;
+}
+
+.toast-button {
+  flex: none;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

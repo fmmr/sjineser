@@ -428,6 +428,7 @@ Chart.js (§11), loaded only when a chart is shown.
   intercepted. `js/pwa.js` registers the worker after the window `load` event, on https and on
   localhost/127.0.0.1 only; registration failures are ignored. A release is downloaded when
   the browser next checks `sw.js` and takes effect on the next launch after that.
+- **Updates:** the app asks the worker to check for a new version whenever it becomes visible (iOS home-screen apps are usually resumed, not reloaded). When a new version takes over an open page, a toast "Ny versjon er klar — Oppdater" offers a reload. The About/Mer version shows the *downloaded* cache, which can be newer than the running page until that reload.
 - **Releasing:** run `npm run stamp` (`scripts/stamp-sw.mjs`) after changing anything in
   `docs/`; it first regenerates `js/about-data.js` (shipped files, lines of JS/CSS/HTML
   without the vendored Chart.js, Apps Script lines, test files and cases), then `PRECACHE`

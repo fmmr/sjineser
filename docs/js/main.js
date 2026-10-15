@@ -74,7 +74,9 @@ store.refresh().catch(() => false).then((ok) => {
   if (!ok) showToast(t.offline);
 });
 outbox.flush();
-registerServiceWorker();
+registerServiceWorker({
+  onUpdateReady: () => showToast(t.update.ready, { action: { label: t.update.reload, onClick: () => location.reload() } }),
+});
 
 function resync() {
   outbox.flush();

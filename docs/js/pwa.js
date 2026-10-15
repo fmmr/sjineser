@@ -13,17 +13,33 @@ export function canRegisterServiceWorker({ protocol, hostname }) {
 
 /**
  * Registers sw.js once the page has loaded, so it never competes with startup. Failures are
- * ignored: the app works without a worker, just not offline. A new release takes effect on
- * the next launch (docs/sw.js).
+ * ignored: the app works without a worker, just not offline.
+ *
+ * Updates: a home-screen app on iOS is usually resumed rather than reloaded, so the browser
+ * never re-checks sw.js on its own. We ask for an update check whenever the app becomes visible.
+ * The worker activates a complete new version at once (skipWaiting + claim); when that new
+ * worker takes over a page that already had one, `onUpdateReady` is called so the UI can offer
+ * a reload. The very first install taking control is not an update.
  * @param {{ container?: ServiceWorkerContainer, location?: Location, window?: Window,
- *   document?: Document }} [env] the browser globals by default (injectable for tests)
+ *   document?: Document, onUpdateReady?: () => void }} [env] browser globals by default (injectable for tests)
  */
 export function registerServiceWorker({
   container = globalThis.navigator?.serviceWorker, location = globalThis.location,
-  window = globalThis.window, document = globalThis.document,
+  window = globalThis.window, document = globalThis.document, onUpdateReady = () => {},
 } = {}) {
   if (!container || !canRegisterServiceWorker(location)) return;
-  const register = () => container.register('sw.js').catch(() => undefined);
+  const hadController = Boolean(container.controller);
+  container.addEventListener?.('controllerchange', () => {
+    if (hadController) onUpdateReady();
+  });
+
+  const register = () => container.register('sw.js')
+    .then((registration) => {
+      document.addEventListener?.('visibilitychange', () => {
+        if (document.visibilityState === 'visible') registration?.update?.().catch(() => undefined);
+      });
+    })
+    .catch(() => undefined);
   if (document.readyState === 'complete') register();
   else window.addEventListener('load', register, { once: true });
 }

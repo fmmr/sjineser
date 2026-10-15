@@ -5,6 +5,7 @@ export const t = {
   tabs: { play: 'Spill', stats: 'Statistikk', more: 'Mer' },
   loading: 'Laster …',
   offline: 'Får ikke kontakt med serveren. Viser lagrede data.',
+  update: { ready: 'Ny versjon er klar', reload: 'Oppdater' },
 
   noNights: 'Ingen kvelder ennå.',
   nightOf: (date) => `Kveld ${date}`,

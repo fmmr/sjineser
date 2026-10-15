@@ -231,6 +231,41 @@ test('registerServiceWorker waits for the load event, or registers at once after
   assert.equal(registered.length, 2);
 });
 
+test('registerServiceWorker checks for updates when the app returns and reports a new version', async () => {
+  const listeners = {};
+  const on = (target) => (type, listener) => { (listeners[`${target}:${type}`] ??= []).push(listener); };
+  let updates = 0;
+  const registration = { update: async () => { updates += 1; } };
+  const container = { controller: {}, register: async () => registration, addEventListener: on('sw') };
+  const document = { readyState: 'complete', visibilityState: 'visible', addEventListener: on('doc') };
+  let ready = 0;
+  registerServiceWorker({
+    container, location: { protocol: 'https:', hostname: 'x' }, window: {}, document,
+    onUpdateReady: () => { ready += 1; },
+  });
+  await new Promise((resolve) => setTimeout(resolve));
+  listeners['doc:visibilitychange'].forEach((listener) => listener());
+  assert.equal(updates, 1);
+  document.visibilityState = 'hidden';
+  listeners['doc:visibilitychange'].forEach((listener) => listener());
+  assert.equal(updates, 1);
+  listeners['sw:controllerchange'].forEach((listener) => listener());
+  assert.equal(ready, 1);
+});
+
+test('the first install taking control is not reported as an update', async () => {
+  const listeners = [];
+  const container = { controller: null, register: async () => ({}), addEventListener: (type, l) => listeners.push(l) };
+  let ready = 0;
+  registerServiceWorker({
+    container, location: { protocol: 'https:', hostname: 'x' }, window: {},
+    document: { readyState: 'complete', addEventListener() {} }, onUpdateReady: () => { ready += 1; },
+  });
+  await new Promise((resolve) => setTimeout(resolve));
+  listeners.forEach((listener) => listener());
+  assert.equal(ready, 0);
+});
+
 test('cacheVersion reads VERSION from the sjineser-* cache name, null without one or on errors', async () => {
   assert.equal(await cacheVersion({ keys: async () => ['other', 'sjineser-abc123def456'] }), 'abc123def456');
   assert.equal(await cacheVersion({ keys: async () => ['other'] }), null);
