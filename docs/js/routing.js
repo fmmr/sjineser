@@ -70,8 +70,8 @@ export function buildHash(path, query = {}) {
 /** @typedef {'play' | 'stats' | 'more'} Tab */
 
 /**
- * The tab bar entry a route belongs to: stats pages → Statistikk; the Mer page and the
- * explanation pages it links to → Mer; everything else (play screens, unknown paths) → Spill.
+ * The tab bar entry a route belongs to: stats pages → Statistikk; the Mer pages (e.g. Spillere) and the
+ * explanation pages they link to → Mer; everything else (play screens, unknown paths) → Spill.
  * @param {string} path e.g. '/stats/player/Anne'
  * @returns {Tab}
  */

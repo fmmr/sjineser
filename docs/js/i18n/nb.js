@@ -56,6 +56,8 @@ export const t = {
     noNight: 'Start en kveld først',
     noMatch: 'Ingen kamp i gang',
     nothingToUndo: 'Ingenting å angre',
+    unknownPlayer: 'Fant ikke spilleren',
+    inUse: 'Spilleren har spilt kamper – deaktiver i stedet',
   },
 
   proposal: {
@@ -125,6 +127,9 @@ export const t = {
 
   more: {
     title: 'Mer',
+    gameHeading: 'Spill',
+    players: 'Spillere',
+    playersNote: 'Legg til, endre navn, deaktiver',
     settingsHeading: 'Innstillinger',
     theme: 'Tema',
     themeChoices: { system: 'System', dark: 'Mørk', light: 'Lys' },
@@ -136,6 +141,28 @@ export const t = {
     sheet: 'Google Regneark',
     version: 'Versjon',
     newTab: ' (åpnes i ny fane)',
+  },
+
+  players: {
+    title: 'Spillere',
+    activeHeading: 'Aktive',
+    inactiveHeading: 'Inaktive',
+    inactiveNote: 'Inaktive spillere vises ikke når en kveld startes, men statistikken deres beholdes.',
+    none: 'Ingen spillere ennå.',
+    played: (games, date) => `${games} spill · sist ${date}`,
+    notPlayed: 'Ikke spilt ennå',
+    activeLabel: (name) => `${name} er aktiv`,
+    actionsLabel: (name) => `Valg for ${name}`,
+    rename: 'Endre navn',
+    renameTitle: (name) => `Endre navn på ${name}`,
+    renameNote: 'Navnet endres i alle kvelder, kamper og i statistikken.',
+    nameLabel: 'Nytt navn',
+    save: 'Lagre',
+    renamed: (name) => `Endret navn til ${name}`,
+    delete: 'Slett',
+    deleteTitle: (name) => `Slette ${name}?`,
+    deleteMessage: 'Spilleren har ikke spilt og fjernes fra listen.',
+    deleted: (name) => `${name} er slettet`,
   },
 
   /**

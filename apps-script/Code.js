@@ -70,14 +70,61 @@ function handlePost(e) {
 
 const HANDLERS = {
   addPlayer({ name }) {
-    if (typeof name !== 'string') return fail('invalid', 'Invalid name');
-    const clean = name.trim();
-    // ',' joins names in Nights; '+' joins a pair in stats links.
-    if (!clean || clean.includes(',') || clean.includes('+')) return fail('invalid', 'Invalid name');
-    const existing = readTab('Players').find((r) => r.value.name.toLowerCase() === clean.toLowerCase());
+    const clean = cleanName(name);
+    if (!clean) return fail('invalid', 'Invalid name');
+    const existing = findPlayerRow(readTab('Players'), clean);
     if (existing) return done('noop', { name: existing.value.name });
     append('Players', [clean, true]);
     return done('applied', { name: clean });
+  },
+
+  /**
+   * Renames a player in Players, every Nights roster and every Matches seat, in that order:
+   * the Matches seat validation requires the new name to exist in Players first.
+   */
+  renamePlayer({ from, to }) {
+    const name = cleanName(to);
+    if (typeof from !== 'string' || !name) return fail('invalid', 'Invalid name');
+    const players = readTab('Players');
+    const player = findPlayerRow(players, from);
+    if (!player) return findPlayerRow(players, name) ? done('noop') : fail('invalid', 'Unknown player');
+    const old = player.value.name;
+    if (old === name) return done('noop');
+    const other = findPlayerRow(players, name);
+    if (other && other.row !== player.row) return fail('conflict', 'Another player has that name');
+
+    tab('Players').getRange(player.row, 1).setValue(name);
+    rewriteColumns('Nights', 2, 1, (cells) => {
+      const names = String(cells[0]).split(',').map((p) => p.trim()).filter(Boolean);
+      return names.includes(old) ? [names.map((n) => (n === old ? name : n)).join(', ')] : null;
+    });
+    rewriteColumns('Matches', 3, SEATS.length, (cells) => {
+      const seats = cells.map((c) => String(c).trim());
+      return seats.includes(old) ? seats.map((n) => (n === old ? name : n)) : null;
+    });
+    return done('applied');
+  },
+
+  setPlayerActive({ name, active }) {
+    if (typeof name !== 'string' || typeof active !== 'boolean') return fail('invalid', 'Invalid player');
+    const player = findPlayerRow(readTab('Players'), name);
+    if (!player) return fail('invalid', 'Unknown player');
+    if (player.value.active === active) return done('noop');
+    tab('Players').getRange(player.row, 2).setValue(active);
+    return done('applied');
+  },
+
+  /** Only players without history: never on a Nights roster, never in a Matches seat. */
+  deletePlayer({ name }) {
+    if (typeof name !== 'string') return fail('invalid', 'Invalid player');
+    const player = findPlayerRow(readTab('Players'), name);
+    if (!player) return done('noop');
+    const stored = player.value.name;
+    const inNights = readTab('Nights').some((r) => r.value.players.includes(stored));
+    const inMatches = readTab('Matches').some((r) => SEATS.some((seat) => r.value[seat] === stored));
+    if (inNights || inMatches) return fail('invalid', 'Player has history');
+    tab('Players').deleteRow(player.row);
+    return done('applied');
   },
 
   startNight({ date, players }) {
@@ -189,6 +236,25 @@ function readAll() {
   return { players: values('Players'), nights: values('Nights'), matches: values('Matches'), games: values('Games') };
 }
 
+/**
+ * Batch read-modify-write of `width` columns from `column` over all data rows of a tab.
+ * `change(cells)` returns the new cells of a row, or null to keep it; writes only if something changed.
+ */
+function rewriteColumns(name, column, width, change) {
+  const sheet = tab(name);
+  const count = dataRowCount(sheet);
+  if (count === 0) return;
+  const range = sheet.getRange(2, column, count, width);
+  let changed = false;
+  const values = range.getValues().map((cells) => {
+    const next = change(cells);
+    if (!next) return cells;
+    changed = true;
+    return next;
+  });
+  if (changed) range.setValues(values);
+}
+
 function append(name, cells) {
   const sheet = tab(name);
   const row = dataRowCount(sheet) + 2;
@@ -221,6 +287,19 @@ function isoDate(value) {
   return value instanceof Date
     ? Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd')
     : String(value).trim();
+}
+
+/** A valid trimmed player name, or null. ',' joins names in Nights; '+' joins a pair in stats links. */
+function cleanName(name) {
+  if (typeof name !== 'string') return null;
+  const clean = name.trim();
+  return clean && !clean.includes(',') && !clean.includes('+') ? clean : null;
+}
+
+/** The Players row whose name matches case-insensitively, or undefined. */
+function findPlayerRow(rows, name) {
+  const wanted = String(name).trim().toLowerCase();
+  return rows.find((r) => r.value.name.toLowerCase() === wanted);
 }
 
 function sameMembers(a, b) {

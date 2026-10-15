@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createOutbox, randomId } from '../../docs/js/state/outbox.js';
+import { createOutbox, dependsOn, opScope, randomId } from '../../docs/js/state/outbox.js';
 import { createStorage } from '../../docs/js/state/storage.js';
 import { DATE, memoryBackend } from '../helpers.js';
 
@@ -233,4 +233,35 @@ test('randomId works without crypto.randomUUID (insecure origins, older Safari)'
     if (original) Object.defineProperty(globalThis.crypto, 'randomUUID', original);
     else delete globalThis.crypto.randomUUID;
   }
+});
+
+test('player ops belong to no night or match and never cascade', () => {
+  const player = [
+    { id: 'a', action: 'renamePlayer', payload: { from: 'Hans', to: 'Johannes' } },
+    { id: 'b', action: 'setPlayerActive', payload: { name: 'Hans', active: false } },
+    { id: 'c', action: 'deletePlayer', payload: { name: 'Kari' } },
+    { id: 'd', action: 'addPlayer', payload: { name: 'Kari' } },
+  ];
+  const others = [
+    { id: 'n', action: 'startNight', payload: { date: DATE, players: [] } },
+    { id: 'm', action: 'startMatch', payload: { matchId: `${DATE}#1`, date: DATE } },
+  ];
+  for (const op of player) {
+    assert.deepEqual(opScope(op), { night: null, match: null }, op.action);
+    for (const other of [...player, ...others]) {
+      if (other === op) continue;
+      assert.equal(dependsOn(other, op), false, `${other.action} after dropped ${op.action}`);
+      assert.equal(dependsOn(op, other), false, `${op.action} after dropped ${other.action}`);
+    }
+  }
+});
+
+test('a dropped renamePlayer drops only itself', async () => {
+  const { outbox, log } = setup({ responses: [{ ok: false, error: 'conflict' }] });
+  outbox.enqueue('renamePlayer', { from: 'Hans', to: 'Kari' });
+  outbox.enqueue('setPlayerActive', { name: 'Hans', active: false });
+  outbox.enqueue('addGame', game(`${DATE}#1`, 1));
+  await outbox.flush();
+  assert.deepEqual(log.dropped, [['renamePlayer']]);
+  assert.deepEqual(log.sent, ['renamePlayer', 'setPlayerActive', 'addGame']);
 });

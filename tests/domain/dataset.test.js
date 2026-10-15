@@ -111,3 +111,88 @@ test('a non-string matchId never throws', () => {
     assert.equal(outcome(nightWithMatch(), 'deleteMatch', { matchId }), 'noop');
   }
 });
+
+// ---------- Player management ----------
+
+const withKari = () => ({ ...nightWithMatch(['A']), players: [...nightWithMatch().players, { name: 'Kari', active: true }] });
+
+test('renamePlayer renames the player, every roster and every seat', () => {
+  const { dataset: ds, outcome: o } = applyOp(withKari(), op('renamePlayer', { from: 'Hans', to: ' Johannes ' }));
+  assert.equal(o, 'applied');
+  assert.deepEqual(ds.players.map((p) => p.name), ['Frode', 'Johannes', 'Per', 'Tor', 'Kari']);
+  assert.deepEqual(ds.nights[0].players, ['Frode', 'Johannes', 'Per', 'Tor']);
+  assert.equal(ds.matches[0].A1, 'Johannes');
+  assert.deepEqual(ds.games, withKari().games);
+});
+
+test('renamePlayer keeps the active flag', () => {
+  const base = dataset({ players: [{ name: 'Gamle', active: false }] });
+  assert.deepEqual(applyOp(base, op('renamePlayer', { from: 'Gamle', to: 'Eldre' })).dataset.players, [{ name: 'Eldre', active: false }]);
+});
+
+test('renamePlayer to another casing of the same player is applied', () => {
+  const { dataset: ds, outcome: o } = applyOp(withKari(), op('renamePlayer', { from: 'Hans', to: 'HANS' }));
+  assert.equal(o, 'applied');
+  assert.equal(ds.matches[0].A1, 'HANS');
+  assert.deepEqual(ds.nights[0].players, ['Frode', 'HANS', 'Per', 'Tor']);
+  // Retrying the same op is a noop: 'Hans' now resolves to 'HANS', which already is the target.
+  assert.equal(outcome(ds, 'renamePlayer', { from: 'Hans', to: 'HANS' }), 'noop');
+});
+
+test('renamePlayer is idempotent: a retry after success is a noop', () => {
+  const rename = { from: 'Hans', to: 'Johannes' };
+  const { dataset: ds } = applyOp(withKari(), op('renamePlayer', rename));
+  assert.equal(outcome(ds, 'renamePlayer', rename), 'noop');
+  assert.equal(outcome(ds, 'renamePlayer', { from: 'Hans', to: 'johannes' }), 'noop');
+});
+
+test('renamePlayer: noop for the same name, conflict for another player, invalid otherwise', () => {
+  assert.equal(outcome(withKari(), 'renamePlayer', { from: 'Hans', to: 'Hans' }), 'noop');
+  assert.equal(outcome(withKari(), 'renamePlayer', { from: 'Hans', to: 'kari' }), 'conflict');
+  assert.equal(outcome(withKari(), 'renamePlayer', { from: 'Nobody', to: 'Someone' }), 'invalid');
+  for (const to of ['', '  ', 'A, B', 'A+B', 42, null]) {
+    assert.equal(outcome(withKari(), 'renamePlayer', { from: 'Hans', to }), 'invalid', String(to));
+  }
+  assert.equal(outcome(withKari(), 'renamePlayer', { from: 42, to: 'Johannes' }), 'invalid');
+  assert.equal(outcome(withKari(), 'renamePlayer', {}), 'invalid');
+});
+
+test('setPlayerActive: applied, noop for the same value, invalid for unknown player or non-boolean', () => {
+  const { dataset: ds, outcome: o } = applyOp(withKari(), op('setPlayerActive', { name: 'Kari', active: false }));
+  assert.equal(o, 'applied');
+  assert.deepEqual(ds.players.at(-1), { name: 'Kari', active: false });
+  assert.equal(outcome(ds, 'setPlayerActive', { name: 'Kari', active: false }), 'noop');
+  assert.equal(outcome(ds, 'setPlayerActive', { name: 'kari', active: true }), 'applied');
+  assert.equal(outcome(ds, 'setPlayerActive', { name: 'Nobody', active: false }), 'invalid');
+  assert.equal(outcome(ds, 'setPlayerActive', { name: 'Kari', active: 'false' }), 'invalid');
+  assert.equal(outcome(ds, 'setPlayerActive', { name: 42, active: true }), 'invalid');
+});
+
+test('deletePlayer: only players without history; noop if absent', () => {
+  const { dataset: ds, outcome: o } = applyOp(withKari(), op('deletePlayer', { name: 'kari' }));
+  assert.equal(o, 'applied');
+  assert.deepEqual(ds.players.map((p) => p.name), FOUR);
+  assert.equal(outcome(ds, 'deletePlayer', { name: 'Kari' }), 'noop');
+  assert.equal(outcome(withKari(), 'deletePlayer', { name: 'Hans' }), 'invalid');
+  assert.equal(outcome(withKari(), 'deletePlayer', { name: 42 }), 'invalid');
+});
+
+test('deletePlayer refuses a player who is only on a night roster', () => {
+  const base = dataset({ players: FOUR.map((name) => ({ name, active: true })), nights: [{ date: DATE, players: FOUR }] });
+  assert.equal(outcome(base, 'deletePlayer', { name: 'Tor' }), 'invalid');
+});
+
+test('player ops never mutate their input', () => {
+  const ds = withKari();
+  const snapshot = structuredClone(ds);
+  applyOp(ds, op('renamePlayer', { from: 'Hans', to: 'Johannes' }));
+  applyOp(ds, op('setPlayerActive', { name: 'Hans', active: false }));
+  applyOp(ds, op('deletePlayer', { name: 'Kari' }));
+  assert.deepEqual(ds, snapshot);
+});
+
+test('player ops with a missing payload do not throw', () => {
+  for (const action of ['renamePlayer', 'setPlayerActive', 'deletePlayer']) {
+    assert.equal(applyOp(withKari(), { action }).outcome, 'invalid', action);
+  }
+});

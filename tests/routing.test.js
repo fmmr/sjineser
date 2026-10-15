@@ -63,8 +63,8 @@ test('buildHash and parseHash round-trip', () => {
 
 test('activeTab: stats pages → stats; Mer and the explanation pages → more; the rest → play', () => {
   for (const path of ['/stats', '/stats/player/Anne', '/stats/pairs', '/stats/compare/A/B']) assert.equal(activeTab(path), 'stats', path);
-  for (const path of ['/more', '/about', '/about/teams', '/about/rating']) assert.equal(activeTab(path), 'more', path);
-  for (const path of ['/', '/play', '/play/night', '/play/new-match', '/play/match', '/unknown', '/statsx', '/aboutx']) {
+  for (const path of ['/more', '/more/players', '/about', '/about/teams', '/about/rating']) assert.equal(activeTab(path), 'more', path);
+  for (const path of ['/', '/play', '/play/night', '/play/new-match', '/play/match', '/unknown', '/statsx', '/aboutx', '/morex']) {
     assert.equal(activeTab(path), 'play', path);
   }
 });

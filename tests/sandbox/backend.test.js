@@ -116,3 +116,15 @@ test('sandbox api, outbox and store never write to the real storage namespace', 
   assert.deepEqual(backend.keys().filter((key) => key.startsWith('sjineser:')), ['sjineser:pin']);
   assert.ok(backend.keys().includes('sjineser-sandbox:outbox'));
 });
+
+test('player management uses the same rules: rename everywhere, retry is a noop, delete needs no history', async () => {
+  const storage = freshStorage();
+  const api = await withMatch(storage);
+  assert.deepEqual(await api.post('renamePlayer', { from: 'Anne', to: 'Annette' }, 'any'), { ok: true, result: 'applied' });
+  assert.deepEqual(await api.post('renamePlayer', { from: 'Anne', to: 'Annette' }, 'any'), { ok: true, result: 'noop' });
+  const { data } = await api.getAll();
+  assert.equal(data.matches.find((m) => m.matchId === MATCH).A1, 'Annette');
+  assert.ok(!JSON.stringify(data).includes('"Anne"'));
+  assert.equal((await api.post('deletePlayer', { name: 'Annette' }, 'any')).error, 'invalid');
+  assert.equal((await api.post('renamePlayer', { from: 'Annette', to: 'bjørn' }, 'any')).error, 'conflict');
+});

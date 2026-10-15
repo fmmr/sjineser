@@ -157,3 +157,42 @@ test('a number whose deleteMatch is still queued is not reused', () => {
   actions.startMatch(seats);
   assert.deepEqual(queued(outbox), [`startMatch ${MATCH_1}`, `deleteMatch ${MATCH_1}`, `startMatch ${DATE}#2`]);
 });
+
+test('renamePlayer validates locally and enqueues the stored name and the trimmed new name', () => {
+  const { actions, outbox, store } = setup(nightWithMatch(['A']));
+  assert.deepEqual(actions.renamePlayer('Nobody', 'Kari'), { ok: false, error: 'unknownPlayer' });
+  assert.deepEqual(actions.renamePlayer('Hans', 'per'), { ok: false, error: 'duplicate' });
+  assert.deepEqual(actions.renamePlayer('Hans', 'Jo+hannes'), { ok: false, error: 'plus' });
+  assert.deepEqual(actions.renamePlayer('Hans', 'Hans'), { ok: true });
+  assert.deepEqual(outbox.queue, []);
+  assert.deepEqual(actions.renamePlayer('hans', ' Johannes '), { ok: true });
+  assert.deepEqual(outbox.queue.map((op) => op.payload), [{ from: 'Hans', to: 'Johannes' }]);
+  assert.equal(store.get().matches[0].A1, 'Johannes');
+});
+
+test('renamePlayer allows a new casing of the same name', () => {
+  const { actions, outbox } = setup(nightWithMatch());
+  assert.deepEqual(actions.renamePlayer('Hans', 'HANS'), { ok: true });
+  assert.deepEqual(outbox.queue.map((op) => op.payload), [{ from: 'Hans', to: 'HANS' }]);
+});
+
+test('setPlayerActive enqueues only real changes', () => {
+  const { actions, outbox, store } = setup(nightWithMatch());
+  assert.deepEqual(actions.setPlayerActive('Nobody', false), { ok: false, error: 'unknownPlayer' });
+  assert.deepEqual(actions.setPlayerActive('Hans', true), { ok: true });
+  assert.deepEqual(outbox.queue, []);
+  assert.deepEqual(actions.setPlayerActive('Hans', false), { ok: true });
+  assert.deepEqual(outbox.queue.map((op) => [op.action, op.payload]), [['setPlayerActive', { name: 'Hans', active: false }]]);
+  assert.equal(store.get().players.find((p) => p.name === 'Hans').active, false);
+});
+
+test('deletePlayer refuses players with history and removes the others', () => {
+  const base = nightWithMatch();
+  const { actions, outbox, store } = setup({ ...base, players: [...base.players, { name: 'Kari', active: true }] });
+  assert.deepEqual(actions.deletePlayer('Nobody'), { ok: false, error: 'unknownPlayer' });
+  assert.deepEqual(actions.deletePlayer('Hans'), { ok: false, error: 'inUse' });
+  assert.deepEqual(outbox.queue, []);
+  assert.deepEqual(actions.deletePlayer('kari'), { ok: true });
+  assert.deepEqual(queued(outbox), ['deletePlayer Kari']);
+  assert.equal(store.get().players.length, 4);
+});

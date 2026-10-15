@@ -1,6 +1,6 @@
 import { isISODate } from './dates.js';
-import { findPlayer, nameFormatError } from './players.js';
-import { isValidMatchId, parseMatchId, sameSeats, validSeats } from './match.js';
+import { findPlayer, hasHistory, nameFormatError } from './players.js';
+import { SEATS, isValidMatchId, parseMatchId, sameSeats, validSeats } from './match.js';
 
 /** @typedef {'applied' | 'noop' | 'conflict' | 'invalid'} Outcome */
 /** @typedef {{ action: string, payload: object }} Op */
@@ -33,6 +33,47 @@ const HANDLERS = {
     if (typeof name !== 'string' || nameFormatError(name)) return unchanged(ds, 'invalid');
     if (findPlayer(ds.players, name)) return unchanged(ds, 'noop');
     return changed(ds, { players: [...ds.players, { name: name.trim(), active: true }] });
+  },
+
+  /**
+   * Renames a player everywhere: the Players row, every night roster and every match seat.
+   * `to` may be another casing of the same player. A retry after success finds `from` gone
+   * (or already spelled `to`) and is a noop.
+   */
+  renamePlayer(ds, { from, to }) {
+    if (typeof from !== 'string' || typeof to !== 'string' || nameFormatError(to)) return unchanged(ds, 'invalid');
+    const name = to.trim();
+    const player = findPlayer(ds.players, from);
+    if (!player) return unchanged(ds, findPlayer(ds.players, name) ? 'noop' : 'invalid');
+    if (player.name === name) return unchanged(ds, 'noop');
+    const other = findPlayer(ds.players, name);
+    if (other && other !== player) return unchanged(ds, 'conflict');
+    const old = player.name;
+    const swap = (n) => (n === old ? name : n);
+    return changed(ds, {
+      players: ds.players.map((p) => (p === player ? { ...p, name } : p)),
+      nights: ds.nights.map((n) => (n.players.includes(old) ? { ...n, players: n.players.map(swap) } : n)),
+      matches: ds.matches.map((m) => (SEATS.some((seat) => m[seat] === old)
+        ? { ...m, ...Object.fromEntries(SEATS.map((seat) => [seat, swap(m[seat])])) }
+        : m)),
+    });
+  },
+
+  setPlayerActive(ds, { name, active }) {
+    if (typeof name !== 'string' || typeof active !== 'boolean') return unchanged(ds, 'invalid');
+    const player = findPlayer(ds.players, name);
+    if (!player) return unchanged(ds, 'invalid');
+    if (player.active === active) return unchanged(ds, 'noop');
+    return changed(ds, { players: ds.players.map((p) => (p === player ? { ...p, active } : p)) });
+  },
+
+  /** Only players without history (no roster, no seat) can be deleted; deactivate the others. */
+  deletePlayer(ds, { name }) {
+    if (typeof name !== 'string') return unchanged(ds, 'invalid');
+    const player = findPlayer(ds.players, name);
+    if (!player) return unchanged(ds, 'noop');
+    if (hasHistory(ds, player.name)) return unchanged(ds, 'invalid');
+    return changed(ds, { players: ds.players.filter((p) => p !== player) });
   },
 
   startNight(ds, { date, players }) {

@@ -34,6 +34,7 @@ export function wrapFocus(index, count, backwards) {
  * @property {any | (() => any)} value what the sheet resolves to; a function is called on close
  * @property {'primary' | 'danger' | 'ghost'} [variant]
  * @property {boolean} [submit] also chosen by Enter in a field
+ * @property {boolean} [disabled] shown but not choosable (say why in the message)
  */
 
 /**
@@ -55,6 +56,7 @@ export function openSheet({ title, message, body = [], actions, cancelValue, ini
     h('button', {
       class: `btn btn-${action.variant ?? 'ghost'}`,
       type: action.submit ? 'submit' : 'button',
+      disabled: action.disabled,
       onclick: action.submit ? null : () => close(action.value),
     }, action.label));
 

@@ -1,5 +1,5 @@
 /**
- * Inline SVG icons: the card-suit logo mark, the tab bar glyphs and the list-row arrows. Icons are decorative
+ * Inline SVG icons: the card-suit logo mark, the tab bar glyphs and the list-row trailing glyphs. Icons are decorative
  * (aria-hidden); the text next to them carries the meaning. Colours come from CSS.
  */
 
@@ -70,3 +70,6 @@ export const chevronIcon = () => svg([svgEl('path', { d: 'M9.5 6l6 6-6 6', ...st
 
 /** Trailing arrow of a list row that opens another site in a new tab. */
 export const externalIcon = () => svg([svgEl('path', { d: 'M8 16 16 8M10 8h6v6', ...stroke })]);
+
+/** Trailing "…" of a list row that opens a sheet of actions. */
+export const dotsIcon = () => svg(['5', '12', '19'].map((cx) => svgEl('circle', { cx, cy: '12', r: '1.7', fill: 'currentColor' })));

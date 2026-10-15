@@ -1,6 +1,6 @@
 import { applyOp } from '../domain/dataset.js';
 import { toISODate } from '../domain/dates.js';
-import { validateNewName } from '../domain/players.js';
+import { findPlayer, hasHistory, validateNewName, validateRename } from '../domain/players.js';
 import {
   currentMatch, currentNight, gamesOf, latestMatch, nextGameNo, nextMatchId, parseMatchId, validSeats,
 } from '../domain/match.js';
@@ -58,6 +58,29 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
     addPlayer(name) {
       const error = validateNewName(name, view().players);
       return error ? { ok: false, error } : submit('addPlayer', { name: name.trim() });
+    },
+
+    /** Renames a player in Players, every night roster and every match seat. */
+    renamePlayer(from, to) {
+      const player = findPlayer(view().players, from);
+      if (!player) return { ok: false, error: 'unknownPlayer' };
+      const error = validateRename(player.name, to, view().players);
+      return error ? { ok: false, error } : submit('renamePlayer', { from: player.name, to: to.trim() });
+    },
+
+    /** Inactive players keep their history but are hidden from the start-night picker. */
+    setPlayerActive(name, active) {
+      const player = findPlayer(view().players, name);
+      if (!player) return { ok: false, error: 'unknownPlayer' };
+      return submit('setPlayerActive', { name: player.name, active });
+    },
+
+    /** Only players who were never on a roster or in a match can be deleted. */
+    deletePlayer(name) {
+      const player = findPlayer(view().players, name);
+      if (!player) return { ok: false, error: 'unknownPlayer' };
+      if (hasHistory(view(), player.name)) return { ok: false, error: 'inUse' };
+      return submit('deletePlayer', { name: player.name });
     },
 
     startNight(players) {
