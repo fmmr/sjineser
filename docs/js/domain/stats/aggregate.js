@@ -24,6 +24,25 @@ export function wdlOf(rows) {
  */
 export const lastOutcomes = (rows, count) => rows.slice(-count).map((r) => r.outcome);
 
+/**
+ * Runs of consecutive rows whose outcome is one of `outcomes` (rows in canonical order): the
+ * current run (up to the last row), the longest run, and the last row of the most recent longest
+ * run (null when there is no run).
+ * @param {PlayerGameRow[]} rows
+ * @param {('W' | 'D' | 'L')[]} outcomes
+ * @returns {{ current: number, longest: number, end: PlayerGameRow | null }}
+ */
+export function runOf(rows, outcomes) {
+  let current = 0;
+  let longest = 0;
+  let end = null;
+  for (const row of rows) {
+    current = outcomes.includes(row.outcome) ? current + 1 : 0;
+    if (current > 0 && current >= longest) [longest, end] = [current, row];
+  }
+  return { current, longest, end };
+}
+
 /** @param {Wdl} wdl */
 export const gamesOf = ({ W, D, L }) => W + D + L;
 

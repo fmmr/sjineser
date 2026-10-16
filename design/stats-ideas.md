@@ -32,16 +32,16 @@ Mark ideas `[x]` when shipped.
 
 - [x] Lengste kveld: night with the most games, who was there (records)
 - [x] Kveldsside (`#/stats/night/<date>`): one night's sets as scoreboards, the night's leaderboard (only those who were there, by rating change) with Kveldens vinner, the night's pairs, summary and records; live while the night is ongoing; reached from Kvelder rows, the home cards and the match screen
+- [x] Lengste seiersrekke: most games won in a row by one player, across sets and nights (overview and night records)
 
 ## Ideas (ranked)
 1. **Avgjørende spill** — win share in games where a team stands at 2 wins (set point); specific to first-to-3.
 2. **Tremannslag vs tomannslag** — a player's win share on 3-player vs 2-player teams; tests whether the team of three really has an edge (relevant for the Elo assumption in spec §18).
-3. **Lengste seiersrekke** — overall record (per-player streaks already exist).
-4. **Sesongens spiller** — largest rating gain per season.
-5. **Oppmøte-rekke** — most nights in a row without missing one.
-6. **Mot hverandre-matrise** — player vs player win share table (best on wide screens).
-7. **Snitt spill per sett / uavgjort-andel over tid** — trend chart on the overview.
-8. **Flest uavgjort i ett sett** — record (overlaps with "Lengste sett").
+3. **Sesongens spiller** — largest rating gain per season.
+4. **Oppmøte-rekke** — most nights in a row without missing one.
+5. **Mot hverandre-matrise** — player vs player win share table (best on wide screens).
+6. **Snitt spill per sett / uavgjort-andel over tid** — trend chart on the overview.
+7. **Flest uavgjort i ett sett** — record (overlaps with "Lengste sett").
 
 ## Dropped
 - ~~Sit-outs per player~~ — with 3 vs 2 and 3 vs 3 nobody sits out with six or fewer players, so it would almost always be empty.

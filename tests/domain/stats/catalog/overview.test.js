@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { overallSubject, pairSubject, playerSubject } from '../../../../docs/js/domain/stats/subjects.js';
-import { HF_TP, compute as computeStat, factsOf } from './fixtures.js';
+import { nightFilter } from '../../../../docs/js/domain/stats/filter.js';
+import { HF_TP, HT_FP, compute as computeStat, factsOf } from './fixtures.js';
 
 const OVERALL = overallSubject();
 const N1 = '2026-09-02';
@@ -148,6 +149,33 @@ test('longestDrawStreak: tie → most recent; null without draws', () => {
   ]);
   assert.deepEqual(compute('longestDrawStreak', facts), { value: 2, format: 'int', holders: [], date: N2 });
   assert.equal(compute('longestDrawStreak', factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }])), null);
+});
+
+test('longestWinStreak: one player\'s run across sets and nights; a draw or loss ends it', () => {
+  // Hans: L W W | W W W W D (N2) | W L — 6 across two nights and two sets, ended by a draw.
+  // Frode: L W W | W W L L D — 4, ended by a loss in the second set of N2.
+  const facts = factsOf([
+    { date: N1, matches: [[HF_TP, 'BAA']] },
+    { date: N2, matches: [[HF_TP, 'AA'], [HT_FP, 'AAD']] },
+    { date: N3, matches: [[HF_TP, 'AB']] },
+  ]);
+  assert.deepEqual(compute('longestWinStreak', facts), { value: 6, format: 'int', holders: ['Hans'], date: N2 });
+});
+
+test('longestWinStreak: tie → most recent run end; teammates ending in the same game share it', () => {
+  const facts = factsOf([
+    { date: N1, matches: [['Kari Ola - Tor Per', 'AAB']] },
+    { date: N2, matches: [[HF_TP, 'BAA']] },
+  ]);
+  assert.deepEqual(compute('longestWinStreak', facts), { value: 2, format: 'int', holders: ['Frode', 'Hans'], date: N2 });
+});
+
+test('longestWinStreak: works on a single night; null when nobody won a game', () => {
+  const nights = [{ date: N1, matches: [[HF_TP, 'AAA']] }, { date: N2, matches: [[HF_TP, 'BD']] }];
+  assert.deepEqual(compute('longestWinStreak', factsOf(nights, nightFilter(N2))),
+    { value: 1, format: 'int', holders: ['Per', 'Tor'], date: N2 });
+  assert.equal(compute('longestWinStreak', factsOf([{ date: N1, matches: [[HF_TP, 'DD']] }])), null);
+  assert.equal(compute('longestWinStreak', EMPTY), null);
 });
 
 test('cleanSweeps: count of 3–0 sets without draws, ranked by the players who won most of them', () => {

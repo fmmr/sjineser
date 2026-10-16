@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { allTimeGameNumbers, minGamesFor, settledRows } from '../../../docs/js/domain/stats/aggregate.js';
+import { allTimeGameNumbers, minGamesFor, runOf, settledRows } from '../../../docs/js/domain/stats/aggregate.js';
 import { MIN_GAMES_TOGETHER } from '../../../docs/js/domain/stats/constants.js';
 import { HF_TP, factsOf } from './catalog/fixtures.js';
 
@@ -33,6 +33,13 @@ test('settledRows: only rows after the player\'s PROVISIONAL_GAMES-th game ever'
     ['Hans', N1, 1], ['Frode', N1, 1], ['Tor', N1, 1],
   ]);
   assert.equal(settledRows(factsOf(nights, { kind: 'season', year: 2026, half: 1 })).length, 0);
+});
+
+test('runOf: current and longest run of the given outcomes; end = last row of the most recent longest run', () => {
+  const rows = [...'WWDWWLW'].map((outcome, index) => ({ outcome, index }));
+  assert.deepEqual(runOf(rows, ['W']), { current: 1, longest: 2, end: rows[4] });
+  assert.deepEqual(runOf(rows, ['W', 'D']), { current: 1, longest: 5, end: rows[4] });
+  assert.deepEqual(runOf(rows.slice(0, 2), ['L']), { current: 0, longest: 0, end: null });
 });
 
 test('minGamesFor: no minimum for a single night, MIN_GAMES_TOGETHER otherwise', () => {
