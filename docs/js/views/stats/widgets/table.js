@@ -54,6 +54,14 @@ const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players', 'form'];
  * "14. okt. 2025", labels come from t.statsLabels, form reads "SSUT" (– without games).
  * @param {unknown} value @param {string} format
  */
+/** "Anne, Bjørn og Cato" with each name linking to the player page. */
+function linkedNames(names, query) {
+  return names.flatMap((name, i) => [
+    t.nameSeparator(i, names.length) || null,
+    h('a', { class: 'link', href: statsHref(subjectPath(playerSubject(name)), query) }, name),
+  ]);
+}
+
 export function cellText(value, format) {
   if (format === 'player') return value;
   if (format === 'pair') return t.statsUi.pair(value[0], value[1]);
@@ -81,6 +89,7 @@ export function tableBody({ columns, rows }, { query }) {
     const subject = key === linkKey ? row.subject : LINK_FORMATS.includes(format) ? cellSubject(row[key], format) : null;
     if (subject) content = h('a', { class: 'link', href: statsHref(subjectPath(subject), query) }, text);
     if (format === 'form' && row[key].length > 0) content = formStrip(row[key], { compact: true });
+    if (format === 'players') content = linkedNames(row[key], query);
     if (key === 'rank') content = h('span', { class: 'stat-rank', 'data-rank': String(row[key]) }, text);
     const className = isNumber(format) ? 'num' : format === 'players' ? 'names' : null;
     return h('td', { class: className, 'data-col': key, 'data-sign': signOf(row[key], format) },
