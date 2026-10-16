@@ -7,7 +7,7 @@ const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, 
 
 test('known kinds and formats', () => {
   assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart']);
-  assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal']);
+  assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent']);
   assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label']);
 });
 
@@ -31,6 +31,10 @@ test('number', () => {
   valid('number', { value: 1012.4, format: 'rating', marker: 'provisional' });
   valid('number', { value: -12.5, format: 'signed' });
   valid('number', { value: 2.5, format: 'decimal' });
+  valid('number', { value: -0.083, format: 'signedPercent' });
+  valid('number', { value: 1, format: 'signedPercent' });
+  invalid('number', { value: 1.5, format: 'signedPercent' });
+  invalid('number', { value: -1.01, format: 'signedPercent' });
   invalid('number', { value: 2.5, format: 'int' });
   invalid('number', { value: 1.2, format: 'percent' });
   invalid('number', { value: NaN, format: 'decimal' });

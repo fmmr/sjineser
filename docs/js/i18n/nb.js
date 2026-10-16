@@ -208,12 +208,20 @@ export const t = {
     togetherWdl: { title: 'Sammen', description: 'Spill der de var på samme lag (to eller tre): S/U/T for laget.' },
     attendance: { title: 'Oppmøte', description: 'Kvelder hver spiller var med (også på benken), og andel av kveldene i perioden.' },
     nightsAttended: { title: 'Kvelder', description: 'Kvelder spilleren var med i perioden.' },
+    chemistry: {
+      title: 'Kjemi',
+      description: ({ minGames }) => `Hvor mye bedre (eller dårligere) paret scorer enn ratingen tilsier, i prosentpoeng per spill (seier 1, uavgjort ½). Minst ${minGames} spill sammen som par.`,
+    },
+    pairChemistry: {
+      title: 'Kjemi som par',
+      description: ({ minGames }) => `Prosentpoeng over (eller under) det ratingen tilsier når de spiller sammen som par. Minst ${minGames} spill.`,
+    },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
   },
   /** Label cells in stat tables (format 'label'). */
   statsLabels: { streak_win: 'Seire', streak_unbeaten: 'Ubeseiret', streak_loss: 'Tap' },
   /** Full names for abbreviated table headers (shown as a tooltip / read by screen readers). */
-  statsColumnTitles: { W: 'Vunnet', D: 'Uavgjort', L: 'Tapt' },
+  statsColumnTitles: { W: 'Vunnet', D: 'Uavgjort', L: 'Tapt', chemistry: 'Prosentpoeng over forventet' },
   /** Stat table headers by column key. */
   statsColumns: {
     rank: '#', player: 'Spiller', rating: 'Rating', change: 'Endring', games: 'Spill',
@@ -221,6 +229,7 @@ export const t = {
     W: 'S', D: 'U', L: 'T', winRate: 'Seier %',
     kind: 'Rekke', current: 'Nå', longest: 'Lengst',
     nights: 'Kvelder', share: 'Andel',
+    chemistry: 'Kjemi',
   },
   /** Section headings on the stats pages. */
   statsSections: {
@@ -237,6 +246,7 @@ export const t = {
     overlay: 'Over tid',
     headToHead: 'Sammen og mot hverandre',
     attendance: 'Oppmøte',
+    chemistry: 'Kjemi',
   },
   statsUi: {
     title: 'Statistikk',

@@ -5,7 +5,8 @@ import { isValidSubject } from './subjects.js';
 /**
  * Value kinds a stat can return (spec §9). Each kind has one generic widget.
  * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart'} Kind
- * @typedef {'int' | 'percent' | 'rating' | 'signed' | 'decimal'} NumberFormat percent is 0–1; signed shows +/−
+ * @typedef {'int' | 'percent' | 'rating' | 'signed' | 'decimal' | 'signedPercent'} NumberFormat percent is 0–1;
+ *   signed shows +/−; signedPercent is a fraction −1 … 1 shown as signed percentage points
  * @typedef {NumberFormat | 'player' | 'pair' | 'label'} TableFormat label: an i18n key under t.statsLabels
  * Table rows: one cell per column key, plus optional `subject` (the row links to it) and
  * optional boolean `provisional` (the row's rating cell gets the "ny" marker).
@@ -15,7 +16,7 @@ import { isValidSubject } from './subjects.js';
 export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart'];
 
 /** @type {NumberFormat[]} */
-export const NUMBER_FORMATS = ['int', 'percent', 'rating', 'signed', 'decimal'];
+export const NUMBER_FORMATS = ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent'];
 
 /** @type {TableFormat[]} */
 export const TABLE_FORMATS = [...NUMBER_FORMATS, 'player', 'pair', 'label'];
@@ -28,11 +29,12 @@ const isCount = (value) => Number.isInteger(value) && value >= 0;
 const isName = (value) => typeof value === 'string' && value !== '';
 const isOptional = (value, check) => value === undefined || check(value);
 
-/** A number that fits its format: int → integer, percent → 0–1, the rest → any finite number. */
+/** A number that fits its format: int → integer, percent → 0–1, signedPercent → −1 … 1, the rest → any finite number. */
 function isFormattedNumber(value, format) {
   if (!Number.isFinite(value) || !NUMBER_FORMATS.includes(format)) return false;
   if (format === 'int') return Number.isInteger(value);
   if (format === 'percent') return value >= 0 && value <= 1;
+  if (format === 'signedPercent') return value >= -1 && value <= 1;
   return true;
 }
 

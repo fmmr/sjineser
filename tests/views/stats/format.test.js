@@ -28,6 +28,12 @@ test('signed: rounded with + or −, zero without sign', () => {
   assert.equal(formatValue(0.2, 'signed'), '0');
 });
 
+test('signedPercent: a fraction shown as signed percentage points, zero without sign', () => {
+  assert.equal(formatValue(0.083, 'signedPercent'), '+8');
+  assert.equal(formatValue(-0.126, 'signedPercent'), '−13');
+  assert.equal(formatValue(-0.004, 'signedPercent'), '0');
+});
+
 test('decimal: one decimal with a comma', () => {
   assert.equal(formatValue(2.25, 'decimal'), '2,3');
   assert.equal(formatValue(3, 'decimal'), '3,0');

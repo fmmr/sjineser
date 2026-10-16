@@ -15,6 +15,8 @@ const LINK_FORMATS = ['player', 'pair'];
 /** The subject a player or pair cell stands for. */
 const cellSubject = (value, format) => (format === 'player' ? playerSubject(value) : pairSubject(...value));
 
+const SIGNED_FORMATS = ['signed', 'signedPercent'];
+
 /** Styling hook for signed numbers (e.g. rating change). */
 const signOf = (value) => (value > 0 ? 'up' : value < 0 ? 'down' : null);
 
@@ -46,7 +48,7 @@ export function tableBody({ columns, rows }, { query }) {
       content = h('a', { class: 'link', href: statsHref(subjectPath(subject), query) }, text);
     }
     if (key === 'rank') content = h('span', { class: 'stat-rank', 'data-rank': String(row[key]) }, text);
-    return h('td', { class: isNumber(format) ? 'num' : null, 'data-col': key, 'data-sign': format === 'signed' ? signOf(row[key]) : null },
+    return h('td', { class: isNumber(format) ? 'num' : null, 'data-col': key, 'data-sign': SIGNED_FORMATS.includes(format) ? signOf(row[key]) : null },
       content, format === 'rating' && row.provisional && provisionalMarker());
   };
 

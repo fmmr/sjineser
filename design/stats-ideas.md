@@ -23,6 +23,7 @@ Mark ideas `[x]` when shipped.
 
 ## Shipped later
 - [x] Oppmøte: nights attended and share of nights (overview table, player page, compare)
+- [x] Kjemi: pairs scoring above or below their expected score, in percentage points (pairs page table, compare)
 
 ## Ideas
 - Night winners (largest Elo gain per night)

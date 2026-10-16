@@ -28,7 +28,7 @@ test('compare derives from the catalog: player numbers/wdl side by side, player 
   const { sideBySide, overlay, headToHead } = deriveCompare(STATS);
   assert.deepEqual(sideBySide.map((s) => s.id), ['drawRate', 'rating', 'gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'nightsAttended']);
   assert.deepEqual(overlay.map((s) => s.id), ['eloChart']);
-  assert.deepEqual(headToHead.map((s) => s.id), ['togetherWdl', 'headToHead']);
+  assert.deepEqual(headToHead.map((s) => s.id), ['togetherWdl', 'headToHead', 'pairChemistry']);
 });
 
 test('a new stat shows up in compare without editing pages', () => {
@@ -69,6 +69,10 @@ test('every registered stat is shown somewhere: on a page or in the derived comp
     ...[...sideBySide, ...overlay, ...headToHead].map((s) => s.id),
   ]);
   for (const { id } of STATS) assert.ok(shown.has(id), `${id} is registered but on no page (add it to PAGES in views/stats/pages.js)`);
+});
+
+test('section order: Kjemi opens the pairs page', () => {
+  assert.deepEqual(PAGES.pairs.sections.map((s) => s.id), ['chemistry', 'pairs']);
 });
 
 test('a lone stat titled like its section hides its tile title; otherwise titles show', () => {
