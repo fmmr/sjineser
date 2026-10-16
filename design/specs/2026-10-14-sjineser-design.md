@@ -6,6 +6,10 @@ is available to everyone.
 
 ## 1. Domain
 
+**Terminology (UI vs code):** the app calls a match a **sett** (as in tennis: a night has a
+varying number of sets). Code, data and the sheet keep the name `match` (`matchId`, Matches
+tab); only user-visible text says "sett". A night stays a **kveld**; a game stays a **spill**.
+
 - **Player** — a person who plays. Picked from a list; new players can be added.
 - **Night** — a game night on a date, with a fixed roster of players (≥ 4).
 - **Match** — two teams of 2 or 3 players drawn from the night's roster (§18). On a
