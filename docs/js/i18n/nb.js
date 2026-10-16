@@ -106,7 +106,7 @@ export const t = {
     ratingTitle: 'Slik fungerer rating',
     ratingParagraphs: ({ START, K, SCALE, PROVISIONAL_GAMES }) => [
       `Alle starter på ${START} poeng. Ratingen oppdateres etter hvert spill, også i sett som ikke ble spilt ferdig.`,
-      'Et lags rating er snittet av spillerne på laget (to eller tre), så et lag med tre får ingen ekstra fordel. Før hvert spill regnes det ut hvor sannsynlig det er at laget vinner, ut fra forskjellen i rating.',
+      'Et lags rating er snittet av spillerne på laget, så et lag med tre får ingen ekstra fordel. Før hvert spill regnes det ut hvor sannsynlig det er at laget vinner, ut fra forskjellen i rating.',
       `Seier teller 1, uavgjort ½ og tap 0. Endringen er ${K} × (resultat − forventet), og alle på laget får samme endring. Uavgjort mot et sterkere lag gir derfor poeng.`,
       `Med ${SCALE} poeng i forskjell er det sterke laget forventet å vinne omtrent 10 av 11 spill.`,
       `De første ${PROVISIONAL_GAMES} spillene er ratingen foreløpig og merket «ny».`,
@@ -222,7 +222,7 @@ export const t = {
       description: ({ minGames }) => `Lag på to. På lag med tre telles hver spiller for seg. Kjemi: prosentpoeng over (eller under) det ratingen tilsier, per spill (seier 1, uavgjort ½). Vises med minst ${minGames} spill sammen (på kveldssiden fra første spill).`,
     },
     pairVsPairs: { title: 'Mot andre par', description: 'Bare spill mot lag på to.' },
-    togetherWdl: { title: 'Sammen', description: 'Spill der de var på samme lag (to eller tre): S/U/T for laget.' },
+    togetherWdl: { title: 'Sammen', description: 'Spill der de var på samme lag: S/U/T for laget.' },
     nightsAttended: { title: 'Kvelder', description: 'Kvelder spilleren var med i perioden.' },
     pairChemistry: {
       title: 'Kjemi som par',
@@ -251,10 +251,10 @@ export const t = {
     seasonTitles: { title: 'Sesongens spiller', description: 'Halvår spilleren vant mest rating. Vises når alle sesonger er valgt.' },
     gamesPerSetChart: { title: 'Spill per sett', description: 'Snitt antall spill per sett, kveld for kveld.' },
     drawRateChart: { title: 'Uavgjort-andel', description: 'Andel uavgjorte spill, kveld for kveld.' },
-    headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
+    headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag: hvem som vant, og hvor mange som endte uavgjort.' },
     headToHeadMatrix: {
       title: 'Mot hverandre',
-      description: 'Rad mot kolonne: radens seiersandel i prosent, i spill der de sto på hvert sitt lag (to eller tre). Grønn: flere seire enn tap, rød: flere tap enn seire; uavgjort teller ikke på fargen. Trykk på en rute for å se seire, uavgjort og tap.',
+      description: 'Rad mot kolonne: radens seiersandel i prosent, i spill der de sto på hvert sitt lag. Grønn: flere seire enn tap, rød: flere tap enn seire; uavgjort teller ikke på fargen. Trykk på en rute for å se seire, uavgjort og tap.',
     },
   },
   /** Label cells in stat tables (format 'label') and chart series named by a label key. */
