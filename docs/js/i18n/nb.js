@@ -247,10 +247,15 @@ export const t = {
       description: 'Spilleren med mest rating vunnet hvert halvår (sum av endringene), nyeste først. Vises når alle sesonger er valgt.',
     },
     seasonTitles: { title: 'Sesongens spiller', description: 'Halvår spilleren vant mest rating. Vises når alle sesonger er valgt.' },
+    gamesPerSetChart: { title: 'Spill per sett', description: 'Snitt antall spill per sett, kveld for kveld.' },
+    drawRateChart: { title: 'Uavgjort-andel', description: 'Andel uavgjorte spill, kveld for kveld.' },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
   },
-  /** Label cells in stat tables (format 'label'). */
-  statsLabels: { streak_win: 'Seire', streak_unbeaten: 'Ubeseiret', streak_loss: 'Tap' },
+  /** Label cells in stat tables (format 'label') and chart series named by a label key. */
+  statsLabels: {
+    streak_win: 'Seire', streak_unbeaten: 'Ubeseiret', streak_loss: 'Tap',
+    series_gamesPerSet: 'Spill per sett', series_drawRate: 'Uavgjort-andel',
+  },
   /** Full names for abbreviated table headers (shown as a tooltip / read by screen readers). */
   statsColumnTitles: { W: 'Vunnet', D: 'Uavgjort', L: 'Tapt', chemistry: 'Prosentpoeng over forventet' },
   /** Stat table headers by column key. */
@@ -287,6 +292,7 @@ export const t = {
     nightPairs: 'Kveldens par',
     decisive: 'Avgjørende spill',
     seasonPlayers: 'Sesongens spiller',
+    trends: 'Utvikling',
   },
   statsUi: {
     title: 'Statistikk',

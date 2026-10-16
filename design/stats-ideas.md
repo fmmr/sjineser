@@ -35,12 +35,12 @@ Mark ideas `[x]` when shipped.
 - [x] Lengste seiersrekke: most games won in a row by one player, across sets and nights (overview and night records)
 - [x] Avgjørende spill: win share in games where a team stands at 2 wins and can end the set; min. 5 such games, from the first on a night (player page; overview and night page table; compare)
 - [x] Sesongens spiller: largest rating gain per season (half-year), newest first; shown with all seasons selected (overview table; player page: seasons won)
+- [x] Snitt spill per sett / uavgjort-andel over tid: one point per played night, from 2 played nights (overview section Utvikling)
 
 ## Ideas (ranked)
 1. **Oppmøte-rekke** — most nights in a row without missing one.
 2. **Mot hverandre-matrise** — player vs player win share table (best on wide screens).
-3. **Snitt spill per sett / uavgjort-andel over tid** — trend chart on the overview.
-4. **Flest uavgjort i ett sett** — record (overlaps with "Lengste sett").
+3. **Flest uavgjort i ett sett** — record (overlaps with "Lengste sett").
 
 ## Dropped
 - ~~Sit-outs per player~~ — with 3 vs 2 and 3 vs 3 nobody sits out with six or fewer players, so it would almost always be empty.

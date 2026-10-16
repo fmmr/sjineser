@@ -31,6 +31,14 @@ test('compare derives from the catalog: player numbers/wdl side by side, player 
   assert.deepEqual(headToHead.map((s) => s.id), ['togetherWdl', 'headToHead', 'pairChemistry']);
 });
 
+test('overview: the trend charts sit in Utvikling, after the summary and before the records', () => {
+  const ids = PAGES.overview.sections.map((s) => s.id);
+  assert.deepEqual(PAGES.overview.sections.find((s) => s.id === 'trends').stats, ['gamesPerSetChart', 'drawRateChart']);
+  assert.equal(ids.indexOf('trends'), ids.indexOf('summary') + 1);
+  assert.equal(ids.indexOf('records'), ids.indexOf('trends') + 1);
+  assert.equal(t.statsSections.trends, 'Utvikling');
+});
+
 test('a new stat shows up in compare without editing pages', () => {
   const fake = [
     { id: 'n', subjects: ['player'], kind: 'number' },
@@ -71,8 +79,8 @@ test('every registered stat is shown somewhere: on a page or in the derived comp
   for (const { id } of STATS) assert.ok(shown.has(id), `${id} is registered but on no page (add it to PAGES in views/stats/pages.js)`);
 });
 
-test('overview: leaderboard, summary, records, attendance (the nights table lives on the Kvelder tab)', () => {
-  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records', 'seasonPlayers', 'decisive']);
+test('overview: leaderboard, summary, trends, records, … (the nights table lives on the Kvelder tab)', () => {
+  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'trends', 'records', 'seasonPlayers', 'decisive']);
 });
 
 test('list pages: Spillere is the leaderboard of everyone who has played, Kvelder the nights table', () => {

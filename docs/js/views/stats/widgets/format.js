@@ -1,4 +1,4 @@
-import { formatDate, formatDateLong } from '../../../i18n/nb.js';
+import { formatDate, formatDateLong, t } from '../../../i18n/nb.js';
 
 const SIGNED = new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 0, signDisplay: 'exceptZero' });
 
@@ -28,3 +28,19 @@ export const formatValue = (value, format) => (Object.hasOwn(FORMATS, format) ? 
  */
 export const chartDateFormat = (dates) =>
   (new Set(dates.map((date) => date.slice(0, 4))).size > 1 ? formatDateLong : formatDate);
+
+/**
+ * The y text of a chart value: its `format`, or rating (rounded) when it has none.
+ * @param {{ format?: import('../../../domain/stats/kinds.js').NumberFormat }} value
+ * @returns {(y: number) => string}
+ */
+export const chartYFormat = ({ format = 'rating' }) => (y) => formatValue(y, format);
+
+/**
+ * A chart value's series with display names: a `label` key is looked up in t.statsLabels,
+ * a `name` (e.g. a player) is kept.
+ * @param {{ series: { name?: string, label?: string, points: object[] }[] }} value
+ * @returns {{ name: string, points: object[] }[]}
+ */
+export const chartSeries = ({ series }) =>
+  series.map(({ name, label, points }) => ({ name: name ?? t.statsLabels[label], points }));

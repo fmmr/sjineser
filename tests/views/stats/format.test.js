@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chartDateFormat, formatValue } from '../../../docs/js/views/stats/widgets/format.js';
-import { formatDate, formatDateLong } from '../../../docs/js/i18n/nb.js';
+import { chartDateFormat, chartSeries, chartYFormat, formatValue } from '../../../docs/js/views/stats/widgets/format.js';
+import { formatDate, formatDateLong, t } from '../../../docs/js/i18n/nb.js';
 
 // Intl nb-NO uses a no-break space (U+00A0) for grouping and before '%', and U+2212 for minus.
 const NBSP = ' ';
@@ -52,4 +52,17 @@ test('chart dates are short within one calendar year and long across years', () 
 test('formatDateLong includes the year', () => {
   assert.equal(formatDateLong('2025-10-14'), '14. okt. 2025');
   assert.equal(formatDate('2025-10-14'), '14. okt.');
+});
+
+test('chart y format: the value\'s format, rating when absent', () => {
+  const points = [{ x: '2026-10-14', y: 1 }];
+  assert.equal(chartYFormat({ series: [{ name: 'Anne', points }] })(1012.6), '1013');
+  assert.equal(chartYFormat({ series: [], format: 'percent' })(0.25), `25${NBSP}%`);
+  assert.equal(chartYFormat({ series: [], format: 'decimal' })(3), '3,0');
+});
+
+test('chart series: a label key is resolved from t.statsLabels, a name kept as is', () => {
+  const points = [{ x: '2026-10-14', y: 1 }];
+  assert.deepEqual(chartSeries({ series: [{ name: 'Anne', points }, { label: 'series_drawRate', points }] }),
+    [{ name: 'Anne', points }, { name: t.statsLabels.series_drawRate, points }]);
 });
