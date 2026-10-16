@@ -1,3 +1,4 @@
+import { runOf } from '../aggregate.js';
 import { playerRows } from '../subjects.js';
 
 /** Streak kinds and the outcomes that extend them; the label key is t.statsLabels[`streak_${kind}`]. */
@@ -14,12 +15,7 @@ export const streaks = {
     return {
       columns: [{ key: 'kind', format: 'label' }, { key: 'current', format: 'int' }, { key: 'longest', format: 'int' }],
       rows: STREAKS.map(([kind, outcomes]) => {
-        let current = 0;
-        let longest = 0;
-        for (const { outcome } of rows) {
-          current = outcomes.includes(outcome) ? current + 1 : 0;
-          longest = Math.max(longest, current);
-        }
+        const { current, longest } = runOf(rows, outcomes);
         return { kind: `streak_${kind}`, current, longest };
       }),
     };
