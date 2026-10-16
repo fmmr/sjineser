@@ -528,3 +528,26 @@ the **Testmodus** switch on the Mer page (§6), which reloads the current screen
 - **Sandbox bar** under the header: "TESTMODUS" label, date picker for the pretend date,
   "Nullstill" (regenerate data, clear sandbox outbox/cache, reload) and "Avslutt"
   (link to the app without `?sandbox`).
+
+## 18. Teams of 2 or 3 (added 2026-10-16)
+
+The group sometimes plays **3 against 2** (five players). A team has **2 or 3 players**.
+On a 3-player team two players play each game and they rotate; the team result is shared,
+so all three get the game in their stats and the same Elo change.
+
+- **Sheet:** Matches columns `matchId, date, A1, A2, A3, B1, B2, B3, status` (A3/B3 empty for
+  2-player teams). `setup()` creates this layout; the old layout is replaced by wiping test
+  data and re-running setup (only development data existed).
+- **Validation:** each team has 2–3 distinct, non-empty players; no player on both teams.
+- **Elo:** team rating = mean of its players (2 or 3); every team member gets K × (S − E).
+  A 3-player team gets no extra advantage.
+- **Team sizes for proposals:** 4 → 2+2, 5 → 3+2, 6 → 3+3, 7+ → 3+3 with the bench rules
+  choosing six. Split rules (new partners → balance → variety) compare every valid split.
+- **Stats:** facts rows carry `partners` (1–2 names) and `opponents` (2–3). Partner tables
+  count every teammate. "Pairs" (pairs table, pair page, best partner) mean a 2-player team;
+  3-player teams count only per individual. Compare "Sammen" = same team, any size.
+- **Import:** `scripts/import-history.mjs` converts the old "Logg" tab (one row per game:
+  date, team A 1–3 players, team B 1–3 players, points) into our ops, inferring matches from
+  team changes and first-to-3 (same teams with sides swapped = same match), validates them
+  with `applyOp`, prints a dry-run summary, and with `--apply` posts them through the API
+  (idempotent, PIN required).
