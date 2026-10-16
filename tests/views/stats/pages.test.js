@@ -24,9 +24,9 @@ test('every section has a heading', () => {
   for (const id of ids) assert.equal(typeof t.statsSections[id], 'string', id);
 });
 
-test('compare derives from the catalog: player numbers/wdl side by side, player charts overlaid, compare stats', () => {
+test('compare derives from the catalog in page order: player numbers/wdl side by side, player charts overlaid, compare stats', () => {
   const { sideBySide, overlay, headToHead } = deriveCompare(STATS);
-  assert.deepEqual(sideBySide.map((s) => s.id), ['drawRate', 'rating', 'gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'decisiveWinRate', 'nightsAttended']);
+  assert.deepEqual(sideBySide.map((s) => s.id), ['rating', 'gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'decisiveWinRate', 'drawRate', 'nightsAttended']);
   assert.deepEqual(overlay.map((s) => s.id), ['eloChart']);
   assert.deepEqual(headToHead.map((s) => s.id), ['togetherWdl', 'headToHead', 'pairChemistry']);
 });

@@ -1,52 +1,52 @@
-import { leaderboard } from './catalog/leaderboard.js';
-import { nightsCount } from './catalog/nightsCount.js';
-import { matchesCount } from './catalog/matchesCount.js';
-import { gamesCount } from './catalog/gamesCount.js';
-import { drawRate } from './catalog/drawRate.js';
-import { longestMatch } from './catalog/longestMatch.js';
-import { mostDrawsInSet } from './catalog/mostDrawsInSet.js';
-import { longestNight } from './catalog/longestNight.js';
 import { attendanceStreak } from './catalog/attendanceStreak.js';
-import { longestDrawStreak } from './catalog/longestDrawStreak.js';
-import { longestWinStreak } from './catalog/longestWinStreak.js';
+import { bestPartner } from './catalog/bestPartner.js';
+import { biggestUpset } from './catalog/biggestUpset.js';
 import { cleanSweeps } from './catalog/cleanSweeps.js';
 import { comebacks } from './catalog/comebacks.js';
-import { biggestUpset } from './catalog/biggestUpset.js';
-import { rating } from './catalog/rating.js';
+import { decisiveTable } from './catalog/decisiveTable.js';
+import { decisiveWinRate } from './catalog/decisiveWinRate.js';
+import { drawRate } from './catalog/drawRate.js';
+import { drawRateChart } from './catalog/drawRateChart.js';
 import { eloChart } from './catalog/eloChart.js';
+import { favoriteVictim } from './catalog/favoriteVictim.js';
+import { form } from './catalog/form.js';
+import { gamesCount } from './catalog/gamesCount.js';
+import { gamesPerSetChart } from './catalog/gamesPerSetChart.js';
 import { gamesWdl } from './catalog/gamesWdl.js';
 import { gameWinRate } from './catalog/gameWinRate.js';
+import { headToHead } from './catalog/headToHead.js';
+import { headToHeadMatrix } from './catalog/headToHeadMatrix.js';
+import { highestRating } from './catalog/highestRating.js';
+import { leaderboard } from './catalog/leaderboard.js';
+import { longestDrawStreak } from './catalog/longestDrawStreak.js';
+import { longestMatch } from './catalog/longestMatch.js';
+import { longestNight } from './catalog/longestNight.js';
+import { longestWinStreak } from './catalog/longestWinStreak.js';
+import { lowestRating } from './catalog/lowestRating.js';
+import { lowRating } from './catalog/lowRating.js';
+import { matchesCount } from './catalog/matchesCount.js';
 import { matchesWdl } from './catalog/matchesWdl.js';
 import { matchWinRate } from './catalog/matchWinRate.js';
-import { streaks } from './catalog/streaks.js';
-import { partners } from './catalog/partners.js';
-import { opponents } from './catalog/opponents.js';
-import { bestPartner } from './catalog/bestPartner.js';
+import { mostDrawsInSet } from './catalog/mostDrawsInSet.js';
 import { nemesis } from './catalog/nemesis.js';
-import { worstPartner } from './catalog/worstPartner.js';
-import { favoriteVictim } from './catalog/favoriteVictim.js';
+import { nightLeaderboard } from './catalog/nightLeaderboard.js';
+import { nightsAttended } from './catalog/nightsAttended.js';
+import { nightsCount } from './catalog/nightsCount.js';
+import { nightSets } from './catalog/nightSets.js';
+import { nightsList } from './catalog/nightsList.js';
+import { nightWinner } from './catalog/nightWinner.js';
+import { opponents } from './catalog/opponents.js';
+import { pairChemistry } from './catalog/pairChemistry.js';
 import { pairsTable } from './catalog/pairsTable.js';
 import { pairVsPairs } from './catalog/pairVsPairs.js';
-import { togetherWdl } from './catalog/togetherWdl.js';
-import { headToHead } from './catalog/headToHead.js';
-import { nightsAttended } from './catalog/nightsAttended.js';
-import { pairChemistry } from './catalog/pairChemistry.js';
-import { nightsList } from './catalog/nightsList.js';
-import { form } from './catalog/form.js';
-import { highestRating } from './catalog/highestRating.js';
-import { lowestRating } from './catalog/lowestRating.js';
+import { partners } from './catalog/partners.js';
 import { peakRating } from './catalog/peakRating.js';
-import { lowRating } from './catalog/lowRating.js';
-import { nightSets } from './catalog/nightSets.js';
-import { nightLeaderboard } from './catalog/nightLeaderboard.js';
-import { nightWinner } from './catalog/nightWinner.js';
-import { decisiveWinRate } from './catalog/decisiveWinRate.js';
-import { decisiveTable } from './catalog/decisiveTable.js';
+import { rating } from './catalog/rating.js';
 import { seasonPlayers } from './catalog/seasonPlayers.js';
 import { seasonTitles } from './catalog/seasonTitles.js';
-import { gamesPerSetChart } from './catalog/gamesPerSetChart.js';
-import { drawRateChart } from './catalog/drawRateChart.js';
-import { headToHeadMatrix } from './catalog/headToHeadMatrix.js';
+import { streaks } from './catalog/streaks.js';
+import { togetherWdl } from './catalog/togetherWdl.js';
+import { worstPartner } from './catalog/worstPartner.js';
 
 /**
  * The catalog of stat plugins (spec §9). Adding a stat = one file in catalog/, one import
@@ -59,15 +59,61 @@ import { headToHeadMatrix } from './catalog/headToHeadMatrix.js';
  *   compute returns a value of `kind`, or null when there is not enough data
  */
 
-/** @type {Stat[]} */
+/**
+ * Every stat, one per line in alphabetical order (so parallel additions rarely touch the same
+ * line). The order carries no meaning: pages decide what is shown where (views/stats/pages.js).
+ * @type {Stat[]}
+ */
 export const STATS = [
-  leaderboard, nightsCount, matchesCount, gamesCount, drawRate,
-  longestMatch, mostDrawsInSet, longestNight, attendanceStreak, longestDrawStreak, longestWinStreak, cleanSweeps, comebacks, biggestUpset, highestRating, lowestRating,
-  rating, peakRating, lowRating, seasonTitles, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, decisiveWinRate, streaks,
-  partners, opponents, bestPartner, worstPartner, nemesis, favoriteVictim, pairsTable, pairVsPairs, togetherWdl, headToHead, nightsAttended,
-  pairChemistry, nightsList, form, nightSets, nightLeaderboard, nightWinner, decisiveTable, seasonPlayers,
-  gamesPerSetChart, drawRateChart,
+  attendanceStreak,
+  bestPartner,
+  biggestUpset,
+  cleanSweeps,
+  comebacks,
+  decisiveTable,
+  decisiveWinRate,
+  drawRate,
+  drawRateChart,
+  eloChart,
+  favoriteVictim,
+  form,
+  gamesCount,
+  gamesPerSetChart,
+  gamesWdl,
+  gameWinRate,
+  headToHead,
   headToHeadMatrix,
+  highestRating,
+  leaderboard,
+  longestDrawStreak,
+  longestMatch,
+  longestNight,
+  longestWinStreak,
+  lowestRating,
+  lowRating,
+  matchesCount,
+  matchesWdl,
+  matchWinRate,
+  mostDrawsInSet,
+  nemesis,
+  nightLeaderboard,
+  nightsAttended,
+  nightsCount,
+  nightSets,
+  nightsList,
+  nightWinner,
+  opponents,
+  pairChemistry,
+  pairsTable,
+  pairVsPairs,
+  partners,
+  peakRating,
+  rating,
+  seasonPlayers,
+  seasonTitles,
+  streaks,
+  togetherWdl,
+  worstPartner,
 ];
 
 /** @param {string} id @returns {Stat | null} */

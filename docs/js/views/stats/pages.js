@@ -67,10 +67,26 @@ export const COMPARE_SECTIONS = { sideBySide: 'sideBySide', overlay: 'overlay', 
  * @returns {{ sideBySide: Stat[], overlay: Stat[], headToHead: Stat[] }}
  */
 export const deriveCompare = (stats = STATS) => ({
-  sideBySide: statsFor('player', ['number', 'wdl'], stats),
-  overlay: statsFor('player', ['chart'], stats),
-  headToHead: statsFor('compare', undefined, stats),
+  sideBySide: inOrder(statsFor('player', ['number', 'wdl'], stats), playerPageOrder()),
+  overlay: inOrder(statsFor('player', ['chart'], stats), playerPageOrder()),
+  headToHead: inOrder(statsFor('compare', undefined, stats), COMPARE_HEAD_TO_HEAD_ORDER),
 });
+
+/** Order of the compare-only stats (subject 'compare'); others follow in catalog order. */
+const COMPARE_HEAD_TO_HEAD_ORDER = ['togetherWdl', 'headToHead', 'pairChemistry'];
+
+/** Stat ids in the order the player page shows them, so compare reads like the player page. */
+const playerPageOrder = () => PAGES.player.sections.flatMap((section) => section.stats);
+
+/**
+ * Orders stats by a list of ids; stats not in the list keep their relative order, after the others.
+ * @param {import('../../domain/stats/registry.js').Stat[]} stats
+ * @param {string[]} ids
+ */
+function inOrder(stats, ids) {
+  const position = (stat) => (ids.includes(stat.id) ? ids.indexOf(stat.id) : ids.length);
+  return stats.map((stat, i) => ({ stat, i })).sort((a, b) => position(a.stat) - position(b.stat) || a.i - b.i).map(({ stat }) => stat);
+}
 
 /**
  * Whether a section's tile drops its title: a lone stat titled like the section heading
