@@ -185,7 +185,7 @@ export const t = {
   stats: {
     leaderboard: {
       title: 'Rangering',
-      description: ({ formGames }) => `Rating er nåværende rating. Endring, spill og form (siste ${formGames} spill, nyeste til høyre) gjelder valgt periode.`,
+      description: ({ formGames }) => `Rating er nåværende rating. Endring, spill, oppmøte (kvelder og andel av kveldene) og form (siste ${formGames} spill, nyeste til høyre) gjelder valgt periode.`,
     },
     nightsCount: { title: 'Kvelder' },
     matchesCount: { title: 'Sett' },
@@ -221,7 +221,6 @@ export const t = {
     },
     pairVsPairs: { title: 'Mot andre par', description: 'Bare spill mot lag på to.' },
     togetherWdl: { title: 'Sammen', description: 'Spill der de var på samme lag (to eller tre): S/U/T for laget.' },
-    attendance: { title: 'Oppmøte', description: 'Kvelder hver spiller var med (også på benken), og andel av kveldene i perioden.' },
     nightsAttended: { title: 'Kvelder', description: 'Kvelder spilleren var med i perioden.' },
     pairChemistry: {
       title: 'Kjemi som par',
@@ -248,6 +247,7 @@ export const t = {
     W: 'S', D: 'U', L: 'T', winRate: 'Seier %',
     kind: 'Rekke', current: 'Nå', longest: 'Lengst',
     nights: 'Kvelder', share: 'Andel',
+    attendance: 'Oppmøte',
     chemistry: 'Kjemi',
     date: 'Dato', players: 'Spillere', sets: 'Sett', draws: 'Uavgjort', winner: 'Kveldens vinner', winnerGain: '+/−',
     form: 'Form',
@@ -266,7 +266,6 @@ export const t = {
     sideBySide: 'Side om side',
     overlay: 'Over tid',
     headToHead: 'Sammen og mot hverandre',
-    attendance: 'Oppmøte',
     nights: 'Kvelder',
     form: 'Form',
     sets: 'Sett',

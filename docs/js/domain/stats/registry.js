@@ -27,7 +27,6 @@ import { pairsTable } from './catalog/pairsTable.js';
 import { pairVsPairs } from './catalog/pairVsPairs.js';
 import { togetherWdl } from './catalog/togetherWdl.js';
 import { headToHead } from './catalog/headToHead.js';
-import { attendance } from './catalog/attendance.js';
 import { nightsAttended } from './catalog/nightsAttended.js';
 import { pairChemistry } from './catalog/pairChemistry.js';
 import { nightsList } from './catalog/nightsList.js';
@@ -56,7 +55,7 @@ export const STATS = [
   leaderboard, nightsCount, matchesCount, gamesCount, drawRate,
   longestMatch, longestNight, longestDrawStreak, longestWinStreak, cleanSweeps, comebacks, biggestUpset, highestRating, lowestRating,
   rating, peakRating, lowRating, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, streaks,
-  partners, opponents, bestPartner, worstPartner, nemesis, favoriteVictim, pairsTable, pairVsPairs, togetherWdl, headToHead, attendance, nightsAttended,
+  partners, opponents, bestPartner, worstPartner, nemesis, favoriteVictim, pairsTable, pairVsPairs, togetherWdl, headToHead, nightsAttended,
   pairChemistry, nightsList, form, nightSets, nightLeaderboard, nightWinner,
 ];
 

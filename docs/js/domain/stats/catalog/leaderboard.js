@@ -2,7 +2,7 @@ import { isProvisional, ratingOf } from '../../elo.js';
 import { byName } from '../../players.js';
 import { playerSubject } from '../subjects.js';
 import { FORM_GAMES } from '../constants.js';
-import { lastOutcomes } from '../aggregate.js';
+import { attendanceOf, lastOutcomes } from '../aggregate.js';
 
 /** Columns of the leaderboards (overall and the night's). */
 export const LEADERBOARD_COLUMNS = [
@@ -37,6 +37,10 @@ export function leaderboardRows(facts, players) {
   });
 }
 
+/** The overall leaderboard adds oppmøte (nights there, share of nights) after games. */
+const OVERALL_COLUMNS = LEADERBOARD_COLUMNS.flatMap((column) =>
+  (column.key === 'games' ? [column, { key: 'attendance', format: 'countShare' }] : [column]));
+
 /** Numbers sorted rows 1, 2, 3 … in their order. */
 export const ranked = (rows) => rows.map((row, i) => ({ rank: i + 1, ...row }));
 
@@ -44,7 +48,8 @@ export const ranked = (rows) => rows.map((row, i) => ({ rank: i + 1, ...row }));
  * Elo leaderboard. A rating belongs to a moment, not to a season, so `rating` is everyone's
  * current rating whatever the period; `change` (sum of rating changes) and `games` are within
  * the period, and so is `form` (the last FORM_GAMES outcomes, oldest first). Everyone who has
- * ever played is listed; without games in the period, games is 0, change is null and form is []. Provisional reflects all games played so far.
+ * ever played is listed; without games in the period, games is 0, change is null and form is [].
+ * `attendance` is oppmøte in the period ({ count, share }). Provisional reflects all games played so far.
  * @type {import('../registry.js').Stat}
  */
 export const leaderboard = {
@@ -55,7 +60,8 @@ export const leaderboard = {
     const { rated } = facts;
     if (rated.ratings.size === 0) return null;
     const rows = leaderboardRows(facts, [...rated.ratings.keys()])
+      .map((row) => ({ ...row, attendance: attendanceOf(facts, row.player) }))
       .sort((a, b) => b.rating - a.rating || byName(a.player, b.player));
-    return { columns: LEADERBOARD_COLUMNS, rows: ranked(rows) };
+    return { columns: OVERALL_COLUMNS, rows: ranked(rows) };
   },
 };

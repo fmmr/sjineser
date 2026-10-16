@@ -72,7 +72,7 @@ test('every registered stat is shown somewhere: on a page or in the derived comp
 });
 
 test('overview: leaderboard, summary, records, attendance (the nights table lives on the Kvelder tab)', () => {
-  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records', 'attendance']);
+  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records']);
 });
 
 test('list pages: Spillere is the leaderboard of everyone who has played, Kvelder the nights table', () => {

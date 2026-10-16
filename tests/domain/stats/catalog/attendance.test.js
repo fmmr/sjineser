@@ -16,28 +16,27 @@ const FACTS = factsOf([
   { date: N3, players: ['Ola'], matches: [] },
 ]);
 
-test('attendance: nights on the roster (sitting out counts), share of played nights, most first', () => {
-  const value = compute('attendance', FACTS, overallSubject());
-  assert.deepEqual(value.columns.map((c) => [c.key, c.format]),
-    [['player', 'player'], ['nights', 'int'], ['share', 'percent']]);
-  assert.deepEqual(value.rows.map((r) => [r.player, r.nights, r.share]), [
-    ['Hans', 3, 1], ['Per', 3, 1], ['Tor', 3, 1], ['Frode', 2, 2 / 3], ['Kari', 2, 2 / 3],
-  ]);
-  assert.deepEqual(value.rows[0].subject, playerSubject('Hans'));
+test('leaderboard oppmøte column: nights on the roster (sitting out counts) and share of played nights', () => {
+  const value = compute('leaderboard', FACTS, overallSubject());
+  assert.ok(value.columns.some((c) => c.key === 'attendance' && c.format === 'countShare'));
+  const byPlayer = Object.fromEntries(value.rows.map((r) => [r.player, r.attendance]));
+  assert.deepEqual(byPlayer.Hans, { count: 3, share: 1 });
+  assert.deepEqual(byPlayer.Kari, { count: 2, share: 2 / 3 });
+  assert.equal(byPlayer.Ola, undefined, 'never played: not listed');
 });
 
-test('attendance: everyone who has ever played is listed, with 0 for nights missed in the period', () => {
+test('leaderboard oppmøte column: 0 for a period the player missed', () => {
   const autumn = factsOf([
     { date: '2026-03-04', players: ['Kari'], matches: [['Kari Hans - Tor Per', 'A']] },
     { date: N1, matches: [[HF_TP, 'AAA']] },
   ], { kind: 'season', year: 2026, half: 2 });
-  const kari = compute('attendance', autumn, overallSubject()).rows.find((r) => r.player === 'Kari');
-  assert.deepEqual([kari.nights, kari.share], [0, 0]);
-  assert.equal(compute('attendance', FACTS, overallSubject()).rows.some((r) => r.player === 'Ola'), false, 'never played');
+  const kari = compute('leaderboard', autumn, overallSubject()).rows.find((r) => r.player === 'Kari');
+  assert.deepEqual(kari.attendance, { count: 0, share: 0 });
 });
 
-test('attendance: null without played nights', () => {
-  assert.equal(compute('attendance', factsOf([{ date: N3, players: ['Ola'], matches: [] }]), overallSubject()), null);
+test('the night leaderboard has no oppmøte column (one night is always one night)', () => {
+  const night = factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }], { kind: 'night', date: N1 });
+  assert.equal(compute('nightLeaderboard', night, overallSubject()).columns.some((c) => c.key === 'attendance'), false);
 });
 
 test('nightsAttended: played nights the player was there; null for someone who never came', () => {

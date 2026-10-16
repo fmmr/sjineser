@@ -8,7 +8,7 @@ const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, 
 test('known kinds and formats', () => {
   assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form', 'sets']);
   assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent']);
-  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form']);
+  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form', 'countShare']);
 });
 
 test('unknown kinds and null are never valid', () => {

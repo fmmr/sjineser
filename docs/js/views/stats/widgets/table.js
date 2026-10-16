@@ -47,7 +47,7 @@ export function signOf(value, format) {
 }
 
 /** Formats that are not numbers: left-aligned, never signed. */
-const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players', 'form'];
+const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players', 'form', 'countShare'];
 
 /**
  * Text of a cell; pairs read "Anne & Bjørn", player lists "Anne, Bjørn og Cato", dates
@@ -68,6 +68,7 @@ export function cellText(value, format) {
   if (format === 'label') return t.statsLabels[value] ?? value;
   if (format === 'date') return formatDateLong(value);
   if (format === 'players') return t.names(value);
+  if (format === 'countShare') return `${formatValue(value.count, 'int')} (${formatValue(value.share, 'percent')})`;
   if (format === 'form') return value.length > 0 ? formLetters(value).join('') : t.statsUi.none;
   if (value === null) return t.statsUi.none;
   return formatValue(value, format);
@@ -90,6 +91,9 @@ export function tableBody({ columns, rows }, { query }) {
     if (subject) content = h('a', { class: 'link', href: statsHref(subjectPath(subject), query) }, text);
     if (format === 'form' && row[key].length > 0) content = formStrip(row[key], { compact: true });
     if (format === 'players') content = linkedNames(row[key], query);
+    if (format === 'countShare') {
+      content = [formatValue(row[key].count, 'int'), ' ', h('span', { class: 'cell-share' }, `(${formatValue(row[key].share, 'percent')})`)];
+    }
     if (key === 'rank') content = h('span', { class: 'stat-rank', 'data-rank': String(row[key]) }, text);
     const className = isNumber(format) ? 'num' : format === 'players' ? 'names' : null;
     return h('td', { class: className, 'data-col': key, 'data-sign': signOf(row[key], format) },

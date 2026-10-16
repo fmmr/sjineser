@@ -22,7 +22,7 @@ export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form
 export const NUMBER_FORMATS = ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent'];
 
 /** @type {TableFormat[]} */
-export const TABLE_FORMATS = [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form'];
+export const TABLE_FORMATS = [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form', 'countShare'];
 
 const MARKERS = ['provisional'];
 const WDL_KEYS = ['W', 'D', 'L'];
@@ -51,6 +51,8 @@ const CELL_CHECKS = {
   label: isName,
   date: isISODate,
   players: (value) => Array.isArray(value) && value.length > 0 && value.every(isName),
+  /** A count and its share of a total, e.g. oppmøte "5 (100 %)". */
+  countShare: (value) => isObject(value) && isCount(value.count) && isFormattedNumber(value.share, 'percent'),
   form: (value) => isOutcomes(value, 0),
 };
 

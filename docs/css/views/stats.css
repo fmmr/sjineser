@@ -661,3 +661,9 @@ select.selector-select:disabled {
     grid-column: 1 / -1;
   }
 }
+
+/* "5 (100 %)": the share is secondary, so a little smaller and muted. */
+.cell-share {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

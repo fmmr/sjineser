@@ -215,3 +215,16 @@ export function chemistryOf(rows, minGames = MIN_GAMES_TOGETHER) {
   if (rows.length === 0 || rows.length < minGames) return null;
   return rows.reduce((sum, row) => sum + surpriseOf(row), 0) / rows.length;
 }
+
+/** Nights in the period where at least one game was played (same rule as nightsCount). */
+export const playedNights = (facts) => facts.nights.filter((n) => n.matches.length > 0);
+
+/**
+ * Oppmøte for a player: played nights in the period they were there (on the roster — sitting
+ * out counts) and their share of all played nights. @returns {{ count: number, share: number }}
+ */
+export function attendanceOf(facts, name) {
+  const nights = playedNights(facts);
+  const count = nights.filter((n) => n.players.includes(name)).length;
+  return { count, share: nights.length > 0 ? count / nights.length : 0 };
+}

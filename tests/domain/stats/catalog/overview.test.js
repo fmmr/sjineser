@@ -22,7 +22,7 @@ const EMPTY = factsOf([]);
 test('leaderboard: rating, change and games; ties sorted by name; row subject = player', () => {
   const value = compute('leaderboard', factsOf([{ date: N1, matches: [[HF_TP, 'A']] }]));
   assert.deepEqual(value.columns.map((c) => [c.key, c.format]),
-    [['rank', 'int'], ['player', 'player'], ['rating', 'rating'], ['change', 'signed'], ['games', 'int'], ['form', 'form']]);
+    [['rank', 'int'], ['player', 'player'], ['rating', 'rating'], ['change', 'signed'], ['games', 'int'], ['attendance', 'countShare'], ['form', 'form']]);
   assert.deepEqual(value.rows.map((r) => [r.rank, r.player, r.rating, r.change, r.games, r.provisional]), [
     [1, 'Frode', 1012, 12, 1, true],
     [2, 'Hans', 1012, 12, 1, true],

@@ -22,7 +22,7 @@ Mark ideas `[x]` when shipped.
 - [x] Compare: player stats side by side, Elo overlay, record together / against
 
 ## Shipped later
-- [x] Oppmøte: nights attended and share of nights (overview table, player page, compare)
+- [x] Oppmøte: nights attended and share of nights (leaderboard column, player page, compare)
 - [x] Kjemi: pairs scoring above or below their expected score, in percentage points (a column in the pairs table, compare)
 - [x] Kvelder: list of played nights with players, sets, games, draws and the night winner (largest Elo gain) (overview table)
 - [x] Form: last 10 games as S/U/T chips (player page, own section; leaderboard column)

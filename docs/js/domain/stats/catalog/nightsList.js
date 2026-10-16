@@ -1,6 +1,6 @@
+import { playedNights } from '../aggregate.js';
 import { byName } from '../../players.js';
 import { nightSubject } from '../subjects.js';
-import { playedNights } from './attendance.js';
 
 /**
  * @typedef {{ date: string, players: string[], sets: number, games: number, draws: number,

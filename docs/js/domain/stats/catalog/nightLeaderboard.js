@@ -1,5 +1,5 @@
+import { playedNights } from '../aggregate.js';
 import { byName } from '../../players.js';
-import { playedNights } from './attendance.js';
 import { LEADERBOARD_COLUMNS, leaderboardRows, ranked } from './leaderboard.js';
 import { nightPlayers } from './nightsList.js';
 

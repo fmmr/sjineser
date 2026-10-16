@@ -1,4 +1,4 @@
-import { playedNights } from './attendance.js';
+import { playedNights } from '../aggregate.js';
 
 /** Played nights in the period the player was there; null if none. @type {import('../registry.js').Stat} */
 export const nightsAttended = {
