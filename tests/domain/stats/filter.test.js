@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultFilter, formatFilter, inFilter, parseFilter, seasonsIn } from '../../../docs/js/domain/stats/filter.js';
+import { formatFilter, inFilter, parseFilter, seasonsIn } from '../../../docs/js/domain/stats/filter.js';
 import { generateHistory } from '../../../docs/js/sandbox/generate.js';
-import { dataset, game } from '../../helpers.js';
+import { dataset } from '../../helpers.js';
 
 const TODAY = '2026-10-14';
 const night = (date) => ({ date, players: ['Frode', 'Hans', 'Per', 'Tor'] });
@@ -52,29 +52,4 @@ test('seasonsIn covers the generated history', () => {
   const { dataset: ds, nextDate } = generateHistory();
   const seasons = seasonsIn(ds, nextDate).map(formatFilter);
   assert.deepEqual(seasons, ['2026-2', '2026-1', '2025-2']);
-});
-
-/** A dataset with one match per date; dates in `played` get a game. */
-function withMatches(dates, played = dates) {
-  const matches = dates.map((date) => ({ matchId: `${date}#1`, date, A1: 'Frode', A2: 'Hans', B1: 'Per', B2: 'Tor' }));
-  return dataset({
-    nights: dates.map(night),
-    matches,
-    games: matches.filter((m) => played.includes(m.date)).map((m) => game(m.matchId, 1, 'A')),
-  });
-}
-
-test('defaultFilter is the current season when it has games', () => {
-  const ds = withMatches(['2026-03-01', '2026-09-01']);
-  assert.deepEqual(defaultFilter(ds, TODAY), { kind: 'season', year: 2026, half: 2 });
-});
-
-test('defaultFilter falls back to the latest season with games', () => {
-  const ds = withMatches(['2025-09-01', '2026-03-01', '2026-10-01'], ['2025-09-01', '2026-03-01']);
-  assert.deepEqual(defaultFilter(ds, TODAY), { kind: 'season', year: 2026, half: 1 });
-});
-
-test('defaultFilter is all when there are no games at all', () => {
-  assert.deepEqual(defaultFilter(dataset(), TODAY), { kind: 'all' });
-  assert.deepEqual(defaultFilter(withMatches(['2026-10-01'], []), TODAY), { kind: 'all' });
 });

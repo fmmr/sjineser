@@ -1,20 +1,19 @@
 import { h } from '../components/dom.js';
 import { t } from '../../i18n/nb.js';
 import { buildHash } from '../../routing.js';
-import { formatFilter, parseFilter, seasonsIn } from '../../domain/stats/filter.js';
+import { formatFilter, seasonsIn } from '../../domain/stats/filter.js';
 
 /**
- * Choices for the season filter: this season, earlier seasons (newest first), all seasons.
+ * Choices for the season filter: every season with nights plus the current one, in
+ * chronological order and by name ("Vår 2026", "Høst 2026"), then all seasons.
  * @param {import('../../domain/match.js').Dataset} dataset
  * @param {string} today YYYY-MM-DD
  * @returns {{ value: string, label: string }[]} value: the URL form ('2026-2' / 'all')
  */
 export function seasonOptions(dataset, today) {
-  const current = formatFilter(parseFilter(null, today));
-  const earlier = seasonsIn(dataset, today)
-    .filter((season) => formatFilter(season) !== current)
+  const seasons = seasonsIn(dataset, today).reverse()
     .map((season) => ({ value: formatFilter(season), label: t.statsUi.season(season) }));
-  return [{ value: current, label: t.statsUi.thisSeason }, ...earlier, { value: 'all', label: t.statsUi.allSeasons }];
+  return [...seasons, { value: 'all', label: t.statsUi.allSeasons }];
 }
 
 /**

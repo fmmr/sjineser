@@ -246,7 +246,7 @@ sync badge. Links inside screens are contextual only (e.g. "Alle par" on the sta
    (D A D B …; team names read "Anne, Bjørn og Cato" and wrap inside the panel), three large buttons: *Lag A vant* / *Uavgjort* / *Lag B vant*, and
    *Angre* (undo). At 3 wins: a prominent winner banner and a *Neste kamp* button
    showing the next proposal.
-5. **Stats** — sections below, all with a season filter: this season / a past season /
+5. **Stats** — sections below, all with a season filter: a season by name /
    all time.
 6. **Mer** — grouped lists in the style of the iOS settings (section heading; rows of
    label + trailing control or chevron, hairline separators, ≥ 48 px tall):
@@ -387,10 +387,7 @@ shown side by side for both players; `chart` stats overlay both series (under a 
 "Over tid" heading; each chart keeps its own title); plus stats with subject `compare`
 (record together, record against).
 
-**Season filter**: this season, any earlier season, all time. Applied to the facts,
-so stats never deal with seasons. Kept in the URL (`?s=2026-2` / `?s=all`); an explicit
-`s` is always respected. Without `s` the default is the current season if it has games,
-else the latest season with games, else all time.
+**Season filter**: every season by name in chronological order ("Vår 2026", "Høst 2026"), then "Alle"; the default (no `s` in the URL) is all seasons. Applied to the facts, so stats never deal with seasons. Kept in the URL (`?s=2026-2` / `?s=all`).
 
 **Dates**: records show the full date with year ("14. okt. 2025"); chart axes use the
 short form ("14. okt.") when all points fall in one calendar year, the long form otherwise.

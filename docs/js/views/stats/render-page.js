@@ -2,7 +2,7 @@ import { h } from '../components/dom.js';
 import { statsSkeleton } from '../components/skeleton.js';
 import { t } from '../../i18n/nb.js';
 import { statById } from '../../domain/stats/registry.js';
-import { defaultFilter, parseFilter } from '../../domain/stats/filter.js';
+import { parseFilter } from '../../domain/stats/filter.js';
 import { factsFor } from './facts-cache.js';
 import { seasonFilter } from './season-filter.js';
 import { statsHref } from './links.js';
@@ -66,8 +66,8 @@ export const notFound = (ctx) => [
 ];
 
 /**
- * Shared frame of the stats views: loading placeholder, filter from ?s (without it: the latest
- * season with games, see defaultFilter), memoized facts, and re-rendering on store changes.
+ * Shared frame of the stats views: loading placeholder, filter from ?s (without it: all
+ * seasons), memoized facts, and re-rendering on store changes.
  * @param {HTMLElement} root
  * @param {{ store: object, clock: { today(): string }, query: Record<string, string> }} ctx
  * @param {(page: HTMLElement, data: { dataset: object, facts: object, filter: object, today: string })
@@ -89,7 +89,7 @@ export function mountStatsView(root, ctx, render) {
     root.replaceChildren(page);
     const dataset = store.get();
     const today = clock.today();
-    const filter = query.s ? parseFilter(query.s, today) : defaultFilter(dataset, today);
+    const filter = query.s ? parseFilter(query.s, today) : { kind: 'all' };
     cleanup = render(page, { dataset, facts: factsFor(dataset, filter), filter, today })?.destroy ?? null;
   }
 
