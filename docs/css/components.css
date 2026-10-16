@@ -370,6 +370,79 @@ html:has(.sheet[open]) {
   }
 }
 
+/*
+ * Segmented control on a quiet track: native radios (the Mer page's theme choice; keyboard and
+ * screen readers for free) or links (the stats tabs; the current one has aria-current="page").
+ * Each segment is a full tap target tall; the track and the pill are drawn inside it.
+ */
+.segmented {
+  position: relative;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+}
+
+.segmented::before {
+  content: "";
+  position: absolute;
+  inset: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+
+.segment {
+  position: relative;
+  display: grid;
+  align-items: center;
+  height: var(--tap);
+  padding: 0 3px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.segment-input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segment-pill {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--duration) var(--ease), color var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+
+.segment:active .segment-pill {
+  transform: scale(var(--press-scale));
+}
+
+/* The chosen segment looks like a pressed chip. */
+.segment-input:checked + .segment-pill,
+.segment[aria-current="page"] .segment-pill {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.segment-input:focus-visible + .segment-pill,
+a.segment:focus-visible .segment-pill {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+a.segment:focus-visible {
+  outline: none;
+}
+
 /* Text for screen readers only. */
 .visually-hidden {
   position: absolute;

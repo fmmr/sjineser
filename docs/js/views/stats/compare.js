@@ -2,7 +2,7 @@ import { h } from '../components/dom.js';
 import { t } from '../../i18n/nb.js';
 import { compareSubject, playerSubject } from '../../domain/stats/subjects.js';
 import { COMPARE_SECTIONS, deriveCompare, overlaySeries, sideBySideRows, withValues } from './pages.js';
-import { statsHref, subjectPath } from './links.js';
+import { PLAYERS_PATH, statsHref, subjectPath } from './links.js';
 import { mountStatsView, notFound, statsSection } from './render-page.js';
 import { selectorHeader } from './selector-bar.js';
 import { renderWidget } from './widgets/index.js';
@@ -36,7 +36,7 @@ export function mountStatsCompare(root, ctx) {
   return mountStatsView(root, ctx, (page, data) => {
     const known = (name) => data.dataset.players.some((p) => p.name === name);
     if (a === b || !known(a) || !known(b)) {
-      page.append(...notFound(ctx));
+      page.append(...notFound(PLAYERS_PATH, ctx));
       return undefined;
     }
     const { facts } = data;

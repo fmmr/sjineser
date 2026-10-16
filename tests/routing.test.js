@@ -5,6 +5,10 @@ import { routes } from '../docs/js/views/routes.js';
 import { mountStatsPlayer } from '../docs/js/views/stats/player.js';
 import { mountStatsCompare } from '../docs/js/views/stats/compare.js';
 import { mountStatsNight } from '../docs/js/views/stats/night.js';
+import { mountStatsPlayers } from '../docs/js/views/stats/players.js';
+import { mountStatsNights } from '../docs/js/views/stats/nights.js';
+import { mountStatsPairs } from '../docs/js/views/stats/pairs.js';
+import { mountStatsOverview } from '../docs/js/views/stats/overview.js';
 
 const home = () => 'home';
 const stats = () => 'stats';
@@ -61,6 +65,14 @@ test('app routes: the player page with and without a name, and compare', () => {
 
 test('app routes: the night page', () => {
   assert.deepEqual(matchRoute(routes, '/stats/night/2026-10-13'), { mount: mountStatsNight, params: { date: '2026-10-13' } });
+});
+
+test('app routes: the four stats tabs (Oversikt, Spillere, Par, Kvelder)', () => {
+  assert.deepEqual(matchRoute(routes, '/stats'), { mount: mountStatsOverview, params: {} });
+  assert.deepEqual(matchRoute(routes, '/stats/players'), { mount: mountStatsPlayers, params: {} });
+  assert.deepEqual(matchRoute(routes, '/stats/pairs'), { mount: mountStatsPairs, params: {} });
+  assert.deepEqual(matchRoute(routes, '/stats/nights'), { mount: mountStatsNights, params: {} });
+  for (const path of ['/stats/players', '/stats/nights']) assert.equal(activeTab(path), 'stats', path);
 });
 
 test('buildHash omits an empty query and encodes values', () => {

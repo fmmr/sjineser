@@ -13,8 +13,10 @@ export const PAGES = {
     { id: 'leaderboard', stats: ['leaderboard'] },
     { id: 'summary', stats: ['nightsCount', 'matchesCount', 'gamesCount', 'drawRate'] },
     { id: 'records', stats: ['longestMatch', 'longestNight', 'longestDrawStreak', 'cleanSweeps', 'comebacks', 'biggestUpset', 'highestRating', 'lowestRating'] },
-    { id: 'nights', stats: ['nightsList'] },
     { id: 'attendance', stats: ['attendance'] },
+  ] },
+  players: { sections: [
+    { id: 'leaderboard', stats: ['leaderboard'] },
   ] },
   player: { sections: [
     { id: 'rating', stats: ['rating', 'eloChart', 'peakRating', 'lowRating'] },
@@ -25,6 +27,9 @@ export const PAGES = {
   ] },
   pairs: { sections: [
     { id: 'pairs', stats: ['pairsTable'] },
+  ] },
+  nights: { sections: [
+    { id: 'nights', stats: ['nightsList'] },
   ] },
   pair: { sections: [
     { id: 'results', stats: ['gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'drawRate'] },
@@ -44,7 +49,9 @@ export const PAGES = {
 };
 
 /** The subject type each page computes its stats for. */
-export const PAGE_SUBJECTS = { overview: 'overall', player: 'player', pairs: 'overall', pair: 'pair', night: 'overall' };
+export const PAGE_SUBJECTS = {
+  overview: 'overall', players: 'overall', player: 'player', pairs: 'overall', nights: 'overall', pair: 'pair', night: 'overall',
+};
 
 /** Section headings (t.statsSections keys) of the derived compare page. */
 export const COMPARE_SECTIONS = { sideBySide: 'sideBySide', overlay: 'overlay', headToHead: 'headToHead' };

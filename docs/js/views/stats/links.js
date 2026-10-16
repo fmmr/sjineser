@@ -16,8 +16,10 @@ export function subjectPath(subject) {
   return '/stats';
 }
 
-/** Path of the pairs table. */
+/** Paths of the list pages (the stats tabs besides the overview). */
+export const PLAYERS_PATH = '/stats/players';
 export const PAIRS_PATH = '/stats/pairs';
+export const NIGHTS_PATH = '/stats/nights';
 
 /**
  * A stats link that keeps the season filter ('s') of the current query.

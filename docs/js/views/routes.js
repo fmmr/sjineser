@@ -4,10 +4,12 @@ import { mountNewMatch } from './play/new-match.js';
 import { mountMatch } from './play/match.js';
 import { mountStatsOverview } from './stats/overview.js';
 import { mountStatsPlayer } from './stats/player.js';
+import { mountStatsPlayers } from './stats/players.js';
 import { mountStatsPairs } from './stats/pairs.js';
 import { mountStatsPair } from './stats/pair.js';
 import { mountStatsCompare } from './stats/compare.js';
 import { mountStatsNight } from './stats/night.js';
+import { mountStatsNights } from './stats/nights.js';
 import { mountAboutTeams } from './about/teams.js';
 import { mountAboutRating } from './about/rating.js';
 import { mountAbout } from './about/about.js';
@@ -22,11 +24,13 @@ export const routes = [
   ['/play/new-match', mountNewMatch],
   ['/play/match', mountMatch],
   ['/stats', mountStatsOverview],
+  ['/stats/players', mountStatsPlayers],
   ['/stats/player', mountStatsPlayer],
   ['/stats/player/:name', mountStatsPlayer],
   ['/stats/pairs', mountStatsPairs],
   ['/stats/pair/:pair', mountStatsPair],
   ['/stats/compare/:a/:b', mountStatsCompare],
+  ['/stats/nights', mountStatsNights],
   ['/stats/night/:date', mountStatsNight],
   ['/more', mountMore],
   ['/more/players', mountPlayers],

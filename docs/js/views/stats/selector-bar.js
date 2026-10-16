@@ -5,6 +5,7 @@ import { byName, playerOverview } from '../../domain/players.js';
 import { compareSubject, playerSubject } from '../../domain/stats/subjects.js';
 import { seasonChoices } from './season-filter.js';
 import { statsHref, subjectPath } from './links.js';
+import { breadcrumb, breadcrumbParts, statsNav } from './stats-nav.js';
 
 /**
  * The selector bar on top of the player and compare pages (spec §9): Spiller · Sammenlign · Sesong.
@@ -80,8 +81,8 @@ export function selectorBar({ dataset, filter, today }, { player = '', other = '
 }
 
 /**
- * Header of the player and compare pages: back link, the page title for screen readers (the bar
- * shows it) and the bar.
+ * Header of the player and compare pages: the stats tabs, the breadcrumb ("Spillere › Anne" once a
+ * player is chosen), the page title for screen readers (the bar shows it) and the bar.
  * @param {string} title e.g. 'Anne' or 'Anne mot Per'
  * @param {{ dataset: object, filter: object, today: string }} data
  * @param {Selection & { path: string }} state
@@ -89,6 +90,7 @@ export function selectorBar({ dataset, filter, today }, { player = '', other = '
  */
 export const selectorHeader = (title, data, state, ctx) =>
   h('header', { class: 'stats-header' },
-    h('a', { class: 'link stats-back', href: statsHref('/stats', ctx.query) }, t.statsUi.back),
+    h('div', { class: 'stats-nav-row' }, statsNav(state.path, ctx.query)),
+    breadcrumb(breadcrumbParts('players', state.player ? title : '', ctx.query)),
     h('h1', { class: 'visually-hidden' }, title),
     selectorBar(data, state, ctx));

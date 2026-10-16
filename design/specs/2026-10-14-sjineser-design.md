@@ -240,8 +240,8 @@ Navigation is the bottom tab bar and nothing else: **Spill** (Play, `#/play`), *
 (Stats, `#/stats`) and **Mer** (More, `#/more`). Hash routes; links are shareable. The active
 tab follows the path (`routing.js` `activeTab`): `/stats…` → Statistikk; `/more…` and `/about…`
 → Mer; everything else → Spill. The header holds only the logo and name (home link) and the
-sync badge. Links inside screens are contextual only (e.g. "Alle par" on the stats overview,
-"Slik foreslås lag" under the team proposal).
+sync badge. Links inside screens are contextual only (e.g. "Slik foreslås lag" under the team
+proposal); the stats section adds its own sub-navigation (§9 Navigation).
 
 1. **Play home** — three states, by the active night (§3):
    - *A night is ongoing:* its card ("Kveld 14. okt.", the players, *Fortsett kvelden*);
@@ -393,8 +393,8 @@ domain constant (e.g. minimum games) is a function of one shared params object,
 `views/stats/description-params.js` (`{ minGames, provisionalGames, … }`, built from the
 exported domain constants); a new constant is added there, never in the widgets.
 
-**Pages are lists of stat ids** (`views/stats/pages.js`): overview, player, pairs, pair,
-night; compare is derived. Generic widgets render each kind (`views/stats/widgets/`). Moving a stat
+**Pages are lists of stat ids** (`views/stats/pages.js`): overview, players, player, pairs,
+pair, nights, night; compare is derived. Generic widgets render each kind (`views/stats/widgets/`). Moving a stat
 between pages = editing a list.
 
 Each page section has a heading (`t.statsSections`); when a section holds a single stat
@@ -415,9 +415,30 @@ replayed over all games, so ratings stay continuous and every existing stat work
 **Dates**: records show the full date with year ("14. okt. 2025"); chart axes use the
 short form ("14. okt.") when all points fall in one calendar year, the long form otherwise.
 
-**Routes**: `#/stats`, `#/stats/player` (no player chosen yet), `#/stats/player/<name>`,
-`#/stats/pairs`, `#/stats/pair/<a>+<b>`, `#/stats/compare/<a>/<b>`, `#/stats/night/<YYYY-MM-DD>`
+**Routes**: `#/stats`, `#/stats/players`, `#/stats/player` (no player chosen yet), `#/stats/player/<name>`,
+`#/stats/pairs`, `#/stats/pair/<a>+<b>`, `#/stats/compare/<a>/<b>`, `#/stats/nights`, `#/stats/night/<YYYY-MM-DD>`
 (router supports `:params` and a query string). All `/stats/*` routes highlight the Statistikk tab.
+
+**Navigation** (`views/stats/stats-nav.js`; added 2026-10-16): every stats page opens with a
+sub-navigation, a segmented control of four links — **Oversikt** (`#/stats`) · **Spillere**
+(`#/stats/players`) · **Par** (`#/stats/pairs`) · **Kvelder** (`#/stats/nights`) — with the look of
+the Mer page's theme control (components.css), but navigation (`<nav>`, `aria-current="page"` on
+the current tab), not a radio group; it fits across 375 px. The current tab comes from the path
+(`statsTab`): a list page is its own tab; `/stats/player*` and `/stats/compare/*` → Spillere,
+`/stats/pair/*` → Par, `/stats/night/*` → Kvelder. Tab links keep `s` when the current query has it
+(the night page has none, so its tabs carry none).
+- **List pages** (one per tab): Oversikt (leaderboard, summary, records, attendance); Spillere
+  (`PAGES.players`: the leaderboard of everyone who has played; a row opens the player page);
+  Par (the pairs table); Kvelder (`PAGES.nights`: the `nightsList` table; a row opens the night
+  page). Their heading is for screen readers only (the tab names the page); the season pill sits
+  under the tabs on a phone and beside them where there is room.
+- **Detail pages** show a **breadcrumb** under the tabs instead of a back link: "Spillere › Anne",
+  "Spillere › Anne mot Per", "Par › Anne & Bjørn", "Kvelder › 13. okt. 2026"; the first part links to
+  the list page (keeping `s`), the last is the page itself (`aria-current="page"`). The player and
+  compare pages keep the selector bar (with Sesong) under it; the pair page keeps its title-row
+  season pill; the night page has no season filter. Unknown players, pairs or nights show the tabs
+  and the not-found text.
+- Links inside the pages (names, pairs, night rows, the pair page's player links) work as before.
 
 **Selector bar** (player and compare pages, `views/stats/selector-bar.js`): three selects side by
 side, a third of the width each (text truncated), each under a small uppercase label:
@@ -428,7 +449,7 @@ empty ("–") by default, lists the other players and is disabled until a player
 opens `#/stats/compare/<player>/<other>`, the empty option goes back to `#/stats/player/<player>`.
 On the compare page Spiller = a and Sammenlign = b; neither list offers the player chosen in the
 other. Sesong is the season filter. The bar replaces the title-row season pill on these pages (the
-overview and pair pages keep it); the page heading is visually hidden (the player's name /
+list pages and the pair page keep the pill); the page heading is visually hidden (the player's name /
 "A mot B").
 
 **Starter set**
@@ -448,7 +469,7 @@ overview and pair pages keep it); the page heading is visually hidden (the playe
 
 **Night page** (`#/stats/night/<date>`, `views/stats/night.js`, `PAGES.night`; added 2026-10-16): the
 overall stats computed with the night filter. Heading "Kveld 13. okt. 2026" (with a "pågår" marker
-while ongoing), everyone who was there (sitting out included) and a back link; no season filter.
+while ongoing), everyone who was there (sitting out included) and the breadcrumb; no season filter.
 Sections: **Sett** (`nightSets`, value kind `sets`: `{ sets: [{ matchId, number, A, B, score, winner,
 complete }] }` in play order, shown as small scoreboards like the record cards; the last unfinished set
 of an ongoing night is marked "pågår", other unfinished sets "ikke ferdig"; a set appears with its

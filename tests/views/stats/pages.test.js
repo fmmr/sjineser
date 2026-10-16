@@ -71,8 +71,15 @@ test('every registered stat is shown somewhere: on a page or in the derived comp
   for (const { id } of STATS) assert.ok(shown.has(id), `${id} is registered but on no page (add it to PAGES in views/stats/pages.js)`);
 });
 
-test('section order: Kvelder directly above Oppmøte on the overview', () => {
-  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records', 'nights', 'attendance']);
+test('overview: leaderboard, summary, records, attendance (the nights table lives on the Kvelder tab)', () => {
+  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records', 'attendance']);
+});
+
+test('list pages: Spillere is the leaderboard of everyone who has played, Kvelder the nights table', () => {
+  assert.deepEqual(PAGES.players.sections, [{ id: 'leaderboard', stats: ['leaderboard'] }]);
+  assert.deepEqual(PAGES.nights.sections, [{ id: 'nights', stats: ['nightsList'] }]);
+  assert.equal(PAGE_SUBJECTS.players, 'overall');
+  assert.equal(PAGE_SUBJECTS.nights, 'overall');
 });
 
 test('pairs page: one table, kjemi is a column in it', () => {

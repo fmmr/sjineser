@@ -5,7 +5,7 @@ import { statById } from '../../domain/stats/registry.js';
 import { parseFilter } from '../../domain/stats/filter.js';
 import { factsFor } from './facts-cache.js';
 import { seasonFilter } from './season-filter.js';
-import { statsHref } from './links.js';
+import { breadcrumb, breadcrumbParts, statsNav, statsTab } from './stats-nav.js';
 import { tileTitleHidden, withValues } from './pages.js';
 import { WIDE_KINDS, renderWidget } from './widgets/index.js';
 
@@ -48,24 +48,33 @@ export function renderPage(root, page, facts, subject, ctx) {
 }
 
 /**
- * Page heading with the season filter, plus an optional back link and extra content.
- * @param {{ title: Node | string | (Node | string | false)[], path: string, back?: boolean, season?: boolean, extra?: Node[] }} options
- *   path: this page, for the filter; season: false leaves the season filter out (the night page)
+ * Page header: the stats tabs, then on a list page the season filter beside or under them, on a
+ * detail page the breadcrumb and the title row (title plus season filter), plus extra content.
+ * @param {{ title: Node | string | (Node | string | false)[], path: string, list?: boolean, crumb?: string,
+ *   season?: boolean, extra?: Node[] }} options
+ *   path: this page (tabs, filter); list: one of the four list pages (title for screen readers only);
+ *   crumb: this page's last breadcrumb part; season: false leaves the season filter out (the night page)
  * @param {{ query: Record<string, string>, navigate: (path: string) => void }} ctx
  * @param {{ dataset: object, filter: object, today: string }} data
  */
-export function statsHeader({ title, path, back = true, season = true, extra = [] }, { query, navigate }, { dataset, filter, today }) {
+export function statsHeader({ title, path, list = false, crumb = '', season = true, extra = [] }, { query, navigate }, { dataset, filter, today }) {
+  const pill = season && seasonFilter({ dataset, filter, today, path, query, navigate });
   return h('header', { class: 'stats-header' },
-    back && h('a', { class: 'link stats-back', href: statsHref('/stats', query) }, t.statsUi.back),
-    h('div', { class: 'stats-title-row' },
-      h('h1', {}, title),
-      season && seasonFilter({ dataset, filter, today, path, query, navigate })),
+    h('div', { class: 'stats-nav-row' }, statsNav(path, query), list && pill),
+    crumb && breadcrumb(breadcrumbParts(statsTab(path), crumb, query)),
+    list
+      ? h('h1', { class: 'visually-hidden' }, title)
+      : h('div', { class: 'stats-title-row' }, h('h1', {}, title), pill),
     extra);
 }
 
-/** Muted "not found" text for unknown players or pairs. */
-export const notFound = (ctx) => [
-  h('a', { class: 'link stats-back', href: statsHref('/stats', ctx.query) }, t.statsUi.back),
+/**
+ * The tabs and a muted "not found" text, for unknown players, pairs or nights.
+ * @param {string} path the list page of the section (its tab is marked)
+ * @param {{ query: Record<string, string> }} ctx
+ */
+export const notFound = (path, ctx) => [
+  h('div', { class: 'stats-nav-row' }, statsNav(path, ctx.query)),
   h('p', { class: 'muted' }, t.statsUi.notFound),
 ];
 

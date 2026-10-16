@@ -7,7 +7,7 @@ import { nightFilter } from '../../domain/stats/filter.js';
 import { nightSubject, overallSubject } from '../../domain/stats/subjects.js';
 import { nightPlayers } from '../../domain/stats/catalog/nightsList.js';
 import { PAGES } from './pages.js';
-import { subjectPath } from './links.js';
+import { NIGHTS_PATH, subjectPath } from './links.js';
 import { mountStatsView, notFound, renderPage, statsHeader } from './render-page.js';
 
 /**
@@ -26,13 +26,14 @@ export function mountStatsNight(root, ctx) {
   const view = mountStatsView(root, ctx, (page, data) => {
     const night = isISODate(date) && data.facts.nights.find((n) => n.date === date);
     if (!night) {
-      page.append(...notFound(ctx));
+      page.append(...notFound(NIGHTS_PATH, ctx));
       return undefined;
     }
     const ongoing = isOngoing();
     page.append(statsHeader({
       title: [t.nightOf(formatDateLong(date)), ongoing && h('span', { class: 'stat-marker' }, t.statsUi.setStatus.ongoing)],
       path: subjectPath(nightSubject(date)),
+      crumb: formatDateLong(date),
       season: false,
       extra: [h('p', { class: 'stats-night-players' }, t.names(nightPlayers(night)))],
     }, ctx, data));

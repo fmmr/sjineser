@@ -500,8 +500,55 @@ select.selector-select:disabled {
   }
 }
 
-.stats-back {
-  justify-self: start;
+/*
+ * Stats tabs (Oversikt · Spillere · Par · Kvelder) with the list pages' season pill: under the
+ * tabs on a phone, beside them where there is room.
+ */
+.stats-nav-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* The same width on every stats page, so the tabs never shift; the pill wraps when it does not fit. */
+.stats-tabs {
+  flex: 0 0 30rem;
+  max-width: 100%;
+}
+
+/* Four tabs fit across 375 px. */
+.stats-tabs .segment-pill {
+  padding: 0 var(--space-2);
+}
+
+/* Breadcrumb of the detail pages: "Spillere › Anne"; the first part links to the list page. */
+.stats-breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.stats-breadcrumb li {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stats-breadcrumb li + li::before {
+  content: "›" / "";
+  padding: 0 var(--space-2);
+}
+
+.stats-breadcrumb .link {
   display: inline-flex;
   align-items: center;
   min-height: var(--tap);
