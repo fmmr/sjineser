@@ -5,7 +5,7 @@ import { FORM_GAMES } from './constants.js';
 
 /**
  * Value kinds a stat can return (spec §9). Each kind has one generic widget.
- * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart' | 'form' | 'sets'} Kind
+ * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart' | 'form' | 'sets' | 'matrix'} Kind
  * @typedef {'int' | 'percent' | 'rating' | 'signed' | 'decimal' | 'signedPercent'} NumberFormat percent is 0–1;
  *   signed shows +/−; signedPercent is a fraction −1 … 1 shown as signed percentage points
  * @typedef {NumberFormat | 'player' | 'pair' | 'label' | 'date' | 'players' | 'form' | 'countShare' | 'season'} TableFormat
@@ -16,7 +16,7 @@ import { FORM_GAMES } from './constants.js';
  */
 
 /** @type {Kind[]} */
-export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form', 'sets'];
+export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form', 'sets', 'matrix'];
 
 /** @type {NumberFormat[]} */
 export const NUMBER_FORMATS = ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent'];
@@ -85,10 +85,28 @@ const isSet = (set) => isObject(set) && isValidMatchId(set.matchId) && Number.is
   && isTeam(set.A) && isTeam(set.B) && isScore(set.score)
   && [null, 'A', 'B'].includes(set.winner) && set.complete === (set.winner !== null);
 
+const isWdl = (value) => isObject(value) && WDL_KEYS.every((key) => isCount(value[key]));
+
+/** A matrix cell: null, or a W/D/L with at least one game. */
+const isMatrixCell = (cell) => cell === null || (isWdl(cell) && cell.W + cell.D + cell.L > 0);
+
+/** cells[j][i] is cells[i][j] seen from the other side: W and L swapped (both null if they never met). */
+const isMirrored = (cell, other) => (cell === null
+  ? other === null
+  : other !== null && cell.W === other.L && cell.D === other.D && cell.L === other.W);
+
+/** A square grid matching `players`: valid cells, null on the diagonal, mirrored across it. */
+function isMatrixGrid(players, cells) {
+  const n = players.length;
+  if (!Array.isArray(cells) || cells.length !== n) return false;
+  if (!cells.every((row) => Array.isArray(row) && row.length === n && row.every(isMatrixCell))) return false;
+  return cells.every((row, i) => row.every((cell, j) => (i === j ? cell === null : isMirrored(cell, cells[j][i]))));
+}
+
 const VALUE_CHECKS = {
   number: ({ value, format, marker }) => isFormattedNumber(value, format) && isOptional(marker, (m) => MARKERS.includes(m)),
 
-  wdl: (value) => WDL_KEYS.every((key) => isCount(value[key])),
+  wdl: isWdl,
 
   /** Head-to-head between two named sides: each side's wins plus the draws. */
   duel: ({ left, right, draws }) => [left, right].every((side) => isObject(side) && isName(side.name) && isCount(side.wins))
@@ -116,6 +134,13 @@ const VALUE_CHECKS = {
 
   /** Sets in play order (e.g. one night's), each a small scoreboard. */
   sets: ({ sets }) => Array.isArray(sets) && sets.length > 0 && sets.every(isSet),
+
+  /**
+   * Player vs player: distinct names (at least two) and cells[i][j] = row i's results against
+   * column j (null on the diagonal and where they never met).
+   */
+  matrix: ({ players, cells }) => Array.isArray(players) && players.length >= 2 && players.every(isName)
+    && new Set(players).size === players.length && isMatrixGrid(players, cells),
 };
 
 /**

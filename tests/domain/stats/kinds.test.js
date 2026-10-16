@@ -6,7 +6,7 @@ const valid = (kind, value) => assert.equal(isValidValue(kind, value), true, JSO
 const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, JSON.stringify(value));
 
 test('known kinds and formats', () => {
-  assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form', 'sets']);
+  assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form', 'sets', 'matrix']);
   assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent']);
   assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form', 'countShare', 'season']);
 });
@@ -154,4 +154,26 @@ test('sets: a list of sets in play order, each with teams, score, winner and com
   invalid('sets', { sets: [{ ...set, winner: 'D' }] });
   invalid('sets', { sets: [{ ...set, complete: false }] });
   invalid('sets', { sets: [{ ...open, complete: true }] });
+});
+
+test('matrix: players and a square grid of row-vs-column results, null on the diagonal and where they never met', () => {
+  const players = ['Anne', 'Bjørn', 'Cato'];
+  const cells = [
+    [null, { W: 2, D: 1, L: 0 }, null],
+    [{ W: 0, D: 1, L: 2 }, null, { W: 1, D: 0, L: 1 }],
+    [null, { W: 1, D: 0, L: 1 }, null],
+  ];
+  valid('matrix', { players, cells });
+  valid('matrix', { players: ['Anne', 'Bjørn'], cells: [[null, null], [null, null]] });
+  invalid('matrix', { players: [], cells: [] });
+  invalid('matrix', { players, cells: cells.slice(0, 2) });
+  invalid('matrix', { players, cells: [cells[0], cells[1], [null, null]] });
+  invalid('matrix', { players: ['Anne', 'Anne', 'Cato'], cells });
+  invalid('matrix', { players: ['Anne', '', 'Cato'], cells });
+  invalid('matrix', { players, cells: [[{ W: 1, D: 0, L: 0 }, cells[0][1], null], cells[1], cells[2]] });
+  invalid('matrix', { players, cells: [[null, { W: 0, D: 0, L: 0 }, null], [{ W: 0, D: 0, L: 0 }, null, cells[1][2]], cells[2]] });
+  invalid('matrix', { players, cells: [[null, { W: 2, D: 1 }, null], cells[1], cells[2]] });
+  invalid('matrix', { players, cells: [[null, { W: 3, D: 1, L: 0 }, null], cells[1], cells[2]] });
+  invalid('matrix', { players, cells: [[null, cells[0][1], { W: 1, D: 0, L: 0 }], cells[1], cells[2]] });
+  invalid('matrix', { players, cells: null });
 });

@@ -18,6 +18,7 @@ export const PAGES = {
   ] },
   players: { sections: [
     { id: 'leaderboard', stats: ['leaderboard'] },
+    { id: 'versusMatrix', stats: ['headToHeadMatrix'] },
   ] },
   player: { sections: [
     { id: 'rating', stats: ['rating', 'eloChart', 'peakRating', 'lowRating', 'seasonTitles'] },

@@ -6,11 +6,12 @@ import { renderRecord } from './record.js';
 import { renderChart } from './chart.js';
 import { renderForm } from './form.js';
 import { renderSets } from './sets.js';
+import { renderMatrix } from './matrix.js';
 
 /** One generic widget per value kind (spec §9). */
 const WIDGETS = {
   number: renderNumber, wdl: renderWdl, duel: renderDuel, table: renderTable, record: renderRecord, chart: renderChart, form: renderForm,
-  sets: renderSets,
+  sets: renderSets, matrix: renderMatrix,
 };
 
 /**
@@ -23,4 +24,4 @@ const WIDGETS = {
 export const renderWidget = (stat, value, ctx) => WIDGETS[stat.kind](stat, value, ctx);
 
 /** Kinds whose widgets take a whole grid row. */
-export const WIDE_KINDS = ['table', 'chart', 'sets'];
+export const WIDE_KINDS = ['table', 'chart', 'sets', 'matrix'];

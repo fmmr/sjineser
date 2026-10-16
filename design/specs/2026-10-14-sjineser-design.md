@@ -390,6 +390,9 @@ winners (everyone when unfinished).
 - `sets` — `{ sets: [{ matchId, number, A, B, score: { A, B, D }, winner, complete }] }` (sets in play order; night page)
 - `form` — `{ outcomes: ['W'|'D'|'L'] }` (a player's last 1–10 games, oldest first; shown as S/U/T chips,
   newest at the right). `form` is also a table format (0–10 outcomes; `[]` = no games, shown as –)
+- `matrix` — `{ players: [names], cells: (null | { W, D, L })[][] }` (player vs player: everyone with games in the
+  period, Norwegian order; `cells[i][j]` = row i's game results against column j, null on the diagonal and where
+  they never met; mirrored across the diagonal)
 Titles and explanations live in `nb.js` under `t.stats[id]`. An explanation that needs a
 domain constant (e.g. minimum games) is a function of one shared params object,
 `views/stats/description-params.js` (`{ minGames, provisionalGames, … }`, built from the
@@ -502,6 +505,14 @@ first, the current season included) sits on the overview after Rekorder; `season
 the number of seasons won, with `seasons` listing them, newest first) on the player page after peak/low.
 Both are inherently across seasons, so they are computed only when the filter is all seasons (the
 default) and return null for a season or night filter.
+
+**Mot hverandre-matrise** (added 2026-10-16): `headToHeadMatrix` (overall, kind `matrix`; null with fewer than two
+players) on the Spillere tab, a section "Mot hverandre" after the player list. Widget `widgets/matrix.js`: a compact
+grid; row headers are the names (linked to the player page), column headers the first three letters (full name as a
+tooltip); each cell is the row player's win share (W / games) as a whole percent without the sign ("60"), tinted
+subtly with the accent when the row player won more of their games than they lost and the danger colour when they
+lost more (draws are neutral, so with many draws a share under 50 % can still be green; stronger with a larger
+margin |W − L| / (W + L)), and links to compare row vs column; empty where they never met. Scrolls sideways on narrow screens with the names sticky on the left.
 
 **Layout**: mobile first — headline numbers and one chart, details one tap deeper;
 wide screens add columns (tiles in an auto-fit grid, tables full width). Charts use
