@@ -386,7 +386,9 @@ winners (everyone when unfinished).
   link to a subject; `provisional: true` marks the row's rating "ny")
 - `record` — `{ value, format, holders: [names], date?, matchId?, match?, ranking?, seasons? }` (`seasons`: a non-empty
   list of `{ year, half }`, shown by name as a muted line, e.g. the seasons a player won)
-- `chart` — `{ series: [{ name, points: [{ x: date, y }] }] }`
+- `chart` — `{ series: [{ name | label, points: [{ x: date, y }] }], format? }` (a series is named by
+  `name`, e.g. a player, or by `label`, a key under `t.statsLabels`; `format` is the y values' number
+  format, default `rating`; percent → 0–1)
 - `sets` — `{ sets: [{ matchId, number, A, B, score: { A, B, D }, winner, complete }] }` (sets in play order; night page)
 - `form` — `{ outcomes: ['W'|'D'|'L'] }` (a player's last 1–10 games, oldest first; shown as S/U/T chips,
   newest at the right). `form` is also a table format (0–10 outcomes; `[]` = no games, shown as –)
@@ -429,7 +431,7 @@ the current tab), not a radio group; it fits across 375 px. The current tab come
 (`statsTab`): a list page is its own tab; `/stats/player*` and `/stats/compare/*` → Spillere,
 `/stats/pair/*` → Par, `/stats/night/*` → Kvelder. Tab links keep `s` when the current query has it
 (the night page has none, so its tabs carry none).
-- **List pages** (one per tab): Oversikt (leaderboard, summary, records, attendance); Spillere
+- **List pages** (one per tab): Oversikt (leaderboard, summary, trends, records, attendance); Spillere
   (`PAGES.players`: the leaderboard of everyone who has played; a row opens the player page);
   Par (the pairs table); Kvelder (`PAGES.nights`: the `nightsList` table; a row opens the night
   page). Their heading is for screen readers only (the tab names the page); the season pill sits
@@ -459,6 +461,10 @@ list pages and the pair page keep the pill); the page heading is visually hidden
   season summary (nights, matches, games, draw %); records: longest match, longest
   draw streak, clean sweeps (3–0 without draws), comebacks (0–2 → 3–2), biggest upset
   (largest pre-game team-rating gap overcome by the game winner).
+  **Utvikling** (after the summary, before the records; added 2026-10-16): two overall charts with one
+  point per played night (x = date), shown from 2 played nights — average games per set (sets with
+  games; `decimal`) and draw share (`percent`). Overall charts are not on the compare page (it overlays
+  player charts only).
   Later: highest and lowest rating (after a game in the period; a player's first
   `PROVISIONAL_GAMES` games ever do not count; tie → most recent).
 - Player: Elo over time; peak and low rating (Toppnotering / Bunnotering, same rule as

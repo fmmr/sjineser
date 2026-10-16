@@ -37,10 +37,10 @@ Mark ideas `[x]` when shipped.
 - [x] Sesongens spiller: largest rating gain per season (half-year), newest first; shown with all seasons selected (overview table; player page: seasons won)
 - [x] Flest uavgjort i ett sett: the set with the most drawn games, shown as a scoreboard (overview and night records)
 - [x] Oppmøte-rekke: most played nights in a row one player was there, sitting out counts (overview records)
+- [x] Snitt spill per sett / uavgjort-andel over tid: one point per played night, from 2 played nights (overview section Utvikling)
 
 ## Ideas (ranked)
 1. **Mot hverandre-matrise** — player vs player win share table (best on wide screens).
-2. **Snitt spill per sett / uavgjort-andel over tid** — trend chart on the overview.
 
 ## Dropped
 - ~~Sit-outs per player~~ — with 3 vs 2 and 3 vs 3 nobody sits out with six or fewer players, so it would almost always be empty.

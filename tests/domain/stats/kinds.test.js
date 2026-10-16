@@ -114,6 +114,22 @@ test('chart', () => {
   invalid('chart', { series: [{ points: [] }] });
 });
 
+test('chart: optional y format (a number format; points must fit it)', () => {
+  const points = [{ x: '2026-10-14', y: 0.25 }];
+  valid('chart', { series: [{ name: 'Anne', points }], format: 'percent' });
+  valid('chart', { series: [{ name: 'Anne', points: [{ x: '2026-10-14', y: 3.5 }] }], format: 'decimal' });
+  invalid('chart', { series: [{ name: 'Anne', points: [{ x: '2026-10-14', y: 1.5 }] }], format: 'percent' });
+  invalid('chart', { series: [{ name: 'Anne', points }], format: 'player' });
+  invalid('chart', { series: [{ name: 'Anne', points }], format: null });
+});
+
+test('chart: a series is named by a name or by a label key (t.statsLabels), not both', () => {
+  const points = [{ x: '2026-10-14', y: 1 }];
+  valid('chart', { series: [{ label: 'series_drawRate', points }] });
+  invalid('chart', { series: [{ label: '', points }] });
+  invalid('chart', { series: [{ name: 'Anne', label: 'series_drawRate', points }] });
+});
+
 test('table rows may carry an optional boolean provisional flag', () => {
   const columns = [{ key: 'player', format: 'player' }, { key: 'rating', format: 'rating' }];
   const row = { player: 'Anne', rating: 1012 };

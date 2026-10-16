@@ -113,3 +113,16 @@ test('every table column has a header and every label cell a text in nb.js', () 
     }
   }
 });
+
+test('every chart series label has a text in nb.js', () => {
+  for (const stat of STATS.filter((s) => s.kind === 'chart')) {
+    for (const type of stat.subjects) {
+      for (const facts of FACTS) {
+        const value = stat.compute(facts, SUBJECTS[type]);
+        for (const { label } of value?.series ?? []) {
+          if (label !== undefined) assert.equal(typeof t.statsLabels[label], 'string', `${stat.id}: t.statsLabels.${label}`);
+        }
+      }
+    }
+  }
+});

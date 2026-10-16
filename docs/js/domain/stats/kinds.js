@@ -107,9 +107,14 @@ const VALUE_CHECKS = {
       && list.every((entry) => isObject(entry) && isName(entry.name) && isCount(entry.count) && entry.count > 0))
     && isOptional(seasons, (list) => Array.isArray(list) && list.length > 0 && list.every(isSeason)),
 
-  chart: ({ series }) => Array.isArray(series) && series.length > 0 && series.every((s) => isObject(s)
-    && isName(s.name) && Array.isArray(s.points)
-    && s.points.every((p) => isObject(p) && isISODate(p.x) && Number.isFinite(p.y))),
+  /**
+   * Series named by `name` (e.g. a player) or by `label` (an i18n key under t.statsLabels), not both.
+   * Optional `format`: the y values' number format (default 'rating'); every y must fit it.
+   */
+  chart: ({ series, format = 'rating' }) => NUMBER_FORMATS.includes(format)
+    && Array.isArray(series) && series.length > 0 && series.every((s) => isObject(s)
+    && (s.name === undefined ? isName(s.label) : isName(s.name) && s.label === undefined) && Array.isArray(s.points)
+    && s.points.every((p) => isObject(p) && isISODate(p.x) && isFormattedNumber(p.y, format))),
 
   /** A player's most recent games, oldest first (1–FORM_GAMES). */
   form: ({ outcomes }) => isOutcomes(outcomes, 1),
