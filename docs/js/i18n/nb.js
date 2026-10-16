@@ -192,6 +192,7 @@ export const t = {
     gamesCount: { title: 'Spill' },
     drawRate: { title: 'Uavgjort-andel' },
     longestMatch: { title: 'Lengste sett', description: 'Flest spill i ett sett.' },
+    mostDrawsInSet: { title: 'Flest uavgjort i ett sett', description: 'Settet med flest uavgjorte spill.' },
     longestNight: { title: 'Lengste kveld', description: 'Flest spill på én kveld. Viser hvem som var med.' },
     longestDrawStreak: { title: 'Lengste uavgjort-rekke', description: 'Flest uavgjorte spill på rad samme kveld.' },
     longestWinStreak: { title: 'Lengste seiersrekke', description: 'Flest spill vunnet på rad.' },

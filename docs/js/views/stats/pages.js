@@ -12,7 +12,7 @@ export const PAGES = {
   overview: { sections: [
     { id: 'leaderboard', stats: ['leaderboard'] },
     { id: 'summary', stats: ['nightsCount', 'matchesCount', 'gamesCount', 'drawRate'] },
-    { id: 'records', stats: ['longestMatch', 'longestNight', 'longestDrawStreak', 'longestWinStreak', 'cleanSweeps', 'comebacks', 'biggestUpset', 'highestRating', 'lowestRating'] },
+    { id: 'records', stats: ['longestMatch', 'mostDrawsInSet', 'longestNight', 'longestDrawStreak', 'longestWinStreak', 'cleanSweeps', 'comebacks', 'biggestUpset', 'highestRating', 'lowestRating'] },
     { id: 'seasonPlayers', stats: ['seasonPlayers'] },
     { id: 'decisive', stats: ['decisiveTable'] },
   ] },
@@ -46,7 +46,7 @@ export const PAGES = {
     { id: 'nightPairs', stats: ['pairsTable'] },
     { id: 'decisive', stats: ['decisiveTable'] },
     { id: 'summary', stats: ['matchesCount', 'gamesCount', 'drawRate'] },
-    { id: 'records', stats: ['longestMatch', 'longestDrawStreak', 'longestWinStreak', 'cleanSweeps', 'comebacks', 'biggestUpset'] },
+    { id: 'records', stats: ['longestMatch', 'mostDrawsInSet', 'longestDrawStreak', 'longestWinStreak', 'cleanSweeps', 'comebacks', 'biggestUpset'] },
   ] },
 };
 

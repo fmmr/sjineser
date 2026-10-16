@@ -134,6 +134,19 @@ test('longestMatch: tie → most recent, unfinished matches count', () => {
   assert.equal(compute('longestMatch', EMPTY), null);
 });
 
+test('mostDrawsInSet: set with most draws, tie → most recent, unfinished counts, null without draws', () => {
+  const facts = factsOf([
+    { date: N1, matches: [[HF_TP, 'ADDBA'], [HF_TP, 'AAA']] },
+    { date: N2, matches: [[HF_TP, 'DADB'], [HF_TP, 'D']] },
+  ]);
+  assert.deepEqual(compute('mostDrawsInSet', facts), {
+    value: 2, format: 'int', holders: [], date: N2, matchId: `${N2}#1`,
+    match: { A: ['Hans', 'Frode'], B: ['Tor', 'Per'], score: { A: 1, B: 1, D: 2 } },
+  });
+  assert.equal(compute('mostDrawsInSet', factsOf([{ date: N1, matches: [[HF_TP, 'AA']] }])), null);
+  assert.equal(compute('mostDrawsInSet', EMPTY), null);
+});
+
 test('longestDrawStreak: runs across matches within a night, resets between nights', () => {
   const facts = factsOf([
     { date: N1, matches: [[HF_TP, 'ADD'], [HF_TP, 'DBBB'], [HF_TP, 'BDD']] },
