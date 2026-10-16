@@ -13,6 +13,22 @@ const header = (key) => (Object.hasOwn(t.statsColumnTitles, key)
 
 const LINK_FORMATS = ['player', 'pair'];
 
+/** Row subjects carried by a cell of another format than player/pair: a night by its date. */
+const ROW_LINK_FORMATS = { night: ['date'] };
+
+/**
+ * The cell that links to the row's subject: the first date cell for a night, else the first
+ * player/pair cell (e.g. a partner → the pair). Null without a subject or a fitting cell.
+ * @param {{ key: string, format: string }[]} columns
+ * @param {{ subject?: { type: string } }} row
+ * @returns {string | null}
+ */
+export function rowLinkKey(columns, row) {
+  if (!row.subject) return null;
+  const formats = ROW_LINK_FORMATS[row.subject.type] ?? LINK_FORMATS;
+  return columns.find((c) => formats.includes(c.format))?.key ?? null;
+}
+
 /** The subject a player or pair cell stands for. */
 const cellSubject = (value, format) => (format === 'player' ? playerSubject(value) : pairSubject(...value));
 
@@ -50,23 +66,20 @@ export function cellText(value, format) {
 }
 
 /**
- * A stat table. The first player/pair cell links to the row's subject (e.g. a partner → the
- * pair), other player/pair cells to their own page. Rows marked `provisional` get the "ny"
+ * A stat table. The row's subject is linked from one cell (rowLinkKey: e.g. a partner → the
+ * pair, a night's date → the night page); other player/pair cells link to their own page. Rows marked `provisional` get the "ny"
  * marker after the rating; ranks get a small marker (top three slightly brighter).
  * @param {{ columns: { key: string, format: string }[], rows: object[] }} value
  * @param {{ query: Record<string, string> }} ctx
  */
 export function tableBody({ columns, rows }, { query }) {
-  const linkKey = columns.find((c) => LINK_FORMATS.includes(c.format))?.key;
   const isNumber = (format) => !TEXT_FORMATS.includes(format);
 
-  const cell = (row, { key, format }) => {
+  const cell = (row, { key, format }, linkKey) => {
     const text = cellText(row[key], format);
     let content = text;
-    if (LINK_FORMATS.includes(format)) {
-      const subject = key === linkKey && row.subject ? row.subject : cellSubject(row[key], format);
-      content = h('a', { class: 'link', href: statsHref(subjectPath(subject), query) }, text);
-    }
+    const subject = key === linkKey ? row.subject : LINK_FORMATS.includes(format) ? cellSubject(row[key], format) : null;
+    if (subject) content = h('a', { class: 'link', href: statsHref(subjectPath(subject), query) }, text);
     if (format === 'form' && row[key].length > 0) content = formStrip(row[key], { compact: true });
     if (key === 'rank') content = h('span', { class: 'stat-rank', 'data-rank': String(row[key]) }, text);
     const className = isNumber(format) ? 'num' : format === 'players' ? 'names' : null;
@@ -78,7 +91,10 @@ export function tableBody({ columns, rows }, { query }) {
     h('table', { class: 'stat-table' },
       h('thead', {}, h('tr', {}, columns.map(({ key, format }) =>
         h('th', { scope: 'col', class: isNumber(format) ? 'num' : null, 'data-col': key }, header(key))))),
-      h('tbody', {}, rows.map((row) => h('tr', {}, columns.map((column) => cell(row, column)))))));
+      h('tbody', {}, rows.map((row) => {
+        const linkKey = rowLinkKey(columns, row);
+        return h('tr', {}, columns.map((column) => cell(row, column, linkKey)));
+      }))));
 }
 
 /** @returns {{ el: HTMLElement }} */

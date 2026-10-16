@@ -36,6 +36,9 @@ import { highestRating } from './catalog/highestRating.js';
 import { lowestRating } from './catalog/lowestRating.js';
 import { peakRating } from './catalog/peakRating.js';
 import { lowRating } from './catalog/lowRating.js';
+import { nightSets } from './catalog/nightSets.js';
+import { nightLeaderboard } from './catalog/nightLeaderboard.js';
+import { nightWinner } from './catalog/nightWinner.js';
 
 /**
  * The catalog of stat plugins (spec §9). Adding a stat = one file in catalog/, one import
@@ -54,7 +57,7 @@ export const STATS = [
   longestMatch, longestNight, longestDrawStreak, cleanSweeps, comebacks, biggestUpset, highestRating, lowestRating,
   rating, peakRating, lowRating, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, streaks,
   partners, opponents, bestPartner, worstPartner, nemesis, favoriteVictim, pairsTable, pairVsPairs, togetherWdl, headToHead, attendance, nightsAttended,
-  chemistry, pairChemistry, nightsList, form,
+  chemistry, pairChemistry, nightsList, form, nightSets, nightLeaderboard, nightWinner,
 ];
 
 /** @param {string} id @returns {Stat | null} */

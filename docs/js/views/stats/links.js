@@ -12,6 +12,7 @@ export function subjectPath(subject) {
   if (subject.type === 'player') return `/stats/player/${enc(subject.name)}`;
   if (subject.type === 'pair') return `/stats/pair/${subject.names.map(enc).join('+')}`;
   if (subject.type === 'compare') return `/stats/compare/${enc(subject.a)}/${enc(subject.b)}`;
+  if (subject.type === 'night') return `/stats/night/${subject.date}`;
   return '/stats';
 }
 

@@ -1,15 +1,17 @@
+import { isISODate } from '../dates.js';
 import { byName } from '../players.js';
 
 /**
- * What a stat is about (spec §9). Pair names are sorted with byName.
+ * What a stat is about (spec §9). Pair names are sorted with byName. A night subject is only a
+ * link target (a table row → the night page); stats about a night use the night filter instead.
  * @typedef {'overall' | 'player' | 'pair' | 'compare'} SubjectType
  * @typedef {{ type: 'overall' } | { type: 'player', name: string } | { type: 'pair', names: [string, string] }
- *   | { type: 'compare', a: string, b: string }} Subject
+ *   | { type: 'compare', a: string, b: string } | { type: 'night', date: string }} Subject
  * @typedef {import('./facts.js').Facts} Facts
  * @typedef {import('./facts.js').PlayerGameRow} PlayerGameRow
  */
 
-/** @type {SubjectType[]} */
+/** The subject types a stat can be computed for. @type {SubjectType[]} */
 export const SUBJECT_TYPES = ['overall', 'player', 'pair', 'compare'];
 
 const PAIR_SEPARATOR = '+';
@@ -29,6 +31,9 @@ export const pairSubject = (a, b) => ({ type: 'pair', names: sortedPair(a, b) })
 /** @param {string} a @param {string} b @returns {Subject} order kept: a is shown first */
 export const compareSubject = (a, b) => ({ type: 'compare', a, b });
 
+/** @param {string} date YYYY-MM-DD @returns {Subject} a link target: the night page */
+export const nightSubject = (date) => ({ type: 'night', date });
+
 const isName = (value) => typeof value === 'string' && value !== '';
 const isPair = (names) => Array.isArray(names) && names.length === 2 && names.every(isName) && names[0] !== names[1];
 
@@ -37,6 +42,7 @@ const SUBJECT_CHECKS = {
   player: ({ name }) => isName(name),
   pair: ({ names }) => isPair(names) && byName(names[0], names[1]) < 0,
   compare: ({ a, b }) => isPair([a, b]),
+  night: ({ date }) => isISODate(date),
 };
 
 /** Shape check, used by the stats contract. @param {unknown} subject */

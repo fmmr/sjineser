@@ -4,6 +4,7 @@ import { activeTab, buildHash, matchRoute, parseHash, sandboxUrl } from '../docs
 import { routes } from '../docs/js/views/routes.js';
 import { mountStatsPlayer } from '../docs/js/views/stats/player.js';
 import { mountStatsCompare } from '../docs/js/views/stats/compare.js';
+import { mountStatsNight } from '../docs/js/views/stats/night.js';
 
 const home = () => 'home';
 const stats = () => 'stats';
@@ -58,6 +59,10 @@ test('app routes: the player page with and without a name, and compare', () => {
   assert.deepEqual(matchRoute(routes, '/stats/compare/Anne/Per'), { mount: mountStatsCompare, params: { a: 'Anne', b: 'Per' } });
 });
 
+test('app routes: the night page', () => {
+  assert.deepEqual(matchRoute(routes, '/stats/night/2026-10-13'), { mount: mountStatsNight, params: { date: '2026-10-13' } });
+});
+
 test('buildHash omits an empty query and encodes values', () => {
   assert.equal(buildHash('/stats', {}), '#/stats');
   assert.equal(buildHash('/stats'), '#/stats');
@@ -71,7 +76,7 @@ test('buildHash and parseHash round-trip', () => {
 });
 
 test('activeTab: stats pages → stats; Mer and the explanation pages → more; the rest → play', () => {
-  for (const path of ['/stats', '/stats/player/Anne', '/stats/pairs', '/stats/compare/A/B']) assert.equal(activeTab(path), 'stats', path);
+  for (const path of ['/stats', '/stats/player/Anne', '/stats/pairs', '/stats/compare/A/B', '/stats/night/2026-10-13']) assert.equal(activeTab(path), 'stats', path);
   for (const path of ['/more', '/more/players', '/about', '/about/teams', '/about/rating']) assert.equal(activeTab(path), 'more', path);
   for (const path of ['/', '/play', '/play/night', '/play/new-match', '/play/match', '/unknown', '/statsx', '/aboutx', '/morex']) {
     assert.equal(activeTab(path), 'play', path);

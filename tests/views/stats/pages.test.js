@@ -110,3 +110,18 @@ test('withValues keeps only stats with a value, in page order', () => {
   assert.deepEqual(result.map(({ stat: { id }, value }) => [id, value.value]), [['a', 1], ['c', 3]]);
   assert.deepEqual(withValues([stat('b', null)], {}, {}), []);
 });
+
+test('night page: sets, the night\'s leaderboard (winner first), its pairs, summary, records', () => {
+  assert.deepEqual(PAGES.night.sections.map((s) => s.id), ['sets', 'nightLeaderboard', 'nightPairs', 'summary', 'records']);
+  assert.deepEqual(PAGES.night.sections.find((s) => s.id === 'nightLeaderboard').stats, ['nightWinner', 'nightLeaderboard']);
+  assert.deepEqual(PAGES.night.sections.find((s) => s.id === 'nightPairs').stats, ['pairsTable']);
+  assert.equal(PAGE_SUBJECTS.night, 'overall');
+});
+
+test('night page: no stat with a minimum of games or that skips provisional games (one night is too short)', () => {
+  const ids = PAGES.night.sections.flatMap((s) => s.stats);
+  for (const id of ['bestPartner', 'worstPartner', 'nemesis', 'favoriteVictim', 'chemistry', 'pairChemistry',
+    'highestRating', 'lowestRating', 'peakRating', 'lowRating']) {
+    assert.ok(!ids.includes(id), id);
+  }
+});

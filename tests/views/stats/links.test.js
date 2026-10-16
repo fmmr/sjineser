@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { statsHref, subjectPath } from '../../../docs/js/views/stats/links.js';
-import { compareSubject, overallSubject, pairSubject, playerSubject } from '../../../docs/js/domain/stats/subjects.js';
+import { compareSubject, nightSubject, overallSubject, pairSubject, playerSubject } from '../../../docs/js/domain/stats/subjects.js';
 
 test('subjectPath encodes æøå, spaces and slashes in names', () => {
   assert.equal(subjectPath(playerSubject('Bjørn Åge')), '/stats/player/Bj%C3%B8rn%20%C3%85ge');
@@ -9,6 +9,7 @@ test('subjectPath encodes æøå, spaces and slashes in names', () => {
   assert.equal(subjectPath(pairSubject('Æsa', 'Bjørn')), '/stats/pair/Bj%C3%B8rn+%C3%86sa');
   assert.equal(subjectPath(compareSubject('Per Ø', 'x/y')), '/stats/compare/Per%20%C3%98/x%2Fy');
   assert.equal(subjectPath(overallSubject()), '/stats');
+  assert.equal(subjectPath(nightSubject('2026-10-13')), '/stats/night/2026-10-13');
 });
 
 test('subjectPath round-trips through decodeURIComponent', () => {

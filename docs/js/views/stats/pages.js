@@ -31,10 +31,21 @@ export const PAGES = {
     { id: 'results', stats: ['gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'drawRate'] },
     { id: 'versus', stats: ['pairVsPairs'] },
   ] },
+  /**
+   * One night (computed with the night filter). No stats with a minimum of games or that skip
+   * provisional games: everything here shows from the night's first game.
+   */
+  night: { sections: [
+    { id: 'sets', stats: ['nightSets'] },
+    { id: 'nightLeaderboard', stats: ['nightWinner', 'nightLeaderboard'] },
+    { id: 'nightPairs', stats: ['pairsTable'] },
+    { id: 'summary', stats: ['matchesCount', 'gamesCount', 'drawRate'] },
+    { id: 'records', stats: ['longestMatch', 'longestDrawStreak', 'cleanSweeps', 'comebacks', 'biggestUpset'] },
+  ] },
 };
 
 /** The subject type each page computes its stats for. */
-export const PAGE_SUBJECTS = { overview: 'overall', player: 'player', pairs: 'overall', pair: 'pair' };
+export const PAGE_SUBJECTS = { overview: 'overall', player: 'player', pairs: 'overall', pair: 'pair', night: 'overall' };
 
 /** Section headings (t.statsSections keys) of the derived compare page. */
 export const COMPARE_SECTIONS = { sideBySide: 'sideBySide', overlay: 'overlay', headToHead: 'headToHead' };

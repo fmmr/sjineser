@@ -5,7 +5,7 @@ import { FORM_GAMES } from './constants.js';
 
 /**
  * Value kinds a stat can return (spec §9). Each kind has one generic widget.
- * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart' | 'form'} Kind
+ * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart' | 'form' | 'sets'} Kind
  * @typedef {'int' | 'percent' | 'rating' | 'signed' | 'decimal' | 'signedPercent'} NumberFormat percent is 0–1;
  *   signed shows +/−; signedPercent is a fraction −1 … 1 shown as signed percentage points
  * @typedef {NumberFormat | 'player' | 'pair' | 'label' | 'date' | 'players' | 'form'} TableFormat label: an i18n key under
@@ -16,7 +16,7 @@ import { FORM_GAMES } from './constants.js';
  */
 
 /** @type {Kind[]} */
-export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form'];
+export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form', 'sets'];
 
 /** @type {NumberFormat[]} */
 export const NUMBER_FORMATS = ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent'];
@@ -63,6 +63,8 @@ const isColumns = (columns) => Array.isArray(columns) && columns.length > 0
   && columns.every((c) => isObject(c) && isName(c.key) && TABLE_FORMATS.includes(c.format))
   && new Set(columns.map((c) => c.key)).size === columns.length;
 
+const isScore = (score) => isObject(score) && ['A', 'B', 'D'].every((key) => isCount(score[key]));
+
 const isTeam = (team) => Array.isArray(team) && team.length > 0 && team.every(isName);
 
 /**
@@ -70,7 +72,12 @@ const isTeam = (team) => Array.isArray(team) && team.length > 0 && team.every(is
  * it is a single game that team A won against team B (e.g. an upset).
  */
 const isRecordMatch = (match) => isObject(match) && isTeam(match.A) && isTeam(match.B)
-  && isOptional(match.score, (score) => isObject(score) && ['A', 'B', 'D'].every((key) => isCount(score[key])));
+  && isOptional(match.score, isScore);
+
+/** One set of a night: its number, both teams, the score, the winner (null while unfinished). */
+const isSet = (set) => isObject(set) && isValidMatchId(set.matchId) && Number.isInteger(set.number) && set.number > 0
+  && isTeam(set.A) && isTeam(set.B) && isScore(set.score)
+  && [null, 'A', 'B'].includes(set.winner) && set.complete === (set.winner !== null);
 
 const VALUE_CHECKS = {
   number: ({ value, format, marker }) => isFormattedNumber(value, format) && isOptional(marker, (m) => MARKERS.includes(m)),
@@ -98,6 +105,9 @@ const VALUE_CHECKS = {
 
   /** A player's most recent games, oldest first (1–FORM_GAMES). */
   form: ({ outcomes }) => isOutcomes(outcomes, 1),
+
+  /** Sets in play order (e.g. one night's), each a small scoreboard. */
+  sets: ({ sets }) => Array.isArray(sets) && sets.length > 0 && sets.every(isSet),
 };
 
 /**

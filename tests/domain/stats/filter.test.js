@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatFilter, inFilter, parseFilter, seasonsIn } from '../../../docs/js/domain/stats/filter.js';
+import { formatFilter, inFilter, nightFilter, parseFilter, seasonsIn } from '../../../docs/js/domain/stats/filter.js';
 import { generateHistory } from '../../../docs/js/sandbox/generate.js';
 import { dataset } from '../../helpers.js';
 
@@ -31,6 +31,16 @@ test('inFilter keeps everything for all and only the season otherwise', () => {
   assert.equal(inFilter('2026-07-01', autumn), true);
   assert.equal(inFilter('2026-06-30', autumn), false);
   assert.equal(inFilter('2025-10-14', autumn), false);
+});
+
+test('a night filter keeps only its own date; its key is n:date and never parsed from s', () => {
+  const night = nightFilter('2026-10-13');
+  assert.deepEqual(night, { kind: 'night', date: '2026-10-13' });
+  assert.equal(inFilter('2026-10-13', night), true);
+  assert.equal(inFilter('2026-10-14', night), false);
+  assert.equal(inFilter('2026-10-12', night), false);
+  assert.equal(formatFilter(night), 'n:2026-10-13');
+  assert.deepEqual(parseFilter('n:2026-10-13', TODAY), { kind: 'season', year: 2026, half: 2 });
 });
 
 test('seasonsIn lists distinct seasons of all nights plus the current one, newest first', () => {

@@ -14,13 +14,13 @@ function linkedNames(names, query) {
 }
 
 /**
- * The set a record is about, as a small scoreboard: one line per team with its wins, the
- * winner in bold, draws underneath. A record about a single game (no score) reads
- * "Erik og Frida slo Anne og Bjørn".
+ * A set as a small scoreboard: one line per team with its wins, the winner in bold, draws
+ * underneath. Without `winner`, the team with more wins is bold (a record's set).
+ * @param {{ A: string[], B: string[], score: { A: number, B: number, D: number } }} match
+ * @param {Record<string, string>} query
+ * @param {'A' | 'B' | null} [winner]
  */
-function matchLine({ A, B, score }, query) {
-  if (!score) return [h('p', {}, linkedNames(A, query), ` ${t.statsUi.beat} `, linkedNames(B, query))];
-  const winner = score.A > score.B ? 'A' : score.B > score.A ? 'B' : null;
+export function scoreboard({ A, B, score }, query, winner = score.A > score.B ? 'A' : score.B > score.A ? 'B' : null) {
   const team = (side, names, wins) => h('div', { class: 'record-team', 'data-winner': String(winner === side) },
     h('span', { class: 'record-names' }, linkedNames(names, query)),
     h('span', { class: 'record-wins' }, String(wins)));
@@ -29,6 +29,15 @@ function matchLine({ A, B, score }, query) {
       team('A', A, score.A), team('B', B, score.B)),
     score.D > 0 && h('p', { class: 'muted' }, t.statsUi.draws(score.D)),
   ];
+}
+
+/**
+ * The set a record is about, as a scoreboard. A record about a single game (no score) reads
+ * "Erik og Frida slo Anne og Bjørn".
+ */
+function matchLine(match, query) {
+  if (!match.score) return [h('p', {}, linkedNames(match.A, query), ` ${t.statsUi.beat} `, linkedNames(match.B, query))];
+  return scoreboard(match, query);
 }
 
 /** "Anne 5 · Dag 4 · Cato 2": the players a count record is mostly about, names linked. */

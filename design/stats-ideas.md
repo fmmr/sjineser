@@ -31,6 +31,7 @@ Mark ideas `[x]` when shipped.
 - [x] Høyeste / laveste rating: highest and lowest rating after a game, provisional games left out (overview records; player page Toppnotering / Bunnotering)
 
 - [x] Lengste kveld: night with the most games, who was there (records)
+- [x] Kveldsside (`#/stats/night/<date>`): one night's sets as scoreboards, the night's leaderboard (only those who were there, by rating change) with Kveldens vinner, the night's pairs, summary and records; live while the night is ongoing; reached from Kvelder rows, the home cards and the match screen
 
 ## Ideas (ranked)
 1. **Avgjørende spill** — win share in games where a team stands at 2 wins (set point); specific to first-to-3.

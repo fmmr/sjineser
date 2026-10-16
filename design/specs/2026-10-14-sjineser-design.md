@@ -363,7 +363,7 @@ is applied afterwards. Facts contain:
 Match-level stats use complete matches only; game-level stats and Elo use all games.
 
 **Subjects** (`domain/stats/subjects.js`): `overall`, `player` (name), `pair` (two
-names, sorted), `compare` (two players). Helpers select a subject's rows (a pair's
+names, sorted), `compare` (two players); plus `night` (date) as a table-row link target only. Helpers select a subject's rows (a pair's
 rows are its games from one partner's perspective) and head-to-head rows.
 
 **Team sizes in stats** (§18): a *pair* is a 2-player team. The pair subject (pair page,
@@ -385,6 +385,7 @@ winners (everyone when unfinished).
   link to a subject; `provisional: true` marks the row's rating "ny")
 - `record` — `{ value, format, holders: [names], date?, matchId? }`
 - `chart` — `{ series: [{ name, points: [{ x: date, y }] }] }`
+- `sets` — `{ sets: [{ matchId, number, A, B, score: { A, B, D }, winner, complete }] }` (sets in play order; night page)
 - `form` — `{ outcomes: ['W'|'D'|'L'] }` (a player's last 1–10 games, oldest first; shown as S/U/T chips,
   newest at the right). `form` is also a table format (0–10 outcomes; `[]` = no games, shown as –)
 Titles and explanations live in `nb.js` under `t.stats[id]`. An explanation that needs a
@@ -392,8 +393,8 @@ domain constant (e.g. minimum games) is a function of one shared params object,
 `views/stats/description-params.js` (`{ minGames, provisionalGames, … }`, built from the
 exported domain constants); a new constant is added there, never in the widgets.
 
-**Pages are lists of stat ids** (`views/stats/pages.js`): overview, player, pair,
-compare. Generic widgets render each kind (`views/stats/widgets/`). Moving a stat
+**Pages are lists of stat ids** (`views/stats/pages.js`): overview, player, pairs, pair,
+night; compare is derived. Generic widgets render each kind (`views/stats/widgets/`). Moving a stat
 between pages = editing a list.
 
 Each page section has a heading (`t.statsSections`); when a section holds a single stat
@@ -406,12 +407,17 @@ shown side by side for both players; `chart` stats overlay both series (under a 
 
 **Season filter**: every season by name in chronological order ("Vår 2026", "Høst 2026"), then "Alle"; the default (no `s` in the URL) is all seasons. Applied to the facts, so stats never deal with seasons. Kept in the URL (`?s=2026-2` / `?s=all`).
 
+**Filter kinds** (`domain/stats/filter.js`): `{ kind: 'all' }`, `{ kind: 'season', year, half }` and
+`{ kind: 'night', date }`. The night filter keeps one night's games; it comes from the night page's
+route, never from `s` (`formatFilter` gives `n:<date>`, used only as the facts cache key). Elo is still
+replayed over all games, so ratings stay continuous and every existing stat works for a night.
+
 **Dates**: records show the full date with year ("14. okt. 2025"); chart axes use the
 short form ("14. okt.") when all points fall in one calendar year, the long form otherwise.
 
 **Routes**: `#/stats`, `#/stats/player` (no player chosen yet), `#/stats/player/<name>`,
-`#/stats/pairs`, `#/stats/pair/<a>+<b>`, `#/stats/compare/<a>/<b>` (router supports `:params`
-and a query string).
+`#/stats/pairs`, `#/stats/pair/<a>+<b>`, `#/stats/compare/<a>/<b>`, `#/stats/night/<YYYY-MM-DD>`
+(router supports `:params` and a query string). All `/stats/*` routes highlight the Statistikk tab.
 
 **Selector bar** (player and compare pages, `views/stats/selector-bar.js`): three selects side by
 side, a third of the width each (text truncated), each under a small uppercase label:
@@ -439,6 +445,24 @@ overview and pair pages keep it); the page heading is visually hidden (the playe
 - Pairs (2-player teams): table of all pairs; pair page with W/D/L, win %, head-to-head vs other pairs.
 - Compare: the shared player stats side by side, Elo curves overlaid, record together,
   record against. Reached from the selector bar's Sammenlign.
+
+**Night page** (`#/stats/night/<date>`, `views/stats/night.js`, `PAGES.night`; added 2026-10-16): the
+overall stats computed with the night filter. Heading "Kveld 13. okt. 2026" (with a "pågår" marker
+while ongoing), everyone who was there (sitting out included) and a back link; no season filter.
+Sections: **Sett** (`nightSets`, value kind `sets`: `{ sets: [{ matchId, number, A, B, score, winner,
+complete }] }` in play order, shown as small scoreboards like the record cards; the last unfinished set
+of an ongoing night is marked "pågår", other unfinished sets "ikke ferdig"; a set appears with its
+first game), **Kveldens rangering** (`nightWinner` — most rating won that night, the same rule as the
+Kvelder table — and `nightLeaderboard`: the leaderboard for only the players who were there, ranked by
+rating change, sitting out last), **Kveldens par** (`pairsTable`), **Oppsummering** (sets, games,
+draw %) and **Rekorder** (longest set, longest draw streak, clean sweeps, comebacks, biggest upset;
+hidden when null). Stats with a minimum of games (best/worst partner, nemesis, favourite victim,
+chemistry) or that skip provisional games (highest/lowest rating) are not on the page: a single night
+is too short, and everything on it shows from the night's first game. While the night is the active
+night (§3) the page polls `store.refresh()` every `POLL_MS` when visible, like the match screen, and
+re-renders on store changes. Reached from the Kvelder table (a row's date links to it: a `night`
+subject is a link target only, not a stat subject type), the home cards (ongoing and "Forrige kveld")
+and the match screen ("Se kveldens statistikk"). An unknown or invalid date shows the not-found text.
 
 **Layout**: mobile first — headline numbers and one chart, details one tap deeper;
 wide screens add columns (tiles in an auto-fit grid, tables full width). Charts use

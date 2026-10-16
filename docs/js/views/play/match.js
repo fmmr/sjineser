@@ -3,6 +3,7 @@ import { showToast } from '../components/toast.js';
 import { t } from '../../i18n/nb.js';
 import { POLL_MS, TAP_COOLDOWN_MS } from '../../config.js';
 import { activeNight, gamesOf, latestMatch, parseMatchId, score, teamOf, winnerOf } from '../../domain/match.js';
+import { nightStatsLink } from './home.js';
 
 const RESULT_ORDER = ['A', 'D', 'B'];
 /** Length of the score pop (.score-bump in play.css). */
@@ -87,7 +88,8 @@ export function mountMatch(root, { store, actions, navigate, clock, tapCooldownM
 
   function update() {
     const ds = store.get();
-    if (!activeNight(ds, clock.today(), clock.hour())) {
+    const night = activeNight(ds, clock.today(), clock.hour());
+    if (!night) {
       // No night, or it is over (noon the next day), once data is loaded or the first fetch failed.
       if (store.isLoaded() || store.hasTried()) navigate('/play');
       else root.replaceChildren(h('p', { class: 'muted' }, t.loading));
@@ -95,7 +97,7 @@ export function mountMatch(root, { store, actions, navigate, clock, tapCooldownM
     }
     const match = latestMatch(ds);
     if (!match) {
-      root.replaceChildren(noMatch());
+      root.replaceChildren(noMatch(), h('p', { class: 'center' }, nightStatsLink(night.date)));
       return;
     }
     const games = gamesOf(ds, match.matchId);
@@ -111,7 +113,8 @@ export function mountMatch(root, { store, actions, navigate, clock, tapCooldownM
         h('p', { class: 'draws center' }, t.draws(totals.D)),
         h('ol', { class: 'sequence' }, games.map((g) => h('li', { 'data-side': g.result }, t.resultShort[g.result]))),
         winner ? winnerBanner(match, winner, totals) : resultButtons(),
-        h('button', { class: 'btn btn-ghost', type: 'button', onclick: undo }, t.undo)),
+        h('button', { class: 'btn btn-ghost', type: 'button', onclick: undo }, t.undo),
+        h('p', { class: 'center' }, nightStatsLink(night.date))),
     );
   }
 

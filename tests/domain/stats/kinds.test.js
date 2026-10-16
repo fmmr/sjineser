@@ -6,7 +6,7 @@ const valid = (kind, value) => assert.equal(isValidValue(kind, value), true, JSO
 const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, JSON.stringify(value));
 
 test('known kinds and formats', () => {
-  assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form']);
+  assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form', 'sets']);
   assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent']);
   assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form']);
 });
@@ -121,4 +121,20 @@ test('table form cells: 0–10 outcomes; [] means no games in the period', () =>
   invalid('table', { columns, rows: [{ player: 'Anne', form: null }] });
   invalid('table', { columns, rows: [{ player: 'Anne', form: ['S'] }] });
   invalid('table', { columns, rows: [{ player: 'Anne', form: Array(11).fill('L') }] });
+});
+
+test('sets: a list of sets in play order, each with teams, score, winner and complete', () => {
+  const set = { matchId: '2026-10-13#1', number: 1, A: ['Anne', 'Bjørn'], B: ['Cato', 'Dag', 'Erik'],
+    score: { A: 3, B: 1, D: 2 }, winner: 'A', complete: true };
+  const open = { ...set, matchId: '2026-10-13#2', number: 2, score: { A: 1, B: 0, D: 0 }, winner: null, complete: false };
+  valid('sets', { sets: [set, open] });
+  invalid('sets', { sets: [] });
+  invalid('sets', {});
+  invalid('sets', { sets: [{ ...set, matchId: 'x' }] });
+  invalid('sets', { sets: [{ ...set, number: 0 }] });
+  invalid('sets', { sets: [{ ...set, A: [] }] });
+  invalid('sets', { sets: [{ ...set, score: { A: 3, B: 1 } }] });
+  invalid('sets', { sets: [{ ...set, winner: 'D' }] });
+  invalid('sets', { sets: [{ ...set, complete: false }] });
+  invalid('sets', { sets: [{ ...open, complete: true }] });
 });

@@ -14,6 +14,7 @@ export const t = {
   newNight: 'Ny kveld',
   nightOngoing: 'Kvelden er i gang.',
   backToNight: 'Tilbake til kvelden',
+  nightStatsLink: 'Se kveldens statistikk',
 
   choosePlayers: 'Hvem spiller i kveld?',
   newPlayerPlaceholder: 'Ny spiller',
@@ -228,6 +229,12 @@ export const t = {
     },
     nightsList: { title: 'Kvelder', description: 'Kveldene i perioden, nyeste først. Spillere: alle som var der, også på benken. Kveldens vinner: mest rating vunnet den kvelden.' },
     form: { title: 'Form', description: ({ formGames }) => `Siste ${formGames} spill i perioden, nyeste til høyre.` },
+    nightSets: { title: 'Sett' },
+    nightLeaderboard: {
+      title: 'Rangering',
+      description: 'Alle som var med, også på benken. Rating er nåværende rating; endring, spill og form gjelder kvelden. Sortert etter endring.',
+    },
+    nightWinner: { title: 'Kveldens vinner', description: 'Mest rating vunnet i løpet av kvelden.' },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
   },
   /** Label cells in stat tables (format 'label'). */
@@ -263,6 +270,9 @@ export const t = {
     chemistry: 'Kjemi',
     nights: 'Kvelder',
     form: 'Form',
+    sets: 'Sett',
+    nightLeaderboard: 'Kveldens rangering',
+    nightPairs: 'Kveldens par',
   },
   statsUi: {
     title: 'Statistikk',
@@ -288,6 +298,8 @@ export const t = {
     noCompare: '–',
     pickPlayer: 'Velg en spiller',
     notFound: 'Fant ikke dette i dataene.',
+    setTitle: (n) => `Sett ${n}`,
+    setStatus: { ongoing: 'pågår', unfinished: 'ikke ferdig' },
   },
 
   sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', resetMessage: 'Testdataene genereres på nytt, og endringer i testmodus forsvinner.', exit: 'Avslutt', date: 'Dato' },

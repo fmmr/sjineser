@@ -32,7 +32,7 @@ test('nightsList: one row per played night, newest first, with roster, sets, gam
   assert.equal(value.rows[0].winnerGain, gainOf(FACTS, 'Per', N2));
   assert.ok(value.rows[0].winnerGain > gainOf(FACTS, 'Hans', N2));
   assert.equal(value.rows[1].winnerGain, gainOf(FACTS, 'Hans', N1), 'Frode and Hans tie; Frode by name');
-  assert.ok(value.rows.every((r) => r.subject === undefined), 'no night page yet');
+  assert.deepEqual(value.rows.map((r) => r.subject), [{ type: 'night', date: N2 }, { type: 'night', date: N1 }], 'rows link to the night page');
 });
 
 test('nightsList: names in Norwegian order; null without played nights', () => {

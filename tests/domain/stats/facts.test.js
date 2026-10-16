@@ -124,6 +124,16 @@ test('the filter removes rows, games, matches and nights but not ratings', () =>
   assert.equal(spring.games.length, 9);
 });
 
+test('a night filter keeps only that night; ratings still continue from every earlier game', () => {
+  const all = buildFacts(twoSeasons(), ALL);
+  const night = buildFacts(twoSeasons(), { kind: 'night', date: DATE });
+  assert.deepEqual(night.nights.map((n) => n.date), [DATE]);
+  assert.deepEqual(night.matches.map((m) => m.matchId), [MATCH_1]);
+  assert.deepEqual(night.rows, all.rows.filter((r) => r.date === DATE));
+  assert.equal(night.rated.timeline.length, all.rated.timeline.length);
+  assert.equal(buildFacts(twoSeasons(), { kind: 'night', date: '2026-10-15' }).games.length, 0);
+});
+
 test('matches exclude those without games and are in canonical order', () => {
   const facts = buildFacts(twoSeasons(), ALL);
   assert.deepEqual(facts.matches.map((m) => m.matchId), [`${SPRING}#1`, `${SPRING}#2`, `${SPRING}#3`, MATCH_1]);

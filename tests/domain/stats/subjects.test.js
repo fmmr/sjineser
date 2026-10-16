@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  SUBJECT_TYPES, againstRows, compareSubject, isValidSubject, overallSubject, pairKey, pairRows, pairSubject,
+  SUBJECT_TYPES, againstRows, compareSubject, isValidSubject, nightSubject, overallSubject, pairKey, pairRows, pairSubject,
   parsePairKey, playerRows, playerSubject, togetherRows,
 } from '../../../docs/js/domain/stats/subjects.js';
 import { buildFacts } from '../../../docs/js/domain/stats/facts.js';
@@ -33,6 +33,8 @@ test('isValidSubject checks shape', () => {
   assert.equal(isValidSubject(playerSubject('Anne')), true);
   assert.equal(isValidSubject(pairSubject('Anne', 'Bjørn')), true);
   assert.equal(isValidSubject(compareSubject('Anne', 'Bjørn')), true);
+  assert.equal(isValidSubject(nightSubject('2026-10-13')), true, 'a night is a link target');
+  assert.equal(isValidSubject(nightSubject('13.10.2026')), false);
   assert.equal(isValidSubject(null), false);
   assert.equal(isValidSubject({ type: 'team' }), false);
   assert.equal(isValidSubject({ type: 'player', name: '' }), false);

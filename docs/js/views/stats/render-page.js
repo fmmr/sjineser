@@ -49,16 +49,17 @@ export function renderPage(root, page, facts, subject, ctx) {
 
 /**
  * Page heading with the season filter, plus an optional back link and extra content.
- * @param {{ title: Node | string, path: string, back?: boolean, extra?: Node[] }} options path: this page, for the filter
+ * @param {{ title: Node | string | (Node | string | false)[], path: string, back?: boolean, season?: boolean, extra?: Node[] }} options
+ *   path: this page, for the filter; season: false leaves the season filter out (the night page)
  * @param {{ query: Record<string, string>, navigate: (path: string) => void }} ctx
  * @param {{ dataset: object, filter: object, today: string }} data
  */
-export function statsHeader({ title, path, back = true, extra = [] }, { query, navigate }, { dataset, filter, today }) {
+export function statsHeader({ title, path, back = true, season = true, extra = [] }, { query, navigate }, { dataset, filter, today }) {
   return h('header', { class: 'stats-header' },
     back && h('a', { class: 'link stats-back', href: statsHref('/stats', query) }, t.statsUi.back),
     h('div', { class: 'stats-title-row' },
       h('h1', {}, title),
-      seasonFilter({ dataset, filter, today, path, query, navigate })),
+      season && seasonFilter({ dataset, filter, today, path, query, navigate })),
     extra);
 }
 
@@ -70,14 +71,15 @@ export const notFound = (ctx) => [
 
 /**
  * Shared frame of the stats views: loading placeholder, filter from ?s (without it: all
- * seasons), memoized facts, and re-rendering on store changes.
+ * seasons) unless the view brings its own, memoized facts, and re-rendering on store changes.
  * @param {HTMLElement} root
  * @param {{ store: object, clock: { today(): string }, query: Record<string, string> }} ctx
  * @param {(page: HTMLElement, data: { dataset: object, facts: object, filter: object, today: string })
  *   => ({ destroy?(): void } | void)} render
+ * @param {{ filter?: import('../../domain/stats/filter.js').Filter }} [options] filter: fixed (e.g. a night), ?s is ignored
  * @returns {{ update(): void, destroy(): void }}
  */
-export function mountStatsView(root, ctx, render) {
+export function mountStatsView(root, ctx, render, { filter: fixed } = {}) {
   const { store, clock, query } = ctx;
   let cleanup = null;
 
@@ -92,7 +94,7 @@ export function mountStatsView(root, ctx, render) {
     root.replaceChildren(page);
     const dataset = store.get();
     const today = clock.today();
-    const filter = query.s ? parseFilter(query.s, today) : { kind: 'all' };
+    const filter = fixed ?? (query.s ? parseFilter(query.s, today) : { kind: 'all' });
     cleanup = render(page, { dataset, facts: factsFor(dataset, filter), filter, today })?.destroy ?? null;
   }
 

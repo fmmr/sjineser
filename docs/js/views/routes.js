@@ -7,6 +7,7 @@ import { mountStatsPlayer } from './stats/player.js';
 import { mountStatsPairs } from './stats/pairs.js';
 import { mountStatsPair } from './stats/pair.js';
 import { mountStatsCompare } from './stats/compare.js';
+import { mountStatsNight } from './stats/night.js';
 import { mountAboutTeams } from './about/teams.js';
 import { mountAboutRating } from './about/rating.js';
 import { mountAbout } from './about/about.js';
@@ -26,6 +27,7 @@ export const routes = [
   ['/stats/pairs', mountStatsPairs],
   ['/stats/pair/:pair', mountStatsPair],
   ['/stats/compare/:a/:b', mountStatsCompare],
+  ['/stats/night/:date', mountStatsNight],
   ['/more', mountMore],
   ['/more/players', mountPlayers],
   ['/about', mountAbout],
