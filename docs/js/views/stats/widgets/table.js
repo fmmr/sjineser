@@ -47,7 +47,7 @@ export function signOf(value, format) {
 }
 
 /** Formats that are not numbers: left-aligned, never signed. */
-const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players', 'form', 'countShare'];
+const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players', 'form'];
 
 /**
  * Text of a cell; pairs read "Anne & Bjørn", player lists "Anne, Bjørn og Cato", dates
