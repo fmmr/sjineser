@@ -1,5 +1,5 @@
+import { chemistryOf } from '../aggregate.js';
 import { pairRows } from '../subjects.js';
-import { chemistryOf } from './chemistry.js';
 
 /** Kjemi of a and b as a pair (2-player team); null unless they have enough games together. @type {import('../registry.js').Stat} */
 export const pairChemistry = {

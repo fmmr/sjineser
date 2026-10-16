@@ -28,7 +28,6 @@ import { togetherWdl } from './catalog/togetherWdl.js';
 import { headToHead } from './catalog/headToHead.js';
 import { attendance } from './catalog/attendance.js';
 import { nightsAttended } from './catalog/nightsAttended.js';
-import { chemistry } from './catalog/chemistry.js';
 import { pairChemistry } from './catalog/pairChemistry.js';
 import { nightsList } from './catalog/nightsList.js';
 import { form } from './catalog/form.js';
@@ -54,7 +53,7 @@ export const STATS = [
   longestMatch, longestNight, longestDrawStreak, cleanSweeps, comebacks, biggestUpset, highestRating, lowestRating,
   rating, peakRating, lowRating, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, streaks,
   partners, opponents, bestPartner, worstPartner, nemesis, favoriteVictim, pairsTable, pairVsPairs, togetherWdl, headToHead, attendance, nightsAttended,
-  chemistry, pairChemistry, nightsList, form,
+  pairChemistry, nightsList, form,
 ];
 
 /** @param {string} id @returns {Stat | null} */

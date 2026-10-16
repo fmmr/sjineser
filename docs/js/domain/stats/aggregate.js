@@ -1,6 +1,6 @@
-import { ELO } from '../elo.js';
+import { ELO, expectedScore } from '../elo.js';
 import { byName } from '../players.js';
-import { RANKING_SIZE } from './constants.js';
+import { MIN_GAMES_TOGETHER, RANKING_SIZE } from './constants.js';
 import { pairRows, playerRows } from './subjects.js';
 
 /**
@@ -172,4 +172,20 @@ export function subjectMatches(facts, subject) {
     if (side) totals[side === match.winner ? 'won' : 'lost'] += 1;
   }
   return totals;
+}
+
+const ACTUAL_SCORE = { W: 1, D: 0.5, L: 0 };
+
+/** Actual minus expected score of one game, from the pre-game team ratings. @param {PlayerGameRow} row */
+const surpriseOf = (row) => ACTUAL_SCORE[row.outcome] - expectedScore(row.teamRating, row.opponentRating);
+
+/**
+ * Kjemi of a pair from its games together (one row per game): mean actual − expected score
+ * (−1 … 1), or null with fewer than MIN_GAMES_TOGETHER games.
+ * @param {PlayerGameRow[]} rows
+ * @returns {number | null}
+ */
+export function chemistryOf(rows) {
+  if (rows.length < MIN_GAMES_TOGETHER) return null;
+  return rows.reduce((sum, row) => sum + surpriseOf(row), 0) / rows.length;
 }

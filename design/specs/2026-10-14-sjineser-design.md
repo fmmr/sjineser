@@ -436,7 +436,7 @@ overview and pair pages keep it); the page heading is visually hidden (the playe
   the records); games W/D/L and win %; matches W/L and win %; draw rate;
   streaks (current and longest win / unbeaten / loss); partners and opponents tables;
   best partner and nemesis (minimum games apply).
-- Pairs (2-player teams): table of all pairs; pair page with W/D/L, win %, head-to-head vs other pairs.
+- Pairs (2-player teams): table of all pairs (W/D/L, win %, kjemi with ≥ MIN_GAMES_TOGETHER games); pair page with W/D/L, win %, head-to-head vs other pairs.
 - Compare: the shared player stats side by side, Elo curves overlaid, record together,
   record against. Reached from the selector bar's Sammenlign.
 

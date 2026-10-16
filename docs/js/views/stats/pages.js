@@ -24,7 +24,6 @@ export const PAGES = {
     { id: 'people', stats: ['bestPartner', 'worstPartner', 'nemesis', 'favoriteVictim', 'partners', 'opponents'] },
   ] },
   pairs: { sections: [
-    { id: 'chemistry', stats: ['chemistry'] },
     { id: 'pairs', stats: ['pairsTable'] },
   ] },
   pair: { sections: [

@@ -23,7 +23,7 @@ Mark ideas `[x]` when shipped.
 
 ## Shipped later
 - [x] Oppmøte: nights attended and share of nights (overview table, player page, compare)
-- [x] Kjemi: pairs scoring above or below their expected score, in percentage points (pairs page table, compare)
+- [x] Kjemi: pairs scoring above or below their expected score, in percentage points (a column in the pairs table, compare)
 - [x] Kvelder: list of played nights with players, sets, games, draws and the night winner (largest Elo gain) (overview table)
 - [x] Form: last 10 games as S/U/T chips (player page, own section; leaderboard column)
 - [x] Favorittoffer: the opponent a player has the highest win share against, min. games apply (player page)
