@@ -91,3 +91,12 @@ export function activeTab(path) {
 export function sandboxUrl({ pathname, hash }, enable) {
   return `${pathname}${enable ? '?sandbox' : ''}${hash}`;
 }
+
+/**
+ * Whether a route change should scroll to the top: yes for a new page (the browser would keep
+ * the previous page's scroll position and drop you mid-page), no when only the query changes
+ * (e.g. another season on the same page).
+ * @param {string | null} previousPath
+ * @param {string} nextPath
+ */
+export const scrollsToTop = (previousPath, nextPath) => previousPath !== nextPath;

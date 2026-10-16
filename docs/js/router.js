@@ -1,4 +1,4 @@
-import { matchRoute, parseHash } from './routing.js';
+import { matchRoute, parseHash, scrollsToTop } from './routing.js';
 
 /**
  * Hash router. A view is mount(root, ctx) → { update?(), destroy?() }, where ctx also
@@ -8,6 +8,7 @@ import { matchRoute, parseHash } from './routing.js';
  */
 export function createRouter({ root, routes, ctx, onRoute = () => {} }) {
   let current = null;
+  let currentPath = null;
 
   function render() {
     current?.destroy?.();
@@ -15,6 +16,8 @@ export function createRouter({ root, routes, ctx, onRoute = () => {} }) {
     const { mount, params } = matchRoute(routes, path);
     root.replaceChildren();
     current = mount(root, { ...ctx, params, query });
+    if (scrollsToTop(currentPath, path)) window.scrollTo(0, 0);
+    currentPath = path;
     onRoute(path);
   }
 

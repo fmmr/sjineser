@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { activeTab, buildHash, matchRoute, parseHash, sandboxUrl } from '../docs/js/routing.js';
+import { activeTab, buildHash, matchRoute, parseHash, sandboxUrl, scrollsToTop } from '../docs/js/routing.js';
 import { routes } from '../docs/js/views/routes.js';
 import { mountStatsPlayer } from '../docs/js/views/stats/player.js';
 import { mountStatsCompare } from '../docs/js/views/stats/compare.js';
@@ -99,4 +99,11 @@ test('sandboxUrl switches test mode on and off and keeps the current screen', ()
   assert.equal(sandboxUrl({ pathname: '/', hash: '#/stats/player/Anne' }, true), '/?sandbox#/stats/player/Anne');
   assert.equal(sandboxUrl({ pathname: '/', hash: '#/play' }, false), '/#/play');
   assert.equal(sandboxUrl({ pathname: '/app/', hash: '' }, true), '/app/?sandbox');
+});
+
+test('a new page starts at the top; the same page with another query keeps its scroll position', () => {
+  assert.equal(scrollsToTop(null, '/stats'), true);
+  assert.equal(scrollsToTop('/stats', '/stats/player/Anne'), true);
+  assert.equal(scrollsToTop('/stats/player/Anne', '/stats/player/Bjørn'), true);
+  assert.equal(scrollsToTop('/stats', '/stats'), false, 'season change on the same page');
 });
