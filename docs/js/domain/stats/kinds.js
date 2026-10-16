@@ -86,9 +86,11 @@ const VALUE_CHECKS = {
     && isOptional(row.subject, isValidSubject)
     && isOptional(row.provisional, (p) => typeof p === 'boolean')),
 
-  record: ({ value, format, holders, date, matchId, match }) => isFormattedNumber(value, format)
+  record: ({ value, format, holders, date, matchId, match, ranking }) => isFormattedNumber(value, format)
     && Array.isArray(holders) && holders.every(isName)
-    && isOptional(date, isISODate) && isOptional(matchId, isValidMatchId) && isOptional(match, isRecordMatch),
+    && isOptional(date, isISODate) && isOptional(matchId, isValidMatchId) && isOptional(match, isRecordMatch)
+    && isOptional(ranking, (list) => Array.isArray(list) && list.length > 0
+      && list.every((entry) => isObject(entry) && isName(entry.name) && isCount(entry.count) && entry.count > 0)),
 
   chart: ({ series }) => Array.isArray(series) && series.length > 0 && series.every((s) => isObject(s)
     && isName(s.name) && Array.isArray(s.points)

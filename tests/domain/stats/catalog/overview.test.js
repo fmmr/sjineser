@@ -150,25 +150,26 @@ test('longestDrawStreak: tie → most recent; null without draws', () => {
   assert.equal(compute('longestDrawStreak', factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }])), null);
 });
 
-test('cleanSweeps: 3–0 without draws; holders = most recent sweep', () => {
+test('cleanSweeps: count of 3–0 sets without draws, ranked by the players who won most of them', () => {
   const facts = factsOf([
     { date: N1, matches: [[HF_TP, 'AAA'], [HF_TP, 'AADA'], [HF_TP, 'BBB'], [HF_TP, 'AA']] },
-    { date: N2, matches: [[HF_TP, 'ABAA']] },
+    { date: N2, matches: [[HF_TP, 'AAA'], ['Hans Kari - Tor Per', 'AAA']] },
   ]);
-  assert.deepEqual(compute('cleanSweeps', facts),
-    { value: 2, format: 'int', holders: ['Tor', 'Per'], date: N1, matchId: `${N1}#3`,
-      match: { A: ['Hans', 'Frode'], B: ['Tor', 'Per'], score: { A: 0, B: 3, D: 0 } } });
+  assert.deepEqual(compute('cleanSweeps', facts), {
+    value: 4, format: 'int', holders: [],
+    ranking: [{ name: 'Hans', count: 3 }, { name: 'Frode', count: 2 }, { name: 'Kari', count: 1 }],
+  });
   assert.equal(compute('cleanSweeps', factsOf([{ date: N1, matches: [[HF_TP, 'AADA'], [HF_TP, 'AA']] }])), null);
 });
 
-test('comebacks: winner trailed 0–2 and won 3–2 (draws allowed); unfinished matches never count', () => {
+test('comebacks: winner trailed 0–2 and won 3–2 (draws allowed); unfinished never count; ranked by winners', () => {
   const facts = factsOf([
     { date: N1, matches: [[HF_TP, 'BBAAA'], [HF_TP, 'ABBAA'], [HF_TP, 'BBAAB']] },
     { date: N2, matches: [[HF_TP, 'ADADBDB'], [HF_TP, 'BDBAADA'], [HF_TP, 'AABB']] },
   ]);
-  assert.deepEqual(compute('comebacks', facts),
-    { value: 2, format: 'int', holders: ['Hans', 'Frode'], date: N2, matchId: `${N2}#2`,
-      match: { A: ['Hans', 'Frode'], B: ['Tor', 'Per'], score: { A: 3, B: 2, D: 2 } } });
+  assert.deepEqual(compute('comebacks', facts), {
+    value: 2, format: 'int', holders: [], ranking: [{ name: 'Frode', count: 2 }, { name: 'Hans', count: 2 }],
+  });
   assert.equal(compute('comebacks', factsOf([{ date: N1, matches: [[HF_TP, 'BBAA'], [HF_TP, 'ABBAA']] }])), null);
 });
 

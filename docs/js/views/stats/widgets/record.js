@@ -31,16 +31,31 @@ function matchLine({ A, B, score }, query) {
   ];
 }
 
+/** "Anne 5 · Dag 4 · Cato 2": the players a count record is mostly about, names linked. */
+function rankingLine(ranking, query) {
+  return h('p', { class: 'record-ranking' }, ranking.flatMap(({ name, count }, i) => [
+    i > 0 && h('span', { class: 'muted', 'aria-hidden': 'true' }, ' · '),
+    h('span', {},
+      h('a', { class: 'link', href: statsHref(subjectPath(playerSubject(name)), query) }, name),
+      ` ${count}`),
+  ]));
+}
+
 /**
- * Record value, then either the match it is about (both teams) or its holders (linked; a team
- * of three has three), and the date it was set (with the year: records span seasons).
- * @param {{ value: number, format: string, holders: string[], date?: string, match?: object }} value
+ * Record value, then what it is about: a ranking of players (count records), the set (both
+ * teams and the score), or its holders (linked; a team of three has three); and the date it was
+ * set (with the year: records span seasons).
+ * @param {{ value: number, format: string, holders: string[], date?: string, match?: object,
+ *   ranking?: { name: string, count: number }[] }} value
  * @param {{ query: Record<string, string> }} ctx
  */
-export function recordBody({ value, format, holders, date, match }, { query }) {
+export function recordBody({ value, format, holders, date, match, ranking }, { query }) {
+  const about = ranking ? rankingLine(ranking, query)
+    : match ? matchLine(match, query)
+      : holders.length > 0 && h('p', {}, linkedNames(holders, query));
   return h('div', { class: 'stat-record' },
     h('p', { class: 'stat-value' }, formatValue(value, format)),
-    match ? matchLine(match, query) : holders.length > 0 && h('p', {}, linkedNames(holders, query)),
+    about,
     date && h('p', { class: 'muted' }, formatDateLong(date)));
 }
 
