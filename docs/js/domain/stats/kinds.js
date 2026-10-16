@@ -7,7 +7,8 @@ import { isValidSubject } from './subjects.js';
  * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart'} Kind
  * @typedef {'int' | 'percent' | 'rating' | 'signed' | 'decimal' | 'signedPercent'} NumberFormat percent is 0–1;
  *   signed shows +/−; signedPercent is a fraction −1 … 1 shown as signed percentage points
- * @typedef {NumberFormat | 'player' | 'pair' | 'label'} TableFormat label: an i18n key under t.statsLabels
+ * @typedef {NumberFormat | 'player' | 'pair' | 'label' | 'date' | 'players'} TableFormat label: an i18n key under
+ *   t.statsLabels; date: 'YYYY-MM-DD'; players: a non-empty list of names
  * Table rows: one cell per column key, plus optional `subject` (the row links to it) and
  * optional boolean `provisional` (the row's rating cell gets the "ny" marker).
  */
@@ -19,7 +20,7 @@ export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart'];
 export const NUMBER_FORMATS = ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent'];
 
 /** @type {TableFormat[]} */
-export const TABLE_FORMATS = [...NUMBER_FORMATS, 'player', 'pair', 'label'];
+export const TABLE_FORMATS = [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players'];
 
 const MARKERS = ['provisional'];
 const WDL_KEYS = ['W', 'D', 'L'];
@@ -42,6 +43,8 @@ const CELL_CHECKS = {
   player: isName,
   pair: (value) => Array.isArray(value) && value.length === 2 && value.every(isName),
   label: isName,
+  date: isISODate,
+  players: (value) => Array.isArray(value) && value.length > 0 && value.every(isName),
 };
 
 /** Number cells may be null ("no value in this period", shown as –). */

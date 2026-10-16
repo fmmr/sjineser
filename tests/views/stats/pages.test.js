@@ -71,6 +71,10 @@ test('every registered stat is shown somewhere: on a page or in the derived comp
   for (const { id } of STATS) assert.ok(shown.has(id), `${id} is registered but on no page (add it to PAGES in views/stats/pages.js)`);
 });
 
+test('section order: Kvelder directly above Oppmøte on the overview', () => {
+  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records', 'nights', 'attendance']);
+});
+
 test('section order: Kjemi opens the pairs page', () => {
   assert.deepEqual(PAGES.pairs.sections.map((s) => s.id), ['chemistry', 'pairs']);
 });

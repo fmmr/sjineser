@@ -216,6 +216,7 @@ export const t = {
       title: 'Kjemi som par',
       description: ({ minGames }) => `Prosentpoeng over (eller under) det ratingen tilsier når de spiller sammen som par. Minst ${minGames} spill.`,
     },
+    nightsList: { title: 'Kvelder', description: 'Kveldene i perioden, nyeste først. Spillere: alle som var der, også på benken. Kveldens vinner: mest rating vunnet den kvelden.' },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
   },
   /** Label cells in stat tables (format 'label'). */
@@ -230,6 +231,7 @@ export const t = {
     kind: 'Rekke', current: 'Nå', longest: 'Lengst',
     nights: 'Kvelder', share: 'Andel',
     chemistry: 'Kjemi',
+    date: 'Dato', players: 'Spillere', sets: 'Sett', draws: 'Uavgjort', winner: 'Kveldens vinner', winnerGain: '+/−',
   },
   /** Section headings on the stats pages. */
   statsSections: {
@@ -247,6 +249,7 @@ export const t = {
     headToHead: 'Sammen og mot hverandre',
     attendance: 'Oppmøte',
     chemistry: 'Kjemi',
+    nights: 'Kvelder',
   },
   statsUi: {
     title: 'Statistikk',

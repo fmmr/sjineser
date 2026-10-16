@@ -13,6 +13,7 @@ export const PAGES = {
     { id: 'leaderboard', stats: ['leaderboard'] },
     { id: 'summary', stats: ['nightsCount', 'matchesCount', 'gamesCount', 'drawRate'] },
     { id: 'records', stats: ['longestMatch', 'longestDrawStreak', 'cleanSweeps', 'comebacks', 'biggestUpset'] },
+    { id: 'nights', stats: ['nightsList'] },
     { id: 'attendance', stats: ['attendance'] },
   ] },
   player: { sections: [

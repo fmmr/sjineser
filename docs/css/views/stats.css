@@ -269,6 +269,14 @@
   color: var(--danger);
 }
 
+/* A list of names (e.g. everyone at a night) wraps inside its cell instead of widening the table. */
+.stat-table td.names {
+  min-width: 10rem;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  white-space: normal;
+}
+
 .stat-table .num {
   text-align: right;
 }

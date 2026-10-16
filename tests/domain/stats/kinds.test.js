@@ -8,7 +8,7 @@ const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, 
 test('known kinds and formats', () => {
   assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart']);
   assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent']);
-  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label']);
+  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players']);
 });
 
 test('unknown kinds and null are never valid', () => {
@@ -65,6 +65,17 @@ test('table', () => {
   invalid('table', { columns, rows: [{ ...row, kind: 3 }] });
   invalid('table', { columns, rows: [{ ...row, subject: { type: 'team' } }] });
   invalid('table', { columns, rows: null });
+});
+
+test('table date and players cells', () => {
+  const columns = [{ key: 'date', format: 'date' }, { key: 'players', format: 'players' }];
+  const row = { date: '2026-10-14', players: ['Anne', 'Bjørn'] };
+  valid('table', { columns, rows: [row] });
+  invalid('table', { columns, rows: [{ ...row, date: '14.10.2026' }] });
+  invalid('table', { columns, rows: [{ ...row, date: null }] });
+  invalid('table', { columns, rows: [{ ...row, players: [] }] });
+  invalid('table', { columns, rows: [{ ...row, players: ['Anne', ''] }] });
+  invalid('table', { columns, rows: [{ ...row, players: 'Anne' }] });
 });
 
 test('record', () => {

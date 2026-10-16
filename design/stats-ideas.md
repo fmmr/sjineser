@@ -24,9 +24,9 @@ Mark ideas `[x]` when shipped.
 ## Shipped later
 - [x] Oppmøte: nights attended and share of nights (overview table, player page, compare)
 - [x] Kjemi: pairs scoring above or below their expected score, in percentage points (pairs page table, compare)
+- [x] Kvelder: list of played nights with players, sets, games, draws and the night winner (largest Elo gain) (overview table)
 
 ## Ideas
-- Night winners (largest Elo gain per night)
 - Form (last 10 games)
 - Sit-outs per player
 - Favourite victim (opponent beaten most)
