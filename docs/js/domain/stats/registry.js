@@ -23,6 +23,8 @@ import { pairsTable } from './catalog/pairsTable.js';
 import { pairVsPairs } from './catalog/pairVsPairs.js';
 import { togetherWdl } from './catalog/togetherWdl.js';
 import { headToHead } from './catalog/headToHead.js';
+import { attendance } from './catalog/attendance.js';
+import { nightsAttended } from './catalog/nightsAttended.js';
 
 /**
  * The catalog of stat plugins (spec §9). Adding a stat = one file in catalog/, one import
@@ -40,7 +42,7 @@ export const STATS = [
   leaderboard, nightsCount, matchesCount, gamesCount, drawRate,
   longestMatch, longestDrawStreak, cleanSweeps, comebacks, biggestUpset,
   rating, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, streaks,
-  partners, opponents, bestPartner, nemesis, pairsTable, pairVsPairs, togetherWdl, headToHead,
+  partners, opponents, bestPartner, nemesis, pairsTable, pairVsPairs, togetherWdl, headToHead, attendance, nightsAttended,
 ];
 
 /** @param {string} id @returns {Stat | null} */

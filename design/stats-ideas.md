@@ -21,10 +21,12 @@ Mark ideas `[x]` when shipped.
 - [x] Pairs table; pair W/D/L, win %, head-to-head vs other pairs
 - [x] Compare: player stats side by side, Elo overlay, record together / against
 
+## Shipped later
+- [x] Oppmøte: nights attended and share of nights (overview table, player page, compare)
+
 ## Ideas
 - Night winners (largest Elo gain per night)
 - Form (last 10 games)
-- Nights attended, attendance rate
 - Sit-outs per player
 - Favourite victim (opponent beaten most)
 - Most draws in a match

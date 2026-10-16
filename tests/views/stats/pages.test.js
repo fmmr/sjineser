@@ -26,7 +26,7 @@ test('every section has a heading', () => {
 
 test('compare derives from the catalog: player numbers/wdl side by side, player charts overlaid, compare stats', () => {
   const { sideBySide, overlay, headToHead } = deriveCompare(STATS);
-  assert.deepEqual(sideBySide.map((s) => s.id), ['drawRate', 'rating', 'gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate']);
+  assert.deepEqual(sideBySide.map((s) => s.id), ['drawRate', 'rating', 'gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'nightsAttended']);
   assert.deepEqual(overlay.map((s) => s.id), ['eloChart']);
   assert.deepEqual(headToHead.map((s) => s.id), ['togetherWdl', 'headToHead']);
 });

@@ -206,6 +206,8 @@ export const t = {
     pairsTable: { title: 'Alle par', description: 'Lag på to. På lag med tre telles hver spiller for seg.' },
     pairVsPairs: { title: 'Mot andre par', description: 'Bare spill mot lag på to.' },
     togetherWdl: { title: 'Sammen', description: 'Spill der de var på samme lag (to eller tre): S/U/T for laget.' },
+    attendance: { title: 'Oppmøte', description: 'Kvelder hver spiller var med (også på benken), og andel av kveldene i perioden.' },
+    nightsAttended: { title: 'Kvelder', description: 'Kvelder spilleren var med i perioden.' },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
   },
   /** Label cells in stat tables (format 'label'). */
@@ -218,6 +220,7 @@ export const t = {
     partner: 'Makker', opponent: 'Motstander', pair: 'Par',
     W: 'S', D: 'U', L: 'T', winRate: 'Seier %',
     kind: 'Rekke', current: 'Nå', longest: 'Lengst',
+    nights: 'Kvelder', share: 'Andel',
   },
   /** Section headings on the stats pages. */
   statsSections: {
@@ -233,6 +236,7 @@ export const t = {
     sideBySide: 'Side om side',
     overlay: 'Over tid',
     headToHead: 'Sammen og mot hverandre',
+    attendance: 'Oppmøte',
   },
   statsUi: {
     title: 'Statistikk',
