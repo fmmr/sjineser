@@ -1,11 +1,18 @@
-import { bestOf } from '../aggregate.js';
-
-/** Pre-game team-rating gap (losers − winners) of a decided game; ≤ 0 when the favourite won. */
-const gapOf = (game) => (game.result === 'A' ? game.ratingB - game.ratingA : game.ratingA - game.ratingB);
+import { bestOf, matchHolders, recordMatch } from '../aggregate.js';
 
 /**
- * The game won by the team with the lowest pre-game rating relative to the losers;
- * tie → most recent; null when no game was won by the lower-rated team.
+ * Team-rating gap (losers − winners) at the start of a finished set, from the ratings before
+ * its first game; > 0 means the lower-rated team won the set.
+ * @param {import('../facts.js').MatchFact} match
+ */
+function gapOf({ winner, games: [first] }) {
+  return winner === 'A' ? first.ratingB - first.ratingA : first.ratingA - first.ratingB;
+}
+
+/**
+ * The finished set won by the team with the lowest rating at the start of the set, relative to
+ * the losers; tie → most recent; null when every set was won by the higher-rated team.
+ * Per set rather than per game: a single game won inside a lost set is not an upset.
  * @type {import('../registry.js').Stat}
  */
 export const biggestUpset = {
@@ -13,13 +20,12 @@ export const biggestUpset = {
   subjects: ['overall'],
   kind: 'record',
   compute(facts) {
-    const upsets = facts.games.filter((g) => g.result !== 'D' && gapOf(g) > 0);
-    const game = bestOf(upsets, (a, b) => gapOf(a) - gapOf(b));
-    if (!game) return null;
-    const losers = game.result === 'A' ? 'B' : 'A';
+    const upsets = facts.matches.filter((m) => m.complete && gapOf(m) > 0);
+    const match = bestOf(upsets, (a, b) => gapOf(a) - gapOf(b));
+    if (!match) return null;
     return {
-      value: gapOf(game), format: 'rating', holders: [...game[game.result]],
-      match: { A: [...game[game.result]], B: [...game[losers]] }, date: game.date, matchId: game.matchId,
+      value: gapOf(match), format: 'rating', holders: matchHolders(match), match: recordMatch(match),
+      date: match.date, matchId: match.matchId,
     };
   },
 };

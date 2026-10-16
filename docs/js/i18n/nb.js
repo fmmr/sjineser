@@ -188,7 +188,7 @@ export const t = {
     longestDrawStreak: { title: 'Lengste uavgjort-rekke', description: 'Flest uavgjorte spill på rad samme kveld.' },
     cleanSweeps: { title: 'Rene seire (3–0)', description: 'Sett vunnet 3–0 uten uavgjort.' },
     comebacks: { title: 'Comebacks (0–2 → 3–2)', description: 'Sett vunnet 3–2 etter å ha ligget under 0–2.' },
-    biggestUpset: { title: 'Største overraskelse', description: 'Største forskjell i lagrating før spillet, vunnet av det svakeste laget.' },
+    biggestUpset: { title: 'Største overraskelse', description: 'Sett vunnet av laget med lavest rating ved starten av settet, med størst forskjell.' },
     rating: { title: 'Rating' },
     eloChart: { title: 'Rating over tid' },
     gamesWdl: { title: 'Spill' },

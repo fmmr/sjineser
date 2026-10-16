@@ -161,23 +161,29 @@ test('comebacks: winner trailed 0–2 and won 3–2 (draws allowed); unfinished 
   assert.equal(compute('comebacks', factsOf([{ date: N1, matches: [[HF_TP, 'BBAA'], [HF_TP, 'ABBAA']] }])), null);
 });
 
-test('biggestUpset: largest pre-game gap overcome by the winner', () => {
-  const facts = factsOf([{ date: N1, matches: [[HF_TP, 'AB']] }]);
-  assert.deepEqual(compute('biggestUpset', facts),
-    { value: 24, format: 'rating', holders: ['Tor', 'Per'], date: N1, matchId: `${N1}#1`,
-      match: { A: ['Tor', 'Per'], B: ['Hans', 'Frode'] } });
+test('biggestUpset: the finished set won by the lower-rated team, gap at the start of the set', () => {
+  const facts = factsOf([{ date: N1, matches: [[HF_TP, 'AAA'], [HF_TP, 'BBB']] }]);
+  const [first] = facts.matches[1].games;
+  assert.deepEqual(compute('biggestUpset', facts), {
+    value: first.ratingA - first.ratingB, format: 'rating', holders: ['Tor', 'Per'], date: N1, matchId: `${N1}#2`,
+    match: { A: ['Hans', 'Frode'], B: ['Tor', 'Per'], score: { A: 0, B: 3, D: 0 } },
+  });
+});
+
+test('biggestUpset: a game won inside a lost set is no upset; unfinished sets never count', () => {
+  assert.equal(compute('biggestUpset', factsOf([{ date: N1, matches: [[HF_TP, 'AAA'], [HF_TP, 'BAAA']] }])), null);
+  assert.equal(compute('biggestUpset', factsOf([{ date: N1, matches: [[HF_TP, 'AAA'], [HF_TP, 'BB']] }])), null);
 });
 
 test('biggestUpset: tie → most recent', () => {
   const facts = factsOf([{ date: N1, matches: [
-    [HF_TP, 'A'], ['Wenche Xena - Yngve Zeb', 'A'], [HF_TP, 'B'], ['Wenche Xena - Yngve Zeb', 'B'],
+    [HF_TP, 'AAA'], ['Wenche Xena - Yngve Zeb', 'AAA'], [HF_TP, 'BBB'], ['Wenche Xena - Yngve Zeb', 'BBB'],
   ] }]);
-  assert.deepEqual(compute('biggestUpset', facts),
-    { value: 24, format: 'rating', holders: ['Yngve', 'Zeb'], date: N1, matchId: `${N1}#4`,
-      match: { A: ['Yngve', 'Zeb'], B: ['Wenche', 'Xena'] } });
+  const value = compute('biggestUpset', facts);
+  assert.deepEqual([value.holders, value.matchId], [['Yngve', 'Zeb'], `${N1}#4`]);
 });
 
-test('biggestUpset: null when favourites win or the underdog only draws', () => {
+test('biggestUpset: null when favourites win every set', () => {
   assert.equal(compute('biggestUpset', factsOf([{ date: N1, matches: [[HF_TP, 'AADA']] }])), null);
   assert.equal(compute('biggestUpset', EMPTY), null);
 });
