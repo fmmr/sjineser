@@ -198,3 +198,42 @@ test('biggestUpset: null when favourites win every set', () => {
   assert.equal(compute('biggestUpset', factsOf([{ date: N1, matches: [[HF_TP, 'AADA']] }])), null);
   assert.equal(compute('biggestUpset', EMPTY), null);
 });
+
+// ---------- highest / lowest rating ----------
+
+// Hans and Frode win 6 of their first 9 games in spring (provisional), then lose 3 in autumn
+// (games 10–12); Tor and Per mirror them. Settled extremes: after game 10 (Hans/Frode high,
+// Tor/Per low); teammates tie, so the later row (Frode, Per) holds the record.
+const EXTREMES = [
+  { date: SPRING, matches: [[HF_TP, 'AAA'], [HF_TP, 'BBB'], [HF_TP, 'AAA']] },
+  { date: N1, matches: [[HF_TP, 'BBB']] },
+];
+const rowOf = (facts, player, gameNo) => facts.rows.find((r) => r.player === player && r.date === N1 && r.gameNo === gameNo);
+
+test('highestRating: the highest rating after a game, provisional games left out; tie → most recent', () => {
+  const facts = factsOf(EXTREMES);
+  const hansProvisionalPeak = facts.rows.filter((r) => r.player === 'Hans' && r.date === SPRING).at(-1).ratingAfter;
+  const value = compute('highestRating', facts);
+  assert.ok(hansProvisionalPeak > value.value, 'a provisional rating never counts');
+  assert.deepEqual(value, { value: rowOf(facts, 'Frode', 1).ratingAfter, format: 'rating', holders: ['Frode'], date: N1, matchId: `${N1}#1` });
+});
+
+test('lowestRating: the lowest rating after a game, provisional games left out; tie → most recent', () => {
+  const facts = factsOf(EXTREMES);
+  assert.deepEqual(compute('lowestRating', facts),
+    { value: rowOf(facts, 'Per', 1).ratingAfter, format: 'rating', holders: ['Per'], date: N1, matchId: `${N1}#1` });
+});
+
+test('highestRating / lowestRating: follow the season filter, game count is all-time', () => {
+  const autumn = factsOf(EXTREMES, AUTUMN);
+  assert.equal(compute('highestRating', autumn).value, rowOf(autumn, 'Frode', 1).ratingAfter);
+  assert.equal(compute('lowestRating', autumn).value, rowOf(autumn, 'Per', 1).ratingAfter);
+  const spring = factsOf(EXTREMES, SPRING_FILTER);
+  assert.equal(compute('highestRating', spring), null);
+  assert.equal(compute('lowestRating', spring), null);
+});
+
+test('highestRating / lowestRating: null when nobody is past the provisional games', () => {
+  assert.equal(compute('highestRating', factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }])), null);
+  assert.equal(compute('lowestRating', EMPTY), null);
+});

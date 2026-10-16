@@ -28,17 +28,17 @@ Mark ideas `[x]` when shipped.
 - [x] Form: last 10 games as S/U/T chips (player page, own section; leaderboard column)
 - [x] Favorittoffer: the opponent a player has the highest win share against, min. games apply (player page)
 - [x] Dårligste makker: lowest win share with a partner as a pair, min. games apply (player page)
+- [x] Høyeste / laveste rating: highest and lowest rating after a game, provisional games left out (overview records; player page Toppnotering / Bunnotering)
 
 ## Ideas (ranked)
 1. **Avgjørende spill** — win share in games where a team stands at 2 wins (set point); specific to first-to-3.
 2. **Tremannslag vs tomannslag** — a player's win share on 3-player vs 2-player teams; tests whether the team of three really has an edge (relevant for the Elo assumption in spec §18).
-3. **Høyeste / laveste rating noensinne** — peak and low with date (records, player page).
-4. **Lengste seiersrekke** — overall record (per-player streaks already exist).
-5. **Sesongens spiller** — largest rating gain per season.
-6. **Oppmøte-rekke** — most nights in a row without missing one.
-7. **Mot hverandre-matrise** — player vs player win share table (best on wide screens).
-8. **Snitt spill per sett / uavgjort-andel over tid** — trend chart on the overview.
-9. **Flest uavgjort i ett sett** — record (overlaps with "Lengste sett").
+3. **Lengste seiersrekke** — overall record (per-player streaks already exist).
+4. **Sesongens spiller** — largest rating gain per season.
+5. **Oppmøte-rekke** — most nights in a row without missing one.
+6. **Mot hverandre-matrise** — player vs player win share table (best on wide screens).
+7. **Snitt spill per sett / uavgjort-andel over tid** — trend chart on the overview.
+8. **Flest uavgjort i ett sett** — record (overlaps with "Lengste sett").
 
 ## Dropped
 - ~~Sit-outs per player~~ — with 3 vs 2 and 3 vs 3 nobody sits out with six or fewer players, so it would almost always be empty.

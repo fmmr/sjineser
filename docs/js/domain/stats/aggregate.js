@@ -81,6 +81,35 @@ export function gamesUpToLastInScope(facts) {
 export const isProvisionalAfter = (games) => games < ELO.PROVISIONAL_GAMES;
 
 /**
+ * Per row in scope: the player's all-time game number (1 = their first game ever), counted over
+ * every rated game, so a season knows how many games each player had played by then.
+ * @param {Facts} facts
+ * @returns {Map<PlayerGameRow, number>}
+ */
+export function allTimeGameNumbers(facts) {
+  const counts = new Map();
+  const numbers = new Map();
+  for (const { game, before } of facts.rated.timeline) {
+    for (const name of before.keys()) {
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+      numbers.set(`${name}|${gameKey(game)}`, counts.get(name));
+    }
+  }
+  return new Map(facts.rows.map((r) => [r, numbers.get(`${r.player}|${gameKey(r)}`)]));
+}
+
+/**
+ * Rows in scope whose rating after the game is no longer provisional: from the player's
+ * PROVISIONAL_GAMES-th game ever on. Canonical order.
+ * @param {Facts} facts
+ * @returns {PlayerGameRow[]}
+ */
+export function settledRows(facts) {
+  const numbers = allTimeGameNumbers(facts);
+  return facts.rows.filter((r) => !isProvisionalAfter(numbers.get(r)));
+}
+
+/**
  * W/D/L per group, most games first (ties by key). A row can belong to several groups.
  * @param {PlayerGameRow[]} rows
  * @param {(row: PlayerGameRow) => string[]} keysOf

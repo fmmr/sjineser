@@ -90,6 +90,13 @@ test('player page: people records first (best/worst partner, nemesis/favourite v
     ['bestPartner', 'worstPartner', 'nemesis', 'favoriteVictim', 'partners', 'opponents']);
 });
 
+test('rating extremes: overview records end with highest/lowest; player peak/low sit next to the rating tile', () => {
+  assert.deepEqual(PAGES.overview.sections.find((s) => s.id === 'records').stats.slice(-3),
+    ['biggestUpset', 'highestRating', 'lowestRating']);
+  assert.deepEqual(PAGES.player.sections.find((s) => s.id === 'rating').stats,
+    ['rating', 'peakRating', 'lowRating', 'eloChart']);
+});
+
 test('a lone stat titled like its section hides its tile title; otherwise titles show', () => {
   assert.equal(tileTitleHidden({ id: 'leaderboard', stats: ['leaderboard'] }), true);
   assert.equal(tileTitleHidden({ id: 'streaks', stats: ['streaks'] }), true);

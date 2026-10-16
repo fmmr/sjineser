@@ -175,3 +175,32 @@ test('player stats follow the season filter', () => {
   assert.deepEqual(compute('gamesWdl', facts, HANS), { W: 0, D: 0, L: 3 });
   assert.deepEqual(compute('eloChart', facts, HANS).series[0].points.map((p) => p.x), [N1]);
 });
+
+// ---------- peak / low rating ----------
+
+// Hans wins 6 of his first 9 games (provisional), then loses 3 (games 10–12) and wins 1 (game 13).
+const EXTREMES = factsOf([
+  { date: '2026-03-04', matches: [[HF_TP, 'AAA'], [HF_TP, 'BBB'], [HF_TP, 'AAA']] },
+  { date: N1, matches: [[HF_TP, 'BBB']] },
+  { date: N2, matches: [[HF_TP, 'A']] },
+]);
+const hansAfter = (date, gameNo) => EXTREMES.rows.find((r) => r.player === 'Hans' && r.date === date && r.gameNo === gameNo).ratingAfter;
+
+test('peakRating: the player\'s highest rating after game 10 on, with date; no holders', () => {
+  assert.deepEqual(compute('peakRating', EXTREMES, HANS), { value: hansAfter(N1, 1), format: 'rating', holders: [], date: N1 });
+  const torAfterN1 = EXTREMES.rows.filter((r) => r.player === 'Tor' && r.date === N1).at(-1).ratingAfter;
+  assert.equal(compute('peakRating', EXTREMES, playerSubject('Tor')).value, torAfterN1);
+});
+
+test('lowRating: the player\'s lowest rating after game 10 on, with date', () => {
+  assert.deepEqual(compute('lowRating', EXTREMES, HANS), { value: hansAfter(N1, 3), format: 'rating', holders: [], date: N1 });
+});
+
+test('peakRating / lowRating: null while provisional or without games in the period', () => {
+  assert.equal(compute('peakRating', MAIN, playerSubject('Ola')), null);
+  assert.equal(compute('lowRating', MAIN, playerSubject('Ola')), null);
+  assert.equal(compute('peakRating', EXTREMES, NOBODY), null);
+  const spring = factsOf([{ date: '2026-03-04', matches: [[HF_TP, 'AAA'], [HF_TP, 'BBB'], [HF_TP, 'AAA']] },
+    { date: N1, matches: [[HF_TP, 'BBB']] }], { kind: 'season', year: 2026, half: 1 });
+  assert.equal(compute('lowRating', spring, HANS), null);
+});

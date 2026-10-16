@@ -418,7 +418,10 @@ query string).
   season summary (nights, matches, games, draw %); records: longest match, longest
   draw streak, clean sweeps (3–0 without draws), comebacks (0–2 → 3–2), biggest upset
   (largest pre-game team-rating gap overcome by the game winner).
-- Player: Elo over time; games W/D/L and win %; matches W/L and win %; draw rate;
+  Later: highest and lowest rating (after a game in the period; a player's first
+  `PROVISIONAL_GAMES` games ever do not count; tie → most recent).
+- Player: Elo over time; peak and low rating (Toppnotering / Bunnotering, same rule as
+  the records); games W/D/L and win %; matches W/L and win %; draw rate;
   streaks (current and longest win / unbeaten / loss); partners and opponents tables;
   best partner and nemesis (minimum games apply).
 - Pairs (2-player teams): table of all pairs; pair page with W/D/L, win %, head-to-head vs other pairs.
