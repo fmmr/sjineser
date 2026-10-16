@@ -234,6 +234,14 @@ export const t = {
       description: 'Alle som var med, også på benken. Rating er nåværende rating; endring, spill og form gjelder kvelden. Sortert etter endring.',
     },
     nightWinner: { title: 'Kveldens vinner', description: 'Mest rating vunnet i løpet av kvelden.' },
+    decisiveWinRate: {
+      title: 'Seier i avgjørende spill',
+      description: ({ minDecisiveGames }) => `Spill der et lag kunne vinne settet (et lag sto med 2 seire). Minst ${minDecisiveGames} slike spill.`,
+    },
+    decisiveTable: {
+      title: 'Avgjørende spill',
+      description: ({ minDecisiveGames }) => `Spill der et lag kunne vinne settet, fordi et lag sto med 2 seire (2–0, 2–1 eller 2–2). Spillere med minst ${minDecisiveGames} slike spill (på kveldssiden fra første spill).`,
+    },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
   },
   /** Label cells in stat tables (format 'label'). */
@@ -271,6 +279,7 @@ export const t = {
     sets: 'Sett',
     nightLeaderboard: 'Kveldens rangering',
     nightPairs: 'Kveldens par',
+    decisive: 'Avgjørende spill',
   },
   statsUi: {
     title: 'Statistikk',

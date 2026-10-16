@@ -199,11 +199,12 @@ const ACTUAL_SCORE = { W: 1, D: 0.5, L: 0 };
 const surpriseOf = (row) => ACTUAL_SCORE[row.outcome] - expectedScore(row.teamRating, row.opponentRating);
 
 /**
- * Minimum games together for stats that need a sample (best partner, kjemi, …): none for a
- * single night — the night page should be live from the first game — MIN_GAMES_TOGETHER otherwise.
+ * Minimum games for stats that need a sample (best partner, kjemi, deciding games, …): none for a
+ * single night — the night page should be live from the first game — `min` otherwise.
  * @param {import('./filter.js').Filter} filter
+ * @param {number} [min] the stat's own minimum; MIN_GAMES_TOGETHER by default
  */
-export const minGamesFor = (filter) => (filter.kind === 'night' ? 1 : MIN_GAMES_TOGETHER);
+export const minGamesFor = (filter, min = MIN_GAMES_TOGETHER) => (filter.kind === 'night' ? 1 : min);
 
 /**
  * Kjemi of a pair from its games together (one row per game): mean actual − expected score
@@ -227,4 +228,32 @@ export function attendanceOf(facts, name) {
   const nights = playedNights(facts);
   const count = nights.filter((n) => n.players.includes(name)).length;
   return { count, share: nights.length > 0 ? count / nights.length : 0 };
+}
+
+/**
+ * Per game of a set, in game order: whether it was deciding — before it, a team stood at 2 wins
+ * (2–0, 0–2, 2–1, 1–2 or 2–2; a draw does not change the state), so the game could end the set.
+ * @param {{ result: 'A' | 'B' | 'D' }[]} games one set's games in order
+ * @returns {boolean[]}
+ */
+export function decidingFlags(games) {
+  const wins = { A: 0, B: 0 };
+  return games.map(({ result }) => {
+    const deciding = Math.max(wins.A, wins.B) === 2;
+    if (result !== 'D') wins[result] += 1;
+    return deciding;
+  });
+}
+
+/**
+ * The rows of deciding games in scope (every player of both teams), canonical order.
+ * @param {Facts} facts
+ * @returns {PlayerGameRow[]}
+ */
+export function decidingRows(facts) {
+  const deciding = new Set(facts.matches.flatMap(({ games }) => {
+    const flags = decidingFlags(games);
+    return games.filter((_, i) => flags[i]).map(gameKey);
+  }));
+  return facts.rows.filter((row) => deciding.has(gameKey(row)));
 }

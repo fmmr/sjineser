@@ -13,6 +13,7 @@ export const PAGES = {
     { id: 'leaderboard', stats: ['leaderboard'] },
     { id: 'summary', stats: ['nightsCount', 'matchesCount', 'gamesCount', 'drawRate'] },
     { id: 'records', stats: ['longestMatch', 'longestNight', 'longestDrawStreak', 'longestWinStreak', 'cleanSweeps', 'comebacks', 'biggestUpset', 'highestRating', 'lowestRating'] },
+    { id: 'decisive', stats: ['decisiveTable'] },
   ] },
   players: { sections: [
     { id: 'leaderboard', stats: ['leaderboard'] },
@@ -20,7 +21,7 @@ export const PAGES = {
   player: { sections: [
     { id: 'rating', stats: ['rating', 'eloChart', 'peakRating', 'lowRating'] },
     { id: 'form', stats: ['form'] },
-    { id: 'results', stats: ['gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'drawRate', 'nightsAttended'] },
+    { id: 'results', stats: ['gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'decisiveWinRate', 'drawRate', 'nightsAttended'] },
     { id: 'streaks', stats: ['streaks'] },
     { id: 'people', stats: ['bestPartner', 'worstPartner', 'nemesis', 'favoriteVictim', 'partners', 'opponents'] },
   ] },
@@ -35,13 +36,14 @@ export const PAGES = {
     { id: 'versus', stats: ['pairVsPairs'] },
   ] },
   /**
-   * One night (computed with the night filter). No stats with a minimum of games or that skip
-   * provisional games: everything here shows from the night's first game.
+   * One night (computed with the night filter). No stats with a fixed minimum of games or that skip
+   * provisional games: everything here shows from the night's first game (minGamesFor gives 1).
    */
   night: { sections: [
     { id: 'sets', stats: ['nightSets'] },
     { id: 'nightLeaderboard', stats: ['nightWinner', 'nightLeaderboard'] },
     { id: 'nightPairs', stats: ['pairsTable'] },
+    { id: 'decisive', stats: ['decisiveTable'] },
     { id: 'summary', stats: ['matchesCount', 'gamesCount', 'drawRate'] },
     { id: 'records', stats: ['longestMatch', 'longestDrawStreak', 'longestWinStreak', 'cleanSweeps', 'comebacks', 'biggestUpset'] },
   ] },

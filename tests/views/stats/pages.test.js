@@ -26,7 +26,7 @@ test('every section has a heading', () => {
 
 test('compare derives from the catalog: player numbers/wdl side by side, player charts overlaid, compare stats', () => {
   const { sideBySide, overlay, headToHead } = deriveCompare(STATS);
-  assert.deepEqual(sideBySide.map((s) => s.id), ['drawRate', 'rating', 'gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'nightsAttended']);
+  assert.deepEqual(sideBySide.map((s) => s.id), ['drawRate', 'rating', 'gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'decisiveWinRate', 'nightsAttended']);
   assert.deepEqual(overlay.map((s) => s.id), ['eloChart']);
   assert.deepEqual(headToHead.map((s) => s.id), ['togetherWdl', 'headToHead', 'pairChemistry']);
 });
@@ -72,7 +72,7 @@ test('every registered stat is shown somewhere: on a page or in the derived comp
 });
 
 test('overview: leaderboard, summary, records, attendance (the nights table lives on the Kvelder tab)', () => {
-  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records']);
+  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records', 'decisive']);
 });
 
 test('list pages: Spillere is the leaderboard of everyone who has played, Kvelder the nights table', () => {
@@ -119,10 +119,19 @@ test('withValues keeps only stats with a value, in page order', () => {
 });
 
 test('night page: sets, the night\'s leaderboard (winner first), its pairs, summary, records', () => {
-  assert.deepEqual(PAGES.night.sections.map((s) => s.id), ['sets', 'nightLeaderboard', 'nightPairs', 'summary', 'records']);
+  assert.deepEqual(PAGES.night.sections.map((s) => s.id), ['sets', 'nightLeaderboard', 'nightPairs', 'decisive', 'summary', 'records']);
   assert.deepEqual(PAGES.night.sections.find((s) => s.id === 'nightLeaderboard').stats, ['nightWinner', 'nightLeaderboard']);
   assert.deepEqual(PAGES.night.sections.find((s) => s.id === 'nightPairs').stats, ['pairsTable']);
   assert.equal(PAGE_SUBJECTS.night, 'overall');
+});
+
+test('avgjørende spill: a table on the overview and night pages, the win share after Seier i sett', () => {
+  for (const page of [PAGES.overview, PAGES.night]) {
+    assert.deepEqual(page.sections.find((s) => s.id === 'decisive').stats, ['decisiveTable']);
+  }
+  const results = PAGES.player.sections.find((s) => s.id === 'results').stats;
+  assert.equal(results[results.indexOf('matchWinRate') + 1], 'decisiveWinRate');
+  assert.equal(tileTitleHidden({ id: 'decisive', stats: ['decisiveTable'] }), true);
 });
 
 test('night page: no stat with a minimum of games or that skips provisional games (one night is too short)', () => {

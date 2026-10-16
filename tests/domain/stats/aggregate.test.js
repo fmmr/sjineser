@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { allTimeGameNumbers, minGamesFor, runOf, settledRows } from '../../../docs/js/domain/stats/aggregate.js';
-import { MIN_GAMES_TOGETHER } from '../../../docs/js/domain/stats/constants.js';
+import {
+  allTimeGameNumbers, decidingFlags, decidingRows, minGamesFor, runOf, settledRows,
+} from '../../../docs/js/domain/stats/aggregate.js';
+import { MIN_DECISIVE_GAMES, MIN_GAMES_TOGETHER } from '../../../docs/js/domain/stats/constants.js';
 import { HF_TP, factsOf } from './catalog/fixtures.js';
 
 const SPRING = '2026-03-04';
@@ -46,4 +48,30 @@ test('minGamesFor: no minimum for a single night, MIN_GAMES_TOGETHER otherwise',
   assert.equal(minGamesFor({ kind: 'night', date: '2026-10-13' }), 1);
   assert.equal(minGamesFor({ kind: 'all' }), MIN_GAMES_TOGETHER);
   assert.equal(minGamesFor({ kind: 'season', year: 2026, half: 2 }), MIN_GAMES_TOGETHER);
+});
+
+test('minGamesFor: a stat may pass its own minimum; a night still needs only one game', () => {
+  assert.equal(minGamesFor({ kind: 'all' }, MIN_DECISIVE_GAMES), MIN_DECISIVE_GAMES);
+  assert.equal(minGamesFor({ kind: 'season', year: 2026, half: 2 }, MIN_DECISIVE_GAMES), MIN_DECISIVE_GAMES);
+  assert.equal(minGamesFor({ kind: 'night', date: '2026-10-13' }, MIN_DECISIVE_GAMES), 1);
+});
+
+const games = (results) => [...results].map((result) => ({ result }));
+
+test('decidingFlags: a game is deciding when a team stands at 2 wins before it; draws keep the state', () => {
+  assert.deepEqual(decidingFlags(games('AAA')), [false, false, true]);
+  assert.deepEqual(decidingFlags(games('AADA')), [false, false, true, true], '2–0, a draw, still 2–0');
+  assert.deepEqual(decidingFlags(games('BBDB')), [false, false, true, true], '0–2');
+  assert.deepEqual(decidingFlags(games('ABAB')), [false, false, false, true], '2–1 before the last');
+  assert.deepEqual(decidingFlags(games('ABBADDA')), [false, false, false, true, true, true, true], '1–2, then 2–2 with draws');
+  assert.deepEqual(decidingFlags(games('DDA')), [false, false, false]);
+  assert.deepEqual(decidingFlags([]), []);
+});
+
+test('decidingRows: the rows of deciding games, every player of both teams, canonical order', () => {
+  const facts = factsOf([{ date: N1, matches: [[HF_TP, 'ABAB'], [HF_TP, 'AA']] }]);
+  const rows = decidingRows(facts);
+  assert.deepEqual(rows.map((r) => [r.player, r.matchId, r.gameNo, r.outcome]), [
+    ['Hans', `${N1}#1`, 4, 'L'], ['Frode', `${N1}#1`, 4, 'L'], ['Tor', `${N1}#1`, 4, 'W'], ['Per', `${N1}#1`, 4, 'W'],
+  ]);
 });

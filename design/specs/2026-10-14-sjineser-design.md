@@ -475,7 +475,7 @@ complete }] }` in play order, shown as small scoreboards like the record cards; 
 of an ongoing night is marked "pågår", other unfinished sets "ikke ferdig"; a set appears with its
 first game), **Kveldens rangering** (`nightWinner` — most rating won that night, the same rule as the
 Kvelder table — and `nightLeaderboard`: the leaderboard for only the players who were there, ranked by
-rating change, sitting out last), **Kveldens par** (`pairsTable`), **Oppsummering** (sets, games,
+rating change, sitting out last), **Kveldens par** (`pairsTable`), **Avgjørende spill** (`decisiveTable`, from one deciding game), **Oppsummering** (sets, games,
 draw %) and **Rekorder** (longest set, longest draw streak, clean sweeps, comebacks, biggest upset;
 hidden when null). Stats with a minimum of games (best/worst partner, nemesis, favourite victim,
 chemistry) or that skip provisional games (highest/lowest rating) are not on the page: a single night
@@ -484,6 +484,14 @@ night (§3) the page polls `store.refresh()` every `POLL_MS` when visible, like 
 re-renders on store changes. Reached from the Kvelder table (a row's date links to it: a `night`
 subject is a link target only, not a stat subject type), the home cards (ongoing and "Forrige kveld")
 and the match screen ("Se kveldens statistikk"). An unknown or invalid date shows the not-found text.
+
+**Avgjørende spill** (added 2026-10-16): a game is *deciding* when, before it, a team in the set
+stands at 2 wins (2–0, 0–2, 2–1, 1–2, 2–2; draws do not change the state), so it can end the set
+(`decidingFlags` / `decidingRows` in `aggregate.js`). `decisiveWinRate` (player, `number` percent; also
+on compare) is the player's win share in deciding games; `decisiveTable` (overall) lists players with
+W/D/L and win share in them, by win share, then games, then name. Both need `MIN_DECISIVE_GAMES` (5)
+deciding games, one on a night page (`minGamesFor(filter, min)`). Placement: player page Resultater
+(after Seier i sett), an overview section after Rekorder, a night page section after Kveldens par.
 
 **Layout**: mobile first — headline numbers and one chart, details one tap deeper;
 wide screens add columns (tiles in an auto-fit grid, tables full width). Charts use

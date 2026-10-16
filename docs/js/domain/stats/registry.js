@@ -38,6 +38,8 @@ import { lowRating } from './catalog/lowRating.js';
 import { nightSets } from './catalog/nightSets.js';
 import { nightLeaderboard } from './catalog/nightLeaderboard.js';
 import { nightWinner } from './catalog/nightWinner.js';
+import { decisiveWinRate } from './catalog/decisiveWinRate.js';
+import { decisiveTable } from './catalog/decisiveTable.js';
 
 /**
  * The catalog of stat plugins (spec §9). Adding a stat = one file in catalog/, one import
@@ -54,9 +56,9 @@ import { nightWinner } from './catalog/nightWinner.js';
 export const STATS = [
   leaderboard, nightsCount, matchesCount, gamesCount, drawRate,
   longestMatch, longestNight, longestDrawStreak, longestWinStreak, cleanSweeps, comebacks, biggestUpset, highestRating, lowestRating,
-  rating, peakRating, lowRating, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, streaks,
+  rating, peakRating, lowRating, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, decisiveWinRate, streaks,
   partners, opponents, bestPartner, worstPartner, nemesis, favoriteVictim, pairsTable, pairVsPairs, togetherWdl, headToHead, nightsAttended,
-  pairChemistry, nightsList, form, nightSets, nightLeaderboard, nightWinner,
+  pairChemistry, nightsList, form, nightSets, nightLeaderboard, nightWinner, decisiveTable,
 ];
 
 /** @param {string} id @returns {Stat | null} */
