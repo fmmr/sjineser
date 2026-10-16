@@ -194,6 +194,7 @@ export const t = {
     longestMatch: { title: 'Lengste sett', description: 'Flest spill i ett sett.' },
     mostDrawsInSet: { title: 'Flest uavgjort i ett sett', description: 'Settet med flest uavgjorte spill.' },
     longestNight: { title: 'Lengste kveld', description: 'Flest spill på én kveld. Viser hvem som var med.' },
+    attendanceStreak: { title: 'Lengste oppmøte-rekke', description: 'Flest kvelder på rad uten å gå glipp av en.' },
     longestDrawStreak: { title: 'Lengste uavgjort-rekke', description: 'Flest uavgjorte spill på rad samme kveld.' },
     longestWinStreak: { title: 'Lengste seiersrekke', description: 'Flest spill vunnet på rad.' },
     cleanSweeps: { title: 'Rene seire (3–0)', description: 'Sett vunnet 3–0 uten uavgjort. Spillerne som har gjort det flest ganger.' },

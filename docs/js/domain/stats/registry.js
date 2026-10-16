@@ -6,6 +6,7 @@ import { drawRate } from './catalog/drawRate.js';
 import { longestMatch } from './catalog/longestMatch.js';
 import { mostDrawsInSet } from './catalog/mostDrawsInSet.js';
 import { longestNight } from './catalog/longestNight.js';
+import { attendanceStreak } from './catalog/attendanceStreak.js';
 import { longestDrawStreak } from './catalog/longestDrawStreak.js';
 import { longestWinStreak } from './catalog/longestWinStreak.js';
 import { cleanSweeps } from './catalog/cleanSweeps.js';
@@ -58,7 +59,7 @@ import { seasonTitles } from './catalog/seasonTitles.js';
 /** @type {Stat[]} */
 export const STATS = [
   leaderboard, nightsCount, matchesCount, gamesCount, drawRate,
-  longestMatch, mostDrawsInSet, longestNight, longestDrawStreak, longestWinStreak, cleanSweeps, comebacks, biggestUpset, highestRating, lowestRating,
+  longestMatch, mostDrawsInSet, longestNight, attendanceStreak, longestDrawStreak, longestWinStreak, cleanSweeps, comebacks, biggestUpset, highestRating, lowestRating,
   rating, peakRating, lowRating, seasonTitles, eloChart, gamesWdl, gameWinRate, matchesWdl, matchWinRate, decisiveWinRate, streaks,
   partners, opponents, bestPartner, worstPartner, nemesis, favoriteVictim, pairsTable, pairVsPairs, togetherWdl, headToHead, nightsAttended,
   pairChemistry, nightsList, form, nightSets, nightLeaderboard, nightWinner, decisiveTable, seasonPlayers,
