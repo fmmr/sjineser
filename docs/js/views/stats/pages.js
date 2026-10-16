@@ -21,7 +21,7 @@ export const PAGES = {
     { id: 'form', stats: ['form'] },
     { id: 'results', stats: ['gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'drawRate', 'nightsAttended'] },
     { id: 'streaks', stats: ['streaks'] },
-    { id: 'people', stats: ['bestPartner', 'nemesis', 'partners', 'opponents'] },
+    { id: 'people', stats: ['bestPartner', 'worstPartner', 'nemesis', 'favoriteVictim', 'partners', 'opponents'] },
   ] },
   pairs: { sections: [
     { id: 'chemistry', stats: ['chemistry'] },

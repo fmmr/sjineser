@@ -368,10 +368,10 @@ rows are its games from one partner's perspective) and head-to-head rows.
 
 **Team sizes in stats** (§18): a *pair* is a 2-player team. The pair subject (pair page,
 `pairRows`, pair match records), the pairs table, "Mot andre par" (opposing 2-player teams
-only) and best partner count only games as a 2-player team; on a team of three the players
+only), best partner and worst partner count only games as a 2-player team; on a team of three the players
 count individually. The partners table lists every teammate (teams of two and three; a row
 links to the pair page if the two have played as a pair in scope, else to compare), the
-opponents table every individual opponent, nemesis any opponent. Compare "Sammen" = same team
+opponents table every individual opponent, nemesis and favourite victim any opponent. Compare "Sammen" = same team
 of any size; "Mot hverandre" = opposite teams of any size. Match records name all 2–3
 winners (everyone when unfinished).
 

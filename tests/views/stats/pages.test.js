@@ -85,6 +85,11 @@ test('player page: Form gets its own section right under Rating', () => {
   assert.equal(tileTitleHidden({ id: 'form', stats: ['form'] }), true);
 });
 
+test('player page: people records first (best/worst partner, nemesis/favourite victim), then the tables', () => {
+  assert.deepEqual(PAGES.player.sections.find((s) => s.id === 'people').stats,
+    ['bestPartner', 'worstPartner', 'nemesis', 'favoriteVictim', 'partners', 'opponents']);
+});
+
 test('a lone stat titled like its section hides its tile title; otherwise titles show', () => {
   assert.equal(tileTitleHidden({ id: 'leaderboard', stats: ['leaderboard'] }), true);
   assert.equal(tileTitleHidden({ id: 'streaks', stats: ['streaks'] }), true);

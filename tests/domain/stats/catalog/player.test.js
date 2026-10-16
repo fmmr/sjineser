@@ -116,6 +116,45 @@ test('nemesis: lowest win rate against, at least 10 games; tie → more games', 
   assert.equal(compute('nemesis', factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }]), HANS), null, 'no opponent with 10 games');
 });
 
+test('worstPartner: lowest win rate with at least 10 games together as a pair; teams of three do not count', () => {
+  const facts = factsOf([{ date: N1, matches: [
+    [HF_TP, 'AAAAADDDDD'], // Frode: 10 games, 5 wins
+    [HT_FP, 'AADDDDDDDD'], // Tor: 10 games, 2 wins
+    [HP_FT, 'BBB'], // Per: 3 games, too few
+    ['Hans Frode Ola - Tor Per', 'B'.repeat(20)], // a team of three: would make Frode 5 / 30
+  ] }]);
+  assert.deepEqual(compute('worstPartner', facts, HANS), { value: 0.2, format: 'percent', holders: ['Tor'] });
+  assert.equal(compute('worstPartner', MAIN, HANS), null, 'no partner with 10 games');
+  assert.equal(compute('worstPartner', MAIN, NOBODY), null);
+});
+
+test('worstPartner: tie → more games, then name', () => {
+  const twice = factsOf([{ date: N1, matches: [[HF_TP, 'AADDDDDDDD'], [HT_FP, 'AADDDDDDDD'], [HT_FP, 'AADDDDDDDD']] }]);
+  assert.deepEqual(compute('worstPartner', twice, HANS), { value: 0.2, format: 'percent', holders: ['Tor'] });
+  const once = factsOf([{ date: N1, matches: [[HF_TP, 'AADDDDDDDD'], [HT_FP, 'AADDDDDDDD']] }]);
+  assert.deepEqual(compute('worstPartner', once, HANS), { value: 0.2, format: 'percent', holders: ['Frode'] });
+});
+
+test('favoriteVictim: highest win rate against, at least 10 games; any team size', () => {
+  const facts = factsOf([{ date: N1, matches: [
+    [HF_TP, 'AAAAADDDDD'], // Tor 5/10, Per 5/10
+    ['Hans Tor - Per Ola', 'AAAAAAAADD'], // Per 13/20, Ola 8/10
+    [HP_FT, 'AAA'], // Frode 3/3, too few
+  ] }]);
+  assert.deepEqual(compute('favoriteVictim', facts, HANS), { value: 0.8, format: 'percent', holders: ['Ola'] });
+  const three = factsOf([{ date: N1, matches: [['Hans Frode Per - Tor Ola', 'AAAAAAAAAD']] }]);
+  assert.deepEqual(compute('favoriteVictim', three, HANS), { value: 0.9, format: 'percent', holders: ['Ola'] });
+  assert.equal(compute('favoriteVictim', factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }]), HANS), null, 'no opponent with 10 games');
+  assert.equal(compute('favoriteVictim', MAIN, NOBODY), null);
+});
+
+test('favoriteVictim: tie → more games, then name', () => {
+  const games = factsOf([{ date: N1, matches: [['Hans Ola - Tor Per', 'AAAAAAADDD'], ['Hans Tor - Per Ola', 'AAAAAAADDD']] }]);
+  assert.deepEqual(compute('favoriteVictim', games, HANS), { value: 0.7, format: 'percent', holders: ['Per'] });
+  const name = factsOf([{ date: N1, matches: [['Hans Ola - Tor Per', 'AAAAAAADDD']] }]);
+  assert.deepEqual(compute('favoriteVictim', name, HANS), { value: 0.7, format: 'percent', holders: ['Per'] });
+});
+
 test('form: the last 10 games in the period, oldest first; fewer when fewer are played', () => {
   // W W D W L L D L W L W L D D W → the last ten.
   assert.deepEqual(compute('form', MAIN, HANS), { outcomes: ['L', 'D', 'L', 'W', 'L', 'W', 'L', 'D', 'D', 'W'] });
