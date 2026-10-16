@@ -180,12 +180,19 @@ const ACTUAL_SCORE = { W: 1, D: 0.5, L: 0 };
 const surpriseOf = (row) => ACTUAL_SCORE[row.outcome] - expectedScore(row.teamRating, row.opponentRating);
 
 /**
+ * Minimum games together for stats that need a sample (best partner, kjemi, …): none for a
+ * single night — the night page should be live from the first game — MIN_GAMES_TOGETHER otherwise.
+ * @param {import('./filter.js').Filter} filter
+ */
+export const minGamesFor = (filter) => (filter.kind === 'night' ? 1 : MIN_GAMES_TOGETHER);
+
+/**
  * Kjemi of a pair from its games together (one row per game): mean actual − expected score
  * (−1 … 1), or null with fewer than MIN_GAMES_TOGETHER games.
  * @param {PlayerGameRow[]} rows
  * @returns {number | null}
  */
-export function chemistryOf(rows) {
-  if (rows.length < MIN_GAMES_TOGETHER) return null;
+export function chemistryOf(rows, minGames = MIN_GAMES_TOGETHER) {
+  if (rows.length === 0 || rows.length < minGames) return null;
   return rows.reduce((sum, row) => sum + surpriseOf(row), 0) / rows.length;
 }

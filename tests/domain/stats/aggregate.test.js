@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { allTimeGameNumbers, settledRows } from '../../../docs/js/domain/stats/aggregate.js';
+import { allTimeGameNumbers, minGamesFor, settledRows } from '../../../docs/js/domain/stats/aggregate.js';
+import { MIN_GAMES_TOGETHER } from '../../../docs/js/domain/stats/constants.js';
 import { HF_TP, factsOf } from './catalog/fixtures.js';
 
 const SPRING = '2026-03-04';
@@ -32,4 +33,10 @@ test('settledRows: only rows after the player\'s PROVISIONAL_GAMES-th game ever'
     ['Hans', N1, 1], ['Frode', N1, 1], ['Tor', N1, 1],
   ]);
   assert.equal(settledRows(factsOf(nights, { kind: 'season', year: 2026, half: 1 })).length, 0);
+});
+
+test('minGamesFor: no minimum for a single night, MIN_GAMES_TOGETHER otherwise', () => {
+  assert.equal(minGamesFor({ kind: 'night', date: '2026-10-13' }), 1);
+  assert.equal(minGamesFor({ kind: 'all' }), MIN_GAMES_TOGETHER);
+  assert.equal(minGamesFor({ kind: 'season', year: 2026, half: 2 }), MIN_GAMES_TOGETHER);
 });

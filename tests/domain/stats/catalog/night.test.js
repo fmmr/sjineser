@@ -90,3 +90,9 @@ test('existing stats work for a night: summary and records see only that night',
   assert.deepEqual(compute('pairsTable', facts, OVERALL).rows.map((r) => r.pair),
     [['Frode', 'Per'], ['Hans', 'Tor'], ['Frode', 'Kari'], ['Per', 'Tor']]);
 });
+
+test('kjemi in the pairs table counts from the first game on a night (10 games otherwise)', () => {
+  const pairs = compute('pairsTable', night(N2), OVERALL).rows;
+  assert.ok(pairs.every((r) => r.chemistry !== null), 'every pair that played tonight has a kjemi');
+  assert.ok(compute('pairsTable', factsOf(NIGHTS), OVERALL).rows.every((r) => r.chemistry === null), 'all seasons: under 10 games');
+});

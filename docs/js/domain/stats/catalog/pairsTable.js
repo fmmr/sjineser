@@ -1,10 +1,10 @@
 import { byName } from '../../players.js';
-import { chemistryOf, wdlBy, wdlColumns } from '../aggregate.js';
+import { chemistryOf, minGamesFor, wdlBy, wdlColumns } from '../aggregate.js';
 import { isPairRow, pairKey, pairSubject, parsePairKey } from '../subjects.js';
 
 /**
  * Every pair (2-player team) with games in scope, most games first, with its kjemi last
- * (null with fewer than MIN_GAMES_TOGETHER games together).
+ * (null below the minimum games together — none on a night page, see minGamesFor).
  * @type {import('../registry.js').Stat}
  */
 export const pairsTable = {
@@ -27,7 +27,7 @@ export const pairsTable = {
       columns: [...wdlColumns('pair', 'pair'), { key: 'chemistry', format: 'signedPercent' }],
       rows: groups.map(({ key, ...wdl }) => {
         const names = parsePairKey(key);
-        return { pair: names, ...wdl, chemistry: chemistryOf(rowsByPair.get(key)), subject: pairSubject(...names) };
+        return { pair: names, ...wdl, chemistry: chemistryOf(rowsByPair.get(key), minGamesFor(facts.filter)), subject: pairSubject(...names) };
       }),
     };
   },

@@ -216,7 +216,7 @@ export const t = {
     favoriteVictim: { title: 'Favorittoffer', description: ({ minGames }) => `Høyest seiersandel mot, minst ${minGames} spill.` },
     pairsTable: {
       title: 'Alle par',
-      description: ({ minGames }) => `Lag på to. På lag med tre telles hver spiller for seg. Kjemi: prosentpoeng over (eller under) det ratingen tilsier, per spill (seier 1, uavgjort ½). Vises med minst ${minGames} spill sammen.`,
+      description: ({ minGames }) => `Lag på to. På lag med tre telles hver spiller for seg. Kjemi: prosentpoeng over (eller under) det ratingen tilsier, per spill (seier 1, uavgjort ½). Vises med minst ${minGames} spill sammen (på kveldssiden fra første spill).`,
     },
     pairVsPairs: { title: 'Mot andre par', description: 'Bare spill mot lag på to.' },
     togetherWdl: { title: 'Sammen', description: 'Spill der de var på samme lag (to eller tre): S/U/T for laget.' },
