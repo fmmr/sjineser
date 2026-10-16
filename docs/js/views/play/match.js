@@ -2,7 +2,7 @@ import { h } from '../components/dom.js';
 import { showToast } from '../components/toast.js';
 import { t } from '../../i18n/nb.js';
 import { POLL_MS, TAP_COOLDOWN_MS } from '../../config.js';
-import { currentNight, gamesOf, latestMatch, parseMatchId, score, teamOf, winnerOf } from '../../domain/match.js';
+import { activeNight, gamesOf, latestMatch, parseMatchId, score, teamOf, winnerOf } from '../../domain/match.js';
 
 const RESULT_ORDER = ['A', 'D', 'B'];
 /** Length of the score pop (.score-bump in play.css). */
@@ -21,7 +21,7 @@ export function changedSides(before, after) {
 }
 
 /** tapCooldownMs: taps closer together than this count as one (guards against double taps). */
-export function mountMatch(root, { store, actions, navigate, tapCooldownMs = TAP_COOLDOWN_MS }) {
+export function mountMatch(root, { store, actions, navigate, clock, tapCooldownMs = TAP_COOLDOWN_MS }) {
   let lastTap = 0;
   /** The score last rendered, to spot changes. */
   let shown = null;
@@ -87,8 +87,8 @@ export function mountMatch(root, { store, actions, navigate, tapCooldownMs = TAP
 
   function update() {
     const ds = store.get();
-    if (!currentNight(ds)) {
-      // Nothing cached and the first fetch is done (or failed offline): nothing to show here.
+    if (!activeNight(ds, clock.today(), clock.hour())) {
+      // No night, or it is over (noon the next day), once data is loaded or the first fetch failed.
       if (store.isLoaded() || store.hasTried()) navigate('/play');
       else root.replaceChildren(h('p', { class: 'muted' }, t.loading));
       return;

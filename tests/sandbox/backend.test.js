@@ -105,7 +105,7 @@ test('sandbox api, outbox and store never write to the real storage namespace', 
   });
   store = createStore({ storage, outbox, api });
   const clock = createClock({ storage });
-  const actions = createActions({ store, outbox, today: clock.today });
+  const actions = createActions({ store, outbox, clock });
 
   await store.refresh();
   assert.deepEqual(actions.startNight(['Anne', 'Bjørn', 'Cato', 'Dag']), { ok: true });

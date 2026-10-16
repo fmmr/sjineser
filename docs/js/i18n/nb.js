@@ -9,9 +9,11 @@ export const t = {
 
   noNights: 'Ingen kvelder ennå.',
   nightOf: (date) => `Kveld ${date}`,
+  previousNight: (date) => `Forrige kveld ${date}`,
   continueNight: 'Fortsett kvelden',
   newNight: 'Ny kveld',
-  nightAlreadyStarted: 'Kvelden i dag er allerede startet.',
+  nightOngoing: 'Kvelden er i gang.',
+  backToNight: 'Tilbake til kvelden',
 
   choosePlayers: 'Hvem spiller i kveld?',
   newPlayerPlaceholder: 'Ny spiller',
@@ -58,6 +60,7 @@ export const t = {
     invalid: 'Ugyldig valg',
     conflict: 'Kolliderer med eksisterende data',
     noNight: 'Start en kveld først',
+    nightOngoing: 'Kvelden er allerede i gang',
     noMatch: 'Ikke noe sett i gang',
     nothingToUndo: 'Ingenting å angre',
     unknownPlayer: 'Fant ikke spilleren',

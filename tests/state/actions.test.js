@@ -30,13 +30,18 @@ function fakeOutbox() {
   return box;
 }
 
-function setup(base = dataset()) {
+/** A fixed clock: `today` and `hour` as given (default: the night of DATE, in the evening). */
+const fixedClock = (today = DATE, hour = 20) => ({ today: () => today, hour: () => hour });
+/** The day after DATE, at noon: the night of DATE is over. */
+const NEXT_NOON = fixedClock('2026-10-15', 12);
+
+function setup(base = dataset(), clock = fixedClock()) {
   const storage = createStorage(memoryBackend());
   storage.set('dataset', base);
   const outbox = fakeOutbox();
   const store = createStore({ storage, outbox, api: { getAll: async () => ({ ok: false }) } });
   outbox.onChange = () => store.recompute();
-  const actions = createActions({ store, outbox, today: () => DATE, now: () => 'T' });
+  const actions = createActions({ store, outbox, clock, now: () => 'T' });
   return { actions, outbox, store };
 }
 
@@ -62,7 +67,7 @@ test('startNight dates the night with the injected today, not the device date', 
   storage.set('dataset', dataset());
   const outbox = fakeOutbox();
   const store = createStore({ storage, outbox, api: { getAll: async () => ({ ok: false }) } });
-  const actions = createActions({ store, outbox, today: () => '2030-02-03', now: () => 'T' });
+  const actions = createActions({ store, outbox, clock: fixedClock('2030-02-03'), now: () => 'T' });
   actions.startNight(FOUR);
   assert.equal(outbox.queue[0].payload.date, '2030-02-03');
 });
@@ -150,7 +155,33 @@ test('undo with no games removes the match', () => {
   const { actions, outbox } = setup(nightWithMatch());
   actions.undo();
   assert.deepEqual(queued(outbox), [`deleteMatch ${MATCH_1}`]);
-  assert.deepEqual(setup().actions.undo(), { ok: false, error: 'nothingToUndo' });
+  assert.deepEqual(setup({ ...nightWithMatch(), matches: [] }).actions.undo(), { ok: false, error: 'nothingToUndo' });
+  assert.deepEqual(setup().actions.undo(), { ok: false, error: 'noNight' });
+});
+
+test('startMatch, recordGame and undo still write into the night before noon the next day', () => {
+  const { actions, outbox } = setup(nightWithMatch(['A']), fixedClock('2026-10-15', 11));
+  assert.deepEqual(actions.recordGame('B'), { ok: true });
+  assert.deepEqual(actions.undo(), { ok: true });
+  assert.deepEqual(actions.startMatch(seats), { ok: true });
+  assert.deepEqual(queued(outbox), [`startMatch ${DATE}#2`]);
+});
+
+test('once the night is over, startMatch, recordGame and undo refuse with noNight', () => {
+  const { actions, outbox } = setup(nightWithMatch(['A']), NEXT_NOON);
+  assert.deepEqual(actions.startMatch(seats), { ok: false, error: 'noNight' });
+  assert.deepEqual(actions.recordGame('A'), { ok: false, error: 'noNight' });
+  assert.deepEqual(actions.undo(), { ok: false, error: 'noNight' });
+  assert.deepEqual(outbox.queue, []);
+});
+
+test('startNight refuses while a night is ongoing, and works once it is over', () => {
+  const ongoing = setup(nightWithMatch(), fixedClock('2026-10-15', 11));
+  assert.deepEqual(ongoing.actions.startNight(FOUR), { ok: false, error: 'nightOngoing' });
+  assert.deepEqual(ongoing.outbox.queue, []);
+  const over = setup(nightWithMatch(), NEXT_NOON);
+  assert.deepEqual(over.actions.startNight(FOUR), { ok: true });
+  assert.deepEqual(queued(over.outbox), ['startNight 2026-10-15']);
 });
 
 test('an empty match whose startMatch was sent is deleted and its number not reused', () => {

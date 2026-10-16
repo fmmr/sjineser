@@ -27,3 +27,15 @@ test('setToday ignores invalid dates', () => {
   clock.setToday(null);
   assert.equal(clock.today(), '2026-11-01');
 });
+
+test('hour is the local hour of now()', () => {
+  assert.equal(createClock({ now }).hour(), 21);
+  assert.equal(createClock({ now: () => new Date(2026, 9, 15, 0, 5) }).hour(), 0);
+});
+
+test('in sandbox mode only the date is pretended: hour stays the real local hour', () => {
+  const clock = createClock({ storage: createStorage(memoryBackend(), 'sjineser-sandbox:'), now });
+  clock.setToday('2026-11-01');
+  assert.equal(clock.today(), '2026-11-01');
+  assert.equal(clock.hour(), 21);
+});

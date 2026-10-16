@@ -4,7 +4,7 @@ import { confirmSheet } from '../components/sheet.js';
 import { t } from '../../i18n/nb.js';
 import { byName } from '../../domain/players.js';
 import {
-  MAX_TEAM_SIZE, MIN_TEAM_SIZE, currentMatch, currentNight, gamesOf, score, seatsOf,
+  MAX_TEAM_SIZE, MIN_TEAM_SIZE, activeNight, currentMatch, gamesOf, score, seatsOf,
 } from '../../domain/match.js';
 import { isProvisional, rateGames, ratingOf } from '../../domain/elo.js';
 import { proposeTeams } from '../../domain/proposal.js';
@@ -29,7 +29,7 @@ export function nextSide(side, counts) {
 export const canStart = (counts) =>
   [counts.A, counts.B].every((n) => n >= MIN_TEAM_SIZE && n <= MAX_TEAM_SIZE);
 
-export function mountNewMatch(root, { store, actions, navigate }) {
+export function mountNewMatch(root, { store, actions, navigate, clock }) {
   /** @type {Map<string, 'A' | 'B'>} players not in the map are on the bench */
   const sides = new Map();
   /** Set once the user changes the proposal; from then on store updates keep their choice. */
@@ -122,7 +122,7 @@ export function mountNewMatch(root, { store, actions, navigate }) {
 
   function update() {
     const ds = store.get();
-    const night = currentNight(ds);
+    const night = activeNight(ds, clock.today(), clock.hour());
     if (!night) {
       root.replaceChildren(h('p', { class: 'muted' }, t.errors.noNight));
       return;

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  compareGames, currentMatch, currentNight, isValidMatchId, latestMatch, makeMatchId,
+  NIGHT_ENDS_AT_HOUR, activeNight, compareGames, currentMatch, currentNight, isNightOngoing, isValidMatchId, latestMatch, makeMatchId,
   nextGameNo, nextMatchId, parseMatchId, sameSeats, score, seatsOf, teamOf, validSeats, winnerOf,
 } from '../../docs/js/domain/match.js';
 import { DATE, FOUR, MATCH_1, dataset, game, nightWithMatch } from '../helpers.js';
@@ -71,6 +71,43 @@ test('currentNight is the latest by date, not by row order', () => {
   const ds = dataset({ nights: [{ date: '2026-10-14', players: FOUR }, { date: '2026-09-01', players: FOUR }] });
   assert.equal(currentNight(ds).date, '2026-10-14');
   assert.equal(currentNight(dataset()), null);
+});
+
+test('a night is ongoing all of its own date, at any hour', () => {
+  for (const hour of [0, 11, 12, 23]) assert.equal(isNightOngoing('2026-10-14', '2026-10-14', hour), true);
+});
+
+test('a night is ongoing the next day until NIGHT_ENDS_AT_HOUR (noon)', () => {
+  assert.equal(NIGHT_ENDS_AT_HOUR, 12);
+  assert.equal(isNightOngoing('2026-10-14', '2026-10-15', 0), true);
+  assert.equal(isNightOngoing('2026-10-14', '2026-10-15', 11), true);
+  assert.equal(isNightOngoing('2026-10-14', '2026-10-15', 12), false);
+  assert.equal(isNightOngoing('2026-10-14', '2026-10-15', 23), false);
+});
+
+test('a night is over two days later, and not ongoing before its date', () => {
+  assert.equal(isNightOngoing('2026-10-14', '2026-10-16', 0), false);
+  assert.equal(isNightOngoing('2026-10-14', '2026-11-14', 0), false);
+  assert.equal(isNightOngoing('2026-10-14', '2026-10-13', 20), false);
+});
+
+test('the noon rule crosses month, year, leap-day and DST boundaries', () => {
+  assert.equal(isNightOngoing('2026-10-31', '2026-11-01', 11), true);
+  assert.equal(isNightOngoing('2026-12-31', '2027-01-01', 11), true);
+  assert.equal(isNightOngoing('2026-12-31', '2027-01-01', 12), false);
+  assert.equal(isNightOngoing('2028-02-28', '2028-02-29', 3), true);
+  assert.equal(isNightOngoing('2028-02-28', '2028-03-01', 3), false);
+  assert.equal(isNightOngoing('2026-10-24', '2026-10-25', 11), true, 'night before DST ends');
+  assert.equal(isNightOngoing('2027-03-27', '2027-03-28', 11), true, 'night before DST starts');
+});
+
+test('activeNight is the current night while ongoing, else null', () => {
+  const ds = dataset({ nights: [{ date: '2026-10-14', players: FOUR }, { date: '2026-09-01', players: FOUR }] });
+  assert.equal(activeNight(ds, '2026-10-14', 22).date, '2026-10-14');
+  assert.equal(activeNight(ds, '2026-10-15', 11).date, '2026-10-14');
+  assert.equal(activeNight(ds, '2026-10-15', 12), null);
+  assert.equal(activeNight(ds, '2026-10-17', 20), null);
+  assert.equal(activeNight(dataset(), '2026-10-14', 20), null);
 });
 
 test('latestMatch is the highest-numbered match of the current night', () => {

@@ -1,4 +1,5 @@
 import { applyOp, emptyDataset } from '../domain/dataset.js';
+import { addDays } from '../domain/dates.js';
 import { ELO, expectedScore, rateGames } from '../domain/elo.js';
 import { WINS_NEEDED, makeMatchId, seatsOf } from '../domain/match.js';
 import { byName } from '../domain/players.js';
@@ -19,13 +20,6 @@ const DRAW_PROBABILITY = 0.35;
 const ABANDON_PROBABILITY = 0.15;
 const ABANDON_AT_WINS = 2;
 const MAX_GAMES = 40;
-
-/** Adds days to a YYYY-MM-DD date. UTC, so daylight saving never shifts the day. */
-function addDays(date, days) {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 /** 4 players (60 %), 5 (30 %) or 6 (10 %); proposeTeams plays them 2 + 2, 3 + 2 and 3 + 3. */
 function rosterSize(random) {

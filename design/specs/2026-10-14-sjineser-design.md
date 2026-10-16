@@ -100,8 +100,17 @@ find-and-replace).
 entered (informational only; never used for ordering).
 
 **Derived, never stored:** match completion and score, current night (the Nights
-row with the latest date), latest match and current match (see below), sit-outs (players on the night roster but not in a
+row with the latest date), active night, latest match and current match (see below), sit-outs (players on the night roster but not in a
 match), seasons, all stats.
+
+**Active night** = the current night while it is **ongoing**: on its own date, and on the
+next day until 12:00 local time (`NIGHT_ENDS_AT_HOUR` in `domain/match.js`; nights run past
+midnight, but not into the next afternoon). After that it is over and there is no active
+night. `isNightOngoing(nightDate, today, hour)` and `activeNight(dataset, today, hour)` take
+"today" and the hour from the clock (§17); the day step is UTC calendar math, so daylight
+saving never shifts it. Everything that plays — starting a match, recording a game, undo —
+writes only into the active night and is refused (`noNight`) without one; starting a night
+is refused (`nightOngoing`) while one is active.
 
 **Latest match** = the highest-numbered match of the current night.
 **Current match** = the latest match, *if* it is incomplete; otherwise there is none. **Abandoning** a match is implicit: starting the
@@ -234,10 +243,16 @@ tab follows the path (`routing.js` `activeTab`): `/stats…` → Statistikk; `/m
 sync badge. Links inside screens are contextual only (e.g. "Alle par" on the stats overview,
 "Slik foreslås lag" under the team proposal).
 
-1. **Play home** — "Fortsett kveld 14. okt" (continue the latest night) or "Ny kveld".
-   The current night is the latest night, not "today" (nights run past midnight).
+1. **Play home** — three states, by the active night (§3):
+   - *A night is ongoing:* its card ("Kveld 14. okt.", the players, *Fortsett kvelden*);
+     *Ny kveld* is disabled with the hint "Kvelden er i gang." (also after midnight).
+   - *The latest night is over:* a quiet history card ("Forrige kveld 13. okt." and the
+     players, no button); *Ny kveld* is the primary button.
+   - *No nights yet:* "Ingen kvelder ennå." and *Ny kveld*.
 2. **Start night** — tap players from the active Players list, or add a new player.
-   Saves a Nights row.
+   Saves a Nights row. Opened (by URL) while a night is ongoing, it shows "Kvelden er i
+   gang." and a link back instead of the form. New match and Match treat a night that is
+   over as no night (New match: "Start en kveld først"; Match: back to Spill).
 3. **New match** — the app proposes teams (and sit-outs) with a one-line reason per
    decision; the user may override by tapping players between teams/bench (bench → A → B →
    bench, skipping a team that already has 3). Start is enabled when both teams have 2–3 players.
@@ -546,7 +561,10 @@ the **Testmodus** switch on the Mer page (§6), which reloads the current screen
   abandoned last match. Built by folding ops through `applyOp`, so it is always valid.
 - **Pretend date** (`js/state/clock.js`): `today()` returns the real local date, or in
   sandbox mode a stored pretend date (default: 14 days after the last generated night).
-  Actions and views get "today" only from the clock.
+  `hour()` is always the device's real local hour (0–23); only the date is pretended.
+  Actions (`createActions({ clock })`) and views get "today" and the hour only from the
+  clock, so the noon rule (§3) works the same in sandbox mode: moving the pretend date
+  past the day after the latest night ends it.
 - **Separate storage namespace** (`sjineser-sandbox:`), so real outbox/cache/PIN never
   mix with sandbox data.
 - **Sandbox bar** under the header: "TESTMODUS" label, date picker for the pretend date,

@@ -1,16 +1,19 @@
 import { applyOp } from '../domain/dataset.js';
-import { toISODate } from '../domain/dates.js';
+import { createClock } from './clock.js';
 import { findPlayer, hasHistory, validateNewName, validateRename } from '../domain/players.js';
 import {
-  SEATS, currentMatch, currentNight, gamesOf, latestMatch, nextGameNo, nextMatchId, parseMatchId, validSeats,
+  SEATS, activeNight, currentMatch, gamesOf, latestMatch, nextGameNo, nextMatchId, parseMatchId, validSeats,
 } from '../domain/match.js';
 
 /**
  * User intents. Each validates against the current view, enqueues ops and
  * returns { ok: true } or { ok: false, error } where error is a key of t.errors.
+ * Play writes only into the active night (domain activeNight: until noon the next day).
+ * @param {{ store: object, outbox: object, clock?: { today(): string, hour(): number }, now?: () => string }} options
  */
-export function createActions({ store, outbox, today = () => toISODate(new Date()), now = () => new Date().toISOString() }) {
+export function createActions({ store, outbox, clock = createClock(), now = () => new Date().toISOString() }) {
   const view = () => store.get();
+  const night = () => activeNight(view(), clock.today(), clock.hour());
 
   function submit(action, payload) {
     const { outcome } = applyOp(view(), { action, payload });
@@ -83,8 +86,10 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
       return submit('deletePlayer', { name: player.name });
     },
 
+    /** Refused while a night is still ongoing, so there is only ever one night to play in. */
     startNight(players) {
-      return submit('startNight', { date: today(), players });
+      if (night()) return { ok: false, error: 'nightOngoing' };
+      return submit('startNight', { date: clock.today(), players });
     },
 
     /**
@@ -93,17 +98,18 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
      * @param {{ A1: string, A2: string, A3?: string, B1: string, B2: string, B3?: string }} seats
      */
     startMatch(seats) {
-      const night = currentNight(view());
-      if (!night) return { ok: false, error: 'noNight' };
+      const active = night();
+      if (!active) return { ok: false, error: 'noNight' };
       const filled = Object.fromEntries(SEATS.map((seat) => [seat, seats[seat] ?? '']));
       if (!validSeats(filled)) return { ok: false, error: 'invalid' };
       const open = currentMatch(view());
       if (open && gamesOf(view(), open.matchId).length === 0) removeMatch(open.matchId);
-      const matchId = nextFreeMatchId(night.date);
-      return submit('startMatch', { matchId, date: night.date, ...filled });
+      const matchId = nextFreeMatchId(active.date);
+      return submit('startMatch', { matchId, date: active.date, ...filled });
     },
 
     recordGame(result) {
+      if (!night()) return { ok: false, error: 'noNight' };
       const match = currentMatch(view());
       if (!match) return { ok: false, error: 'noMatch' };
       const gameNo = nextGameNo(gamesOf(view(), match.matchId));
@@ -112,6 +118,7 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
 
     /** Removes the last game of the latest match (even if complete), or the match itself if it has none. */
     undo() {
+      if (!night()) return { ok: false, error: 'noNight' };
       const match = latestMatch(view());
       if (!match) return { ok: false, error: 'nothingToUndo' };
       const last = gamesOf(view(), match.matchId).at(-1);

@@ -1,3 +1,5 @@
+import { addDays } from './dates.js';
+
 /** @typedef {{ date: string, players: string[] }} Night */
 /**
  * A team has 2 or 3 players. A3 / B3 are '' (or absent in older data) for a 2-player team.
@@ -94,9 +96,29 @@ export const seatsOf = (A, B) => Object.fromEntries(
   Object.entries({ A, B }).flatMap(([side, team]) => TEAM_SEATS[side].map((seat, i) => [seat, team[i] ?? ''])),
 );
 
-/** The night with the latest date. @param {Dataset} dataset */
+/** The night with the latest date, ongoing or not. @param {Dataset} dataset */
 export const currentNight = (dataset) =>
   dataset.nights.reduce((latest, night) => (!latest || night.date > latest.date ? night : latest), null);
+
+/** Local hour (0–23) on the day after a night at which the night is over. */
+export const NIGHT_ENDS_AT_HOUR = 12;
+
+/**
+ * A night is ongoing on its own date and on the next day until NIGHT_ENDS_AT_HOUR.
+ * @param {string} nightDate YYYY-MM-DD @param {string} today YYYY-MM-DD @param {number} hour 0–23, local
+ */
+export const isNightOngoing = (nightDate, today, hour) =>
+  today === nightDate || (today === addDays(nightDate, 1) && hour < NIGHT_ENDS_AT_HOUR);
+
+/**
+ * The current night if it is still ongoing, else null. Play writes only into this night.
+ * @param {Dataset} dataset @param {string} today YYYY-MM-DD @param {number} hour 0–23, local
+ * @returns {Night | null}
+ */
+export function activeNight(dataset, today, hour) {
+  const night = currentNight(dataset);
+  return night && isNightOngoing(night.date, today, hour) ? night : null;
+}
 
 /** @param {Dataset} dataset @param {string} date */
 export const matchesOfNight = (dataset, date) =>

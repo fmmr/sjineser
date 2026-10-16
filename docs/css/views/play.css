@@ -255,3 +255,14 @@
   font-weight: 650;
   letter-spacing: -0.015em;
 }
+
+/* An ended night is history: quieter, no action. */
+.night-ended {
+  background: transparent;
+  box-shadow: none;
+}
+
+.night-ended .night-players {
+  color: var(--text-muted);
+  font-size: var(--text-base);
+}
