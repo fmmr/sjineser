@@ -1,5 +1,5 @@
 node_modules/
 .DS_Store
 .clasprc.json
-import/
+/import/
 .idea/

@@ -5,7 +5,7 @@
  *
  * Matches layout (teams of 2 or 3): matchId, date, A1, A2, A3, B1, B2, B3, status (formula in I1).
  * A3 / B3 are blank for a 2-player team. This replaced the old layout (A1, A2, B1, B2, status in
- * G1); a sheet with the old layout is migrated by wiping its data tabs and running setup() again
+ * G1); a sheet with the old layout is migrated by running resetAllData() and then setup()
  * (only development data existed then).
  */
 
@@ -288,6 +288,25 @@ function setup() {
   matches.getRange(SEAT_RANGE).setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInRange(players.getRange('A2:A'), true).setAllowInvalid(false).build(),
   );
+}
+
+/**
+ * DANGER: DELETES ALL DATA. Clears every data row (row 2 and down) of Players, Nights, Matches
+ * and Games, every player, night, match and game, and keeps only the header rows. There is no undo
+ * apart from the spreadsheet's version history.
+ *
+ * Only for the one-off history import (spec §18): the owner runs it by hand from the Apps Script
+ * editor, then runs setup(), then `npm run import:history -- --apply`. It is deliberately not in
+ * HANDLERS, so neither doGet nor doPost can reach it. Clears values only (formats, checkboxes,
+ * data validation and the status formula in I1 stay).
+ */
+function resetAllData() {
+  Object.keys(TABS).forEach((name) => {
+    const sheet = tab(name);
+    if (!sheet) return;
+    const rows = sheet.getMaxRows() - 1;
+    if (rows > 0) sheet.getRange(2, 1, rows, TABS[name].length).clearContent();
+  });
 }
 
 // ---------- Helpers ----------

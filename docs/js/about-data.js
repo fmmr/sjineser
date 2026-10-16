@@ -2,7 +2,7 @@
 export const CODE_STATS = {
   files: 117,
   lines: { js: 4934, css: 1931, html: 49 },
-  appsScriptLines: 344,
-  testFiles: 42,
-  testCases: 351,
+  appsScriptLines: 363,
+  testFiles: 43,
+  testCases: 365,
 };

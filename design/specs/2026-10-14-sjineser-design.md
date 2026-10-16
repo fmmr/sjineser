@@ -128,8 +128,7 @@ data validation. It is idempotent and is run once per sheet.
 A night's roster is fixed once started. A late arrival requires editing the sheet;
 roster editing in the app is out of scope.
 
-Historical data from the existing sheet is imported later by a one-off script, once
-its format is known. Not part of the first version.
+Historical data from the old sheet is imported once by `scripts/import-history.mjs` (§18).
 
 ## 4. Backend API (Apps Script)
 
@@ -577,8 +576,40 @@ so all three get the game in their stats and the same Elo change.
   The status formula moved to I1; seat validation covers C2:H (blanks pass). Proposals: `TEAM_SIZES`
   and `splitsOf` in `domain/proposal.js` (§7); the 3-player team is team A in a 3 + 2 proposal.
   Stats semantics in §9 ("Team sizes in stats"). The About page lists the team sizes.
-- **Import:** (separate task, not yet built) `scripts/import-history.mjs` converts the old "Logg" tab (one row per game:
-  date, team A 1–3 players, team B 1–3 players, points) into our ops, inferring matches from
-  team changes and first-to-3 (same teams with sides swapped = same match), validates them
-  with `applyOp`, prints a dry-run summary, and with `--apply` posts them through the API
-  (idempotent, PIN required).
+- **Import (implemented):** `scripts/import-history.mjs` (CLI, Node built-ins only) with the pure,
+  tested `scripts/import/convert.mjs`. Input (git-ignored, never committed): `import/logg.csv`, the
+  old "Logg" tab (one row per game: `Dato` dd.mm.yyyy, team A 2–3 players, team B 2–3 players,
+  points `1.0/0.0` A won, `0.0/1.0` B won, `0.0/0.0` draw) and `import/spillere.csv` (`Navn`, every
+  player, also those who never played).
+  - `parseLogg` validates every row (date, 2–3 distinct names per team, nobody on both teams, one
+    of the three point patterns) and reports all bad rows by row number.
+  - `inferMatches`, per date in file order: a new match starts when the date changes, when the two
+    teams differ (each team an unordered set, sides ignored) or when the current match already has
+    a team at 3 wins (a rematch of the same teams is a new match). Same teams with sides swapped =
+    same match: the row is turned to the orientation of the match's first game and its A/B result
+    swapped. A team change before 3 wins leaves the match incomplete (abandoned).
+  - `buildOps`: `addPlayer` for every listed player and any other name in the games (a name that
+    differs only in casing takes the listed spelling); per date `startNight` (roster = everyone who
+    played, Norwegian order); per match `startMatch` (`date#1`, `date#2`, … per night; '' in an empty
+    third seat); per game `addGame` (`gameNo` from 1; timestamp 20:00Z plus one minute per game of
+    the night, informational only). All ops are folded through `applyOp` from an empty dataset;
+    anything but `applied` aborts.
+  - Default is a dry run (no network): players with games, nights with matches and scores, totals,
+    incomplete matches, the Elo leaderboard and the draw rate. `--apply` (env `SJINESER_PIN`) reads
+    `API_URL` from `docs/js/config.js`, refuses unless the sheet has no nights, matches or games
+    (players may exist), posts the ops strictly in order through the normal envelope protocol
+    (retrying `busy` / `server` / network errors with backoff, `noop` = success, aborting on `pin` /
+    `conflict` / `invalid`), then reads the sheet again and checks the counts.
+  - `resetAllData()` in `apps-script/Code.js` clears all data rows (values only, headers kept) of
+    Players, Nights, Matches and Games. It is run by hand from the editor and is not reachable
+    through `doGet` / `doPost`.
+- **Migration runbook** (once, when the teams-of-three version goes live):
+  1. In the Apps Script editor run `resetAllData` (deletes all existing data), then `setup`
+     (Matches gets the A1–B3 layout and the status formula in I1).
+  2. Deploy the new script (`clasp push`, then update the existing web-app deployment so `API_URL`
+     stays the same).
+  3. Publish the app (merge to `main`; GitHub Pages serves `docs/`).
+  4. Dry run: `npm run import:history` and check the summary against the old sheet.
+  5. Apply: `SJINESER_PIN=… npm run import:history -- --apply`; it ends with "Verified".
+  6. Open the app's stats and check players, nights, the Elo leaderboard and the draw rate against
+     the dry-run summary.
