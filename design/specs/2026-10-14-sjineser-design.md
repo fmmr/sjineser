@@ -334,9 +334,9 @@ Ideas are tracked in `design/stats-ideas.md`.
 **Facts layer** (`domain/stats/facts.js`): computed once per dataset and filter.
 Elo is always replayed over *all* games (ratings are continuous); the season filter
 is applied afterwards. Facts contain:
-- `rows` — one row per player per game: player, partner, opponents, side, result
-  (`W`/`D`/`L`), match, game number, date, season, rating before/after, delta, team
-  and opponent team rating before the game.
+- `rows` — one row per player per game (every member of a team of three gets a row): player,
+  partners (1–2 teammates), opponents (2–3), side, result (`W`/`D`/`L`), match, game number,
+  date, season, rating before/after, delta, team and opponent team rating (means) before the game.
 - `games` — one per game (teams, result, pre-game team ratings).
 - `matches` — one per match (teams, games, score, winner, complete).
 - `nights` — one per night (roster, matches).
@@ -346,6 +346,15 @@ Match-level stats use complete matches only; game-level stats and Elo use all ga
 **Subjects** (`domain/stats/subjects.js`): `overall`, `player` (name), `pair` (two
 names, sorted), `compare` (two players). Helpers select a subject's rows (a pair's
 rows are its games from one partner's perspective) and head-to-head rows.
+
+**Team sizes in stats** (§18): a *pair* is a 2-player team. The pair subject (pair page,
+`pairRows`, pair match records), the pairs table, "Mot andre par" (opposing 2-player teams
+only) and best partner count only games as a 2-player team; on a team of three the players
+count individually. The partners table lists every teammate (teams of two and three; a row
+links to the pair page if the two have played as a pair in scope, else to compare), the
+opponents table every individual opponent, nemesis any opponent. Compare "Sammen" = same team
+of any size; "Mot hverandre" = opposite teams of any size. Match records name all 2–3
+winners (everyone when unfinished).
 
 **Stat plugin** (`domain/stats/catalog/<id>.js`, listed in `domain/stats/registry.js`):
 `{ id, subjects: [...], kind, compute(facts, subject) }` returning a value of a known
@@ -394,7 +403,7 @@ query string).
 - Player: Elo over time; games W/D/L and win %; matches W/L and win %; draw rate;
   streaks (current and longest win / unbeaten / loss); partners and opponents tables;
   best partner and nemesis (minimum games apply).
-- Pairs: table of all pairs; pair page with W/D/L, win %, head-to-head vs other pairs.
+- Pairs (2-player teams): table of all pairs; pair page with W/D/L, win %, head-to-head vs other pairs.
 - Compare: the shared player stats side by side, Elo curves overlaid, record together,
   record against.
 

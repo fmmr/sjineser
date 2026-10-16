@@ -43,7 +43,7 @@ export function subjectRows(facts, subject) {
   return [];
 }
 
-/** Holders of a match record: the winners, or all four when it was not finished. @param {MatchFact} match */
+/** Holders of a match record: the winners (2–3), or everyone when it was not finished. @param {MatchFact} match */
 export const matchHolders = (match) => (match.winner ? [...match[match.winner]] : [...match.A, ...match.B]);
 
 const gameKey = ({ matchId, gameNo }) => `${matchId}/${gameNo}`;
@@ -97,16 +97,16 @@ export const wdlColumns = (key, format) => [
   { key: 'winRate', format: 'percent' },
 ];
 
-/** The side a player or pair played on in a match, or null. */
+/** The side a player or pair played on in a match, or null. A pair counts only as a 2-player team. */
 function sideOf(match, subject) {
   const has = (side) => (subject.type === 'player'
     ? match[side].includes(subject.name)
-    : subject.names.every((name) => match[side].includes(name)));
+    : match[side].length === 2 && subject.names.every((name) => match[side].includes(name)));
   return has('A') ? 'A' : has('B') ? 'B' : null;
 }
 
 /**
- * Finished matches of a player, or of a pair playing as partners, won and lost.
+ * Finished matches of a player, or of a pair playing as a 2-player team, won and lost.
  * Unfinished (abandoned or ongoing) matches never count.
  * @param {Facts} facts
  * @param {import('./subjects.js').Subject} subject player or pair

@@ -1,7 +1,7 @@
 import { wdlOf } from '../aggregate.js';
 import { againstRows } from '../subjects.js';
 
-/** Games where a played against b: a's wins, b's wins and the draws. @type {import('../registry.js').Stat} */
+/** Games where a played against b (teams of any size): a's wins, b's wins and the draws. @type {import('../registry.js').Stat} */
 export const headToHead = {
   id: 'headToHead',
   subjects: ['compare'],

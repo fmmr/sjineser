@@ -41,19 +41,40 @@ function twoSeasons(autumnResults = ['A', 'D']) {
   });
 }
 
-test('four rows per game with partner, opponents and side', () => {
+test('four rows per game with partners, opponents and side', () => {
   const facts = buildFacts(nightWithMatch(['A', 'B']), ALL);
   assert.equal(facts.games.length, 2);
   assert.equal(facts.rows.length, 8);
   const hans = rowOf(facts, 'Hans', MATCH_1, 1);
-  assert.equal(hans.partner, 'Frode');
+  assert.deepEqual(hans.partners, ['Frode']);
   assert.deepEqual(hans.opponents, ['Tor', 'Per']);
   assert.equal(hans.side, 'A');
   assert.equal(hans.date, DATE);
   const per = rowOf(facts, 'Per', MATCH_1, 1);
-  assert.equal(per.partner, 'Tor');
+  assert.deepEqual(per.partners, ['Tor']);
   assert.deepEqual(per.opponents, ['Hans', 'Frode']);
   assert.equal(per.side, 'B');
+});
+
+test('3 vs 2: five rows per game; partners 1–2, opponents 2–3; team ratings are means', () => {
+  const ds = nightWithMatch();
+  ds.matches = [{ matchId: MATCH_1, date: DATE, A1: 'Hans', A2: 'Frode', A3: 'Kari', B1: 'Tor', B2: 'Per', B3: '' }];
+  ds.games = [game(MATCH_1, 1, 'A'), game(MATCH_1, 2, 'B')];
+  const facts = buildFacts(ds, ALL);
+  assert.equal(facts.rows.length, 10);
+  const kari = rowOf(facts, 'Kari', MATCH_1, 1);
+  assert.deepEqual(kari.partners, ['Hans', 'Frode']);
+  assert.deepEqual(kari.opponents, ['Tor', 'Per']);
+  assert.equal(kari.outcome, 'W');
+  const tor = rowOf(facts, 'Tor', MATCH_1, 2);
+  assert.deepEqual(tor.partners, ['Per']);
+  assert.deepEqual(tor.opponents, ['Hans', 'Frode', 'Kari']);
+  const [hans, frode] = ['Hans', 'Frode'].map((p) => rowOf(facts, p, MATCH_1, 2));
+  close(tor.opponentRating, (hans.ratingBefore + frode.ratingBefore + rowOf(facts, 'Kari', MATCH_1, 2).ratingBefore) / 3);
+  close(facts.games[1].ratingA, tor.opponentRating);
+  assert.deepEqual(facts.games[0].A, ['Hans', 'Frode', 'Kari']);
+  assert.deepEqual(facts.matches[0].B, ['Tor', 'Per']);
+  assert.deepEqual(facts.players, ['Frode', 'Hans', 'Kari', 'Per', 'Tor']);
 });
 
 test('outcomes follow the side: A win, B win and draw', () => {
@@ -151,7 +172,9 @@ test('generated history: facts agree with the Elo replay', () => {
   const facts = buildFacts(ds, ALL);
   const rated = rateGames(ds);
   assert.equal(facts.games.length, rated.timeline.length);
-  assert.equal(facts.rows.length, 4 * facts.games.length);
+  // One row per player per game: 4–6 per game, as teams have 2 or 3 players.
+  const seated = facts.games.reduce((total, g) => total + g.A.length + g.B.length, 0);
+  assert.equal(facts.rows.length, seated);
   for (const name of facts.players) {
     close(facts.rows.filter((r) => r.player === name).at(-1).ratingAfter, rated.ratings.get(name));
   }

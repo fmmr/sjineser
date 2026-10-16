@@ -46,13 +46,23 @@ export const isValidSubject = (subject) =>
 /** @param {Facts} facts @param {string} name @returns {PlayerGameRow[]} */
 export const playerRows = (facts, name) => facts.rows.filter((r) => r.player === name);
 
-/** A pair's games, one row each, from the first partner's perspective. @param {Facts} facts @param {[string, string]} names */
-export const pairRows = (facts, [a, b]) => facts.rows.filter((r) => r.player === a && r.partner === b);
+/**
+ * Whether a row is a game of a 2-player team. "Pairs" (pair subjects, the pairs table, best
+ * partner) mean 2-player teams only; on a team of three the players count only individually.
+ * @param {PlayerGameRow} row
+ */
+export const isPairRow = (row) => row.partners.length === 1;
 
-/** Games where a and b were partners, from a's perspective. @param {Facts} facts @param {string} a @param {string} b */
-export const togetherRows = (facts, a, b) => pairRows(facts, [a, b]);
+/**
+ * A pair's games as a 2-player team, one row each, from the first partner's perspective.
+ * @param {Facts} facts @param {[string, string]} names
+ */
+export const pairRows = (facts, [a, b]) => facts.rows.filter((r) => r.player === a && isPairRow(r) && r.partners[0] === b);
 
-/** Games where a played against b, from a's perspective. @param {Facts} facts @param {string} a @param {string} b */
+/** Games where a and b were on the same team (of any size), from a's perspective. @param {Facts} facts @param {string} a @param {string} b */
+export const togetherRows = (facts, a, b) => facts.rows.filter((r) => r.player === a && r.partners.includes(b));
+
+/** Games where a played against b (teams of any size), from a's perspective. @param {Facts} facts @param {string} a @param {string} b */
 export const againstRows = (facts, a, b) => facts.rows.filter((r) => r.player === a && r.opponents.includes(b));
 
 /** URL form of a pair: 'Anne+Bjørn' (sorted). @param {[string, string]} names */

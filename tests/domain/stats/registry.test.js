@@ -17,13 +17,15 @@ const { dataset, nextDate } = generateHistory();
 const FILTERS = [{ kind: 'all' }, seasonsIn(dataset, nextDate)[0]];
 const FACTS = FILTERS.map((filter) => buildFacts(dataset, filter));
 
-/** Representative subjects from all-time ratings: top player, their most frequent pair, top vs bottom. */
+/** Representative subjects from all-time ratings: top player, their most frequent pair (2-player team), top vs bottom. */
 function representativeSubjects() {
   const { rated } = FACTS[0];
   const ranked = [...rated.ratings].sort((x, y) => y[1] - x[1]).map(([name]) => name);
   const [top, bottom] = [ranked[0], ranked.at(-1)];
   const partnerGames = new Map();
-  for (const { partner } of playerRows(FACTS[0], top)) partnerGames.set(partner, (partnerGames.get(partner) ?? 0) + 1);
+  for (const { partners } of playerRows(FACTS[0], top)) {
+    if (partners.length === 1) partnerGames.set(partners[0], (partnerGames.get(partners[0]) ?? 0) + 1);
+  }
   const [partner] = [...partnerGames].sort((x, y) => y[1] - x[1])[0];
   return {
     overall: overallSubject(),

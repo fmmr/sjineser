@@ -60,6 +60,26 @@ test('togetherRows and againstRows are head-to-head from a\'s perspective', () =
   assert.deepEqual(keys(againstRows(facts, 'Hans', 'Frode')), [`Hans@${M2}/1`]);
 });
 
+// #3 (3 vs 2): Hans, Frode & Kari vs Tor & Per (1 game).
+const M3 = `${DATE}#3`;
+const withThree = buildFacts(dataset({
+  nights: [{ date: DATE, players: ['Frode', 'Hans', 'Kari', 'Per', 'Tor'] }],
+  matches: [
+    { matchId: M1, date: DATE, A1: 'Hans', A2: 'Frode', B1: 'Tor', B2: 'Per' },
+    { matchId: M3, date: DATE, A1: 'Hans', A2: 'Frode', A3: 'Kari', B1: 'Tor', B2: 'Per', B3: '' },
+  ],
+  games: [game(M1, 1, 'A'), game(M3, 1, 'B')],
+}), { kind: 'all' });
+
+test('pairRows count 2-player teams only; togetherRows and againstRows count any team size', () => {
+  assert.deepEqual(keys(pairRows(withThree, ['Frode', 'Hans'])), [`Frode@${M1}/1`]);
+  assert.deepEqual(pairRows(withThree, ['Hans', 'Kari']), []);
+  assert.deepEqual(keys(pairRows(withThree, ['Per', 'Tor'])), [`Per@${M1}/1`, `Per@${M3}/1`]);
+  assert.deepEqual(keys(togetherRows(withThree, 'Hans', 'Kari')), [`Hans@${M3}/1`]);
+  assert.deepEqual(keys(togetherRows(withThree, 'Hans', 'Frode')), [`Hans@${M1}/1`, `Hans@${M3}/1`]);
+  assert.deepEqual(keys(againstRows(withThree, 'Tor', 'Kari')), [`Tor@${M3}/1`]);
+});
+
 test('pairKey is sorted and parsePairKey reverses it', () => {
   assert.equal(pairKey(['Øyvind', 'Bjørn']), 'Bjørn+Øyvind');
   assert.deepEqual(parsePairKey('Bjørn+Øyvind'), ['Bjørn', 'Øyvind']);

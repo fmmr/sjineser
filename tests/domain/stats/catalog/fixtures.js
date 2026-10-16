@@ -1,21 +1,21 @@
 import assert from 'node:assert/strict';
 import { buildFacts } from '../../../../docs/js/domain/stats/facts.js';
-import { makeMatchId } from '../../../../docs/js/domain/match.js';
+import { makeMatchId, playersOf, seatsOf as seatsOfTeams } from '../../../../docs/js/domain/match.js';
 import { dataset } from '../../../helpers.js';
 import { statById } from '../../../../docs/js/domain/stats/registry.js';
 import { isValidValue } from '../../../../docs/js/domain/stats/kinds.js';
 
 export const ALL = { kind: 'all' };
 
-/** Seats 'Hans Frode - Tor Per' → { A1, A2, B1, B2 }. */
+/** Seats 'Hans Frode - Tor Per' or 'Hans Frode Kari - Tor Per' → { A1, A2, A3, B1, B2, B3 }. */
 function seatsOf(text) {
-  const [A1, A2, B1, B2] = text.replace('-', ' ').split(/\s+/).filter(Boolean);
-  return { A1, A2, B1, B2 };
+  const [A, B] = text.split('-').map((side) => side.trim().split(/\s+/));
+  return seatsOfTeams(A, B);
 }
 
 /**
  * Builds a dataset from a compact description. Each night: { date, players?, matches }, each
- * match: [seats, results] with seats like 'Hans Frode - Tor Per' and results like 'AADB'
+ * match: [seats, results] with seats like 'Hans Frode - Tor Per' (or three on a side) and results like 'AADB'
  * (one letter per game; '' = started without games). Matches are numbered 1… per night.
  * @param {{ date: string, players?: string[], matches: [string, string][] }[]} nights
  */
@@ -28,7 +28,7 @@ export function history(nights) {
       const matchId = makeMatchId(date, n + 1);
       const seated = seatsOf(seats);
       ds.matches.push({ matchId, date, ...seated });
-      Object.values(seated).forEach((name) => roster.add(name));
+      playersOf(seated).forEach((name) => roster.add(name));
       [...results].forEach((result, i) => ds.games.push({ matchId, gameNo: i + 1, result, timestamp: `${date}T20:00:00Z` }));
     }
     roster.forEach((name) => names.add(name));
