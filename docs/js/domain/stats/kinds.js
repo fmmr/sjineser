@@ -42,12 +42,23 @@ const CELL_CHECKS = {
   label: isName,
 };
 
-const isCell = (value, format) =>
-  (Object.hasOwn(CELL_CHECKS, format) ? CELL_CHECKS[format](value) : isFormattedNumber(value, format));
+/** Number cells may be null ("no value in this period", shown as –). */
+const isCell = (value, format) => (Object.hasOwn(CELL_CHECKS, format)
+  ? CELL_CHECKS[format](value)
+  : value === null || isFormattedNumber(value, format));
 
 const isColumns = (columns) => Array.isArray(columns) && columns.length > 0
   && columns.every((c) => isObject(c) && isName(c.key) && TABLE_FORMATS.includes(c.format))
   && new Set(columns.map((c) => c.key)).size === columns.length;
+
+const isTeam = (team) => Array.isArray(team) && team.length > 0 && team.every(isName);
+
+/**
+ * The match a record is about. With `score` (wins A/B and draws) it is a whole match; without,
+ * it is a single game that team A won against team B (e.g. an upset).
+ */
+const isRecordMatch = (match) => isObject(match) && isTeam(match.A) && isTeam(match.B)
+  && isOptional(match.score, (score) => isObject(score) && ['A', 'B', 'D'].every((key) => isCount(score[key])));
 
 const VALUE_CHECKS = {
   number: ({ value, format, marker }) => isFormattedNumber(value, format) && isOptional(marker, (m) => MARKERS.includes(m)),
@@ -63,9 +74,9 @@ const VALUE_CHECKS = {
     && isOptional(row.subject, isValidSubject)
     && isOptional(row.provisional, (p) => typeof p === 'boolean')),
 
-  record: ({ value, format, holders, date, matchId }) => isFormattedNumber(value, format)
+  record: ({ value, format, holders, date, matchId, match }) => isFormattedNumber(value, format)
     && Array.isArray(holders) && holders.every(isName)
-    && isOptional(date, isISODate) && isOptional(matchId, isValidMatchId),
+    && isOptional(date, isISODate) && isOptional(matchId, isValidMatchId) && isOptional(match, isRecordMatch),
 
   chart: ({ series }) => Array.isArray(series) && series.length > 0 && series.every((s) => isObject(s)
     && isName(s.name) && Array.isArray(s.points)

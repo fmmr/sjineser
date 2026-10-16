@@ -1,15 +1,16 @@
-import { gamesUpToLastInScope, isProvisionalAfter } from '../aggregate.js';
-import { playerRows } from '../subjects.js';
+import { isProvisional, ratingOf } from '../../elo.js';
 
-/** Rating after the player's last game in scope; marked provisional as of that game. @type {import('../registry.js').Stat} */
+/**
+ * The player's current rating — a rating belongs to a moment, not to the selected period —
+ * marked provisional below the provisional game count. Null for someone who has never played.
+ * @type {import('../registry.js').Stat}
+ */
 export const rating = {
   id: 'rating',
   subjects: ['player'],
   kind: 'number',
-  compute(facts, { name }) {
-    const last = playerRows(facts, name).at(-1);
-    if (!last) return null;
-    const provisional = isProvisionalAfter(gamesUpToLastInScope(facts).get(name));
-    return { value: last.ratingAfter, format: 'rating', ...(provisional && { marker: 'provisional' }) };
+  compute({ rated }, { name }) {
+    if (!rated.gamesPlayed.get(name)) return null;
+    return { value: ratingOf(rated, name), format: 'rating', ...(isProvisional(rated, name) && { marker: 'provisional' }) };
   },
 };

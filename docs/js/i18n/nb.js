@@ -179,7 +179,7 @@ export const t = {
    * The stats contract test requires a title for every stat.
    */
   stats: {
-    leaderboard: { title: 'Rangering', description: 'Rating etter siste spill i perioden, og endring i perioden.' },
+    leaderboard: { title: 'Rangering', description: 'Rating er nåværende rating. Endring og spill gjelder valgt periode.' },
     nightsCount: { title: 'Kvelder' },
     matchesCount: { title: 'Kamper' },
     gamesCount: { title: 'Spill' },
@@ -233,6 +233,8 @@ export const t = {
   },
   statsUi: {
     title: 'Statistikk',
+    none: '–',
+    beat: 'slo',
     draws: (n) => (n === 1 ? '1 uavgjort' : `${n} uavgjort`),
     duel: (left, right, draws) => `${left.name} vant ${left.wins}, ${right.name} vant ${right.wins}, ${draws} uavgjort`,
     noData: 'Ikke nok data',

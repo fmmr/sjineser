@@ -42,15 +42,33 @@ test('leaderboard: change is within the season; ratings continue from earlier se
   assert.deepEqual(value.rows.map((r) => r.player), ['Frode', 'Hans', 'Per', 'Tor']);
 });
 
-test('leaderboard: provisional counts all games up to the last game in scope', () => {
+test('leaderboard: rating is the current rating whatever the period; change and games are within the period', () => {
+  const nights = [{ date: SPRING, matches: [[HF_TP, 'A']] }, { date: N1, matches: [[HF_TP, 'D']] }];
+  const drawDelta = 24 * (0.5 - 1 / (1 + 10 ** (-24 / 400)));
+  const hans = compute('leaderboard', factsOf(nights, SPRING_FILTER)).rows.find((r) => r.player === 'Hans');
+  close(hans.rating, 1012 + drawDelta);
+  close(hans.change, 12);
+  assert.equal(hans.games, 1);
+});
+
+test('leaderboard: everyone who has played is listed; no games in the period → games 0, change null', () => {
+  const nights = [{ date: SPRING, matches: [[HF_TP, 'A']] }, { date: N1, matches: [['Tor Per - Frode Ola', 'A']] }];
+  const value = compute('leaderboard', factsOf(nights, AUTUMN));
+  const hans = value.rows.find((r) => r.player === 'Hans');
+  assert.equal(hans.rating, 1012);
+  assert.equal(hans.games, 0);
+  assert.equal(hans.change, null);
+  assert.equal(value.rows.length, 5);
+});
+
+test('leaderboard: provisional reflects all games played so far', () => {
   const nights = (springDraws) => [
     { date: SPRING, matches: [[HF_TP, 'D'.repeat(springDraws)]] },
     { date: N1, matches: [[HF_TP, 'DDDDD']] },
   ];
   const provisional = (facts) => compute('leaderboard', facts).rows[0].provisional;
-  assert.equal(provisional(factsOf(nights(9), AUTUMN)), false, '9 + 5 games');
-  assert.equal(provisional(factsOf(nights(9), SPRING_FILTER)), true, '9 games up to the end of spring');
-  assert.equal(provisional(factsOf(nights(10), SPRING_FILTER)), false, '10 games');
+  assert.equal(provisional(factsOf(nights(4), AUTUMN)), true, '4 + 5 games');
+  assert.equal(provisional(factsOf(nights(5), SPRING_FILTER)), false, '5 + 5 games, whatever the period');
 });
 
 test('leaderboard: null without games', () => {
@@ -84,19 +102,23 @@ test('drawRate: overall, player and pair; null without games', () => {
 
 // ---------- records ----------
 
-test('longestMatch: most games; complete → winners hold it', () => {
+test('longestMatch: most games; belongs to both teams, so no holders but the match with its score', () => {
   const facts = factsOf([{ date: N1, matches: [[HF_TP, 'ADBDAA'], [HF_TP, 'BBB']] }]);
-  assert.deepEqual(compute('longestMatch', facts),
-    { value: 6, format: 'int', holders: ['Hans', 'Frode'], date: N1, matchId: `${N1}#1` });
+  assert.deepEqual(compute('longestMatch', facts), {
+    value: 6, format: 'int', holders: [], date: N1, matchId: `${N1}#1`,
+    match: { A: ['Hans', 'Frode'], B: ['Tor', 'Per'], score: { A: 3, B: 1, D: 2 } },
+  });
 });
 
-test('longestMatch: tie → most recent; an unfinished match is held by all four', () => {
+test('longestMatch: tie → most recent, unfinished matches count', () => {
   const facts = factsOf([
     { date: N1, matches: [[HF_TP, 'ADBDAA']] },
     { date: N2, matches: [[HF_TP, 'DDBDDD']] },
   ]);
-  assert.deepEqual(compute('longestMatch', facts),
-    { value: 6, format: 'int', holders: ['Hans', 'Frode', 'Tor', 'Per'], date: N2, matchId: `${N2}#1` });
+  assert.deepEqual(compute('longestMatch', facts), {
+    value: 6, format: 'int', holders: [], date: N2, matchId: `${N2}#1`,
+    match: { A: ['Hans', 'Frode'], B: ['Tor', 'Per'], score: { A: 0, B: 1, D: 5 } },
+  });
   assert.equal(compute('longestMatch', EMPTY), null);
 });
 
@@ -123,7 +145,8 @@ test('cleanSweeps: 3–0 without draws; holders = most recent sweep', () => {
     { date: N2, matches: [[HF_TP, 'ABAA']] },
   ]);
   assert.deepEqual(compute('cleanSweeps', facts),
-    { value: 2, format: 'int', holders: ['Tor', 'Per'], date: N1, matchId: `${N1}#3` });
+    { value: 2, format: 'int', holders: ['Tor', 'Per'], date: N1, matchId: `${N1}#3`,
+      match: { A: ['Hans', 'Frode'], B: ['Tor', 'Per'], score: { A: 0, B: 3, D: 0 } } });
   assert.equal(compute('cleanSweeps', factsOf([{ date: N1, matches: [[HF_TP, 'AADA'], [HF_TP, 'AA']] }])), null);
 });
 
@@ -133,14 +156,16 @@ test('comebacks: winner trailed 0–2 and won 3–2 (draws allowed); unfinished 
     { date: N2, matches: [[HF_TP, 'ADADBDB'], [HF_TP, 'BDBAADA'], [HF_TP, 'AABB']] },
   ]);
   assert.deepEqual(compute('comebacks', facts),
-    { value: 2, format: 'int', holders: ['Hans', 'Frode'], date: N2, matchId: `${N2}#2` });
+    { value: 2, format: 'int', holders: ['Hans', 'Frode'], date: N2, matchId: `${N2}#2`,
+      match: { A: ['Hans', 'Frode'], B: ['Tor', 'Per'], score: { A: 3, B: 2, D: 2 } } });
   assert.equal(compute('comebacks', factsOf([{ date: N1, matches: [[HF_TP, 'BBAA'], [HF_TP, 'ABBAA']] }])), null);
 });
 
 test('biggestUpset: largest pre-game gap overcome by the winner', () => {
   const facts = factsOf([{ date: N1, matches: [[HF_TP, 'AB']] }]);
   assert.deepEqual(compute('biggestUpset', facts),
-    { value: 24, format: 'rating', holders: ['Tor', 'Per'], date: N1, matchId: `${N1}#1` });
+    { value: 24, format: 'rating', holders: ['Tor', 'Per'], date: N1, matchId: `${N1}#1`,
+      match: { A: ['Tor', 'Per'], B: ['Hans', 'Frode'] } });
 });
 
 test('biggestUpset: tie → most recent', () => {
@@ -148,7 +173,8 @@ test('biggestUpset: tie → most recent', () => {
     [HF_TP, 'A'], ['Wenche Xena - Yngve Zeb', 'A'], [HF_TP, 'B'], ['Wenche Xena - Yngve Zeb', 'B'],
   ] }]);
   assert.deepEqual(compute('biggestUpset', facts),
-    { value: 24, format: 'rating', holders: ['Yngve', 'Zeb'], date: N1, matchId: `${N1}#4` });
+    { value: 24, format: 'rating', holders: ['Yngve', 'Zeb'], date: N1, matchId: `${N1}#4`,
+      match: { A: ['Yngve', 'Zeb'], B: ['Wenche', 'Xena'] } });
 });
 
 test('biggestUpset: null when favourites win or the underdog only draws', () => {

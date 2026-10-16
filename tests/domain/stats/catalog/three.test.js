@@ -92,9 +92,10 @@ test('bestPartner counts 2-player teams only; nemesis any opponent', () => {
   assert.deepEqual(compute('nemesis', facts, playerSubject('Per')), { value: 0, format: 'percent', holders: ['Hans'] });
 });
 
-test('match records name all players of a team of three', () => {
+test('match records show both teams, including a team of three', () => {
   const facts = factsOf([{ date: N1, matches: [['Hans Frode Kari - Tor Per', 'DDAAA']] }]);
-  assert.deepEqual(compute('longestMatch', facts, overallSubject()).holders, ['Hans', 'Frode', 'Kari']);
+  assert.deepEqual(compute('longestMatch', facts, overallSubject()).match,
+    { A: ['Hans', 'Frode', 'Kari'], B: ['Tor', 'Per'], score: { A: 3, B: 0, D: 2 } });
   const unfinished = factsOf([{ date: N1, matches: [['Hans Frode Kari - Tor Per Ola', 'DDAA']] }]);
-  assert.deepEqual(compute('longestMatch', unfinished, overallSubject()).holders, ['Hans', 'Frode', 'Kari', 'Tor', 'Per', 'Ola']);
+  assert.deepEqual(compute('longestMatch', unfinished, overallSubject()).match.B, ['Tor', 'Per', 'Ola']);
 });

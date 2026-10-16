@@ -46,6 +46,9 @@ export function subjectRows(facts, subject) {
 /** Holders of a match record: the winners (2–3), or everyone when it was not finished. @param {MatchFact} match */
 export const matchHolders = (match) => (match.winner ? [...match[match.winner]] : [...match.A, ...match.B]);
 
+/** A record's `match`: both teams and the score, so the card can say who played whom. @param {MatchFact} match */
+export const recordMatch = ({ A, B, score }) => ({ A: [...A], B: [...B], score: { ...score } });
+
 const gameKey = ({ matchId, gameNo }) => `${matchId}/${gameNo}`;
 
 /**

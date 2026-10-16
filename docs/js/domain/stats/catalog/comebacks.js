@@ -1,4 +1,4 @@
-import { matchHolders } from '../aggregate.js';
+import { matchHolders, recordMatch } from '../aggregate.js';
 
 /** Finished, won 3–2, and the loser won the first two decided games (draws in between allowed). */
 function isComeback({ complete, winner, games }) {
@@ -16,6 +16,6 @@ export const comebacks = {
     const found = facts.matches.filter(isComeback);
     const latest = found.at(-1);
     if (!latest) return null;
-    return { value: found.length, format: 'int', holders: matchHolders(latest), date: latest.date, matchId: latest.matchId };
+    return { value: found.length, format: 'int', holders: matchHolders(latest), match: recordMatch(latest), date: latest.date, matchId: latest.matchId };
   },
 };

@@ -1,6 +1,10 @@
-import { bestOf, matchHolders } from '../aggregate.js';
+import { bestOf, recordMatch } from '../aggregate.js';
 
-/** Match with the most games (finished or not); tie → most recent. @type {import('../registry.js').Stat} */
+/**
+ * Match with the most games (finished or not); tie → most recent. A long match belongs to both
+ * teams, so there are no holders; the card shows the match (both teams and the score).
+ * @type {import('../registry.js').Stat}
+ */
 export const longestMatch = {
   id: 'longestMatch',
   subjects: ['overall'],
@@ -8,6 +12,6 @@ export const longestMatch = {
   compute(facts) {
     const match = bestOf(facts.matches, (a, b) => a.games.length - b.games.length);
     if (!match) return null;
-    return { value: match.games.length, format: 'int', holders: matchHolders(match), date: match.date, matchId: match.matchId };
+    return { value: match.games.length, format: 'int', holders: [], match: recordMatch(match), date: match.date, matchId: match.matchId };
   },
 };

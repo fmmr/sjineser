@@ -16,11 +16,15 @@ const MAIN = factsOf([
   { date: N3, matches: [['Tor Per - Frode Ola', 'A']] },
 ]);
 
-test('rating: last rating in scope, provisional marker below 10 games', () => {
+test('rating: the current rating whatever the period, provisional marker below 10 games', () => {
   assert.deepEqual(compute('rating', factsOf([{ date: N1, matches: [[HF_TP, 'A']] }]), HANS),
     { value: 1012, format: 'rating', marker: 'provisional' });
   const hans = MAIN.rows.filter((r) => r.player === 'Hans');
   assert.deepEqual(compute('rating', MAIN, HANS), { value: hans.at(-1).ratingAfter, format: 'rating' });
+  const spring = factsOf([{ date: '2026-03-04', matches: [[HF_TP, 'A']] }, { date: N1, matches: [[HF_TP, 'A']] }],
+    { kind: 'season', year: 2026, half: 1 });
+  assert.notEqual(compute('rating', spring, HANS).value, 1012, 'not the rating at the end of spring');
+  assert.equal(compute('rating', spring, HANS).value, spring.rated.ratings.get('Hans'));
   assert.equal(compute('rating', MAIN, NOBODY), null);
 });
 

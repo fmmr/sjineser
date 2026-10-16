@@ -23,6 +23,7 @@ function cellText(value, format) {
   if (format === 'player') return value;
   if (format === 'pair') return t.statsUi.pair(value[0], value[1]);
   if (format === 'label') return t.statsLabels[value] ?? value;
+  if (value === null) return t.statsUi.none;
   return formatValue(value, format);
 }
 
