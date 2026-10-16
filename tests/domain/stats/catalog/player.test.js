@@ -116,6 +116,18 @@ test('nemesis: lowest win rate against, at least 10 games; tie → more games', 
   assert.equal(compute('nemesis', factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }]), HANS), null, 'no opponent with 10 games');
 });
 
+test('form: the last 10 games in the period, oldest first; fewer when fewer are played', () => {
+  // W W D W L L D L W L W L D D W → the last ten.
+  assert.deepEqual(compute('form', MAIN, HANS), { outcomes: ['L', 'D', 'L', 'W', 'L', 'W', 'L', 'D', 'D', 'W'] });
+  assert.deepEqual(compute('form', factsOf([{ date: N1, matches: [[HF_TP, 'AB']] }]), HANS), { outcomes: ['W', 'L'] });
+  const autumn = factsOf([
+    { date: '2026-03-04', matches: [[HF_TP, 'AAA']] },
+    { date: N1, matches: [[HF_TP, 'BD']] },
+  ], { kind: 'season', year: 2026, half: 2 });
+  assert.deepEqual(compute('form', autumn, HANS), { outcomes: ['L', 'D'] }, 'only games in the period');
+  assert.equal(compute('form', MAIN, NOBODY), null);
+});
+
 test('player stats follow the season filter', () => {
   const facts = factsOf([
     { date: '2026-03-04', matches: [[HF_TP, 'AAA']] },

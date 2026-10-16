@@ -79,6 +79,12 @@ test('section order: Kjemi opens the pairs page', () => {
   assert.deepEqual(PAGES.pairs.sections.map((s) => s.id), ['chemistry', 'pairs']);
 });
 
+test('player page: Form gets its own section right under Rating', () => {
+  assert.deepEqual(PAGES.player.sections.map((s) => s.id), ['rating', 'form', 'results', 'streaks', 'people']);
+  assert.deepEqual(PAGES.player.sections.find((s) => s.id === 'form').stats, ['form']);
+  assert.equal(tileTitleHidden({ id: 'form', stats: ['form'] }), true);
+});
+
 test('a lone stat titled like its section hides its tile title; otherwise titles show', () => {
   assert.equal(tileTitleHidden({ id: 'leaderboard', stats: ['leaderboard'] }), true);
   assert.equal(tileTitleHidden({ id: 'streaks', stats: ['streaks'] }), true);

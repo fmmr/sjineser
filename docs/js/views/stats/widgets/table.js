@@ -3,6 +3,7 @@ import { formatDateLong, t } from '../../../i18n/nb.js';
 import { pairSubject, playerSubject } from '../../../domain/stats/subjects.js';
 import { statsHref, subjectPath } from '../links.js';
 import { formatValue } from './format.js';
+import { formLetters, formStrip } from './form.js';
 import { provisionalMarker, statTile } from './tile.js';
 
 /** Column header; abbreviated ones (S/U/T) carry their full name as a tooltip. */
@@ -30,11 +31,11 @@ export function signOf(value, format) {
 }
 
 /** Formats that are not numbers: left-aligned, never signed. */
-const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players'];
+const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players', 'form'];
 
 /**
  * Text of a cell; pairs read "Anne & Bjørn", player lists "Anne, Bjørn og Cato", dates
- * "14. okt. 2025", labels come from t.statsLabels.
+ * "14. okt. 2025", labels come from t.statsLabels, form reads "SSUT" (– without games).
  * @param {unknown} value @param {string} format
  */
 export function cellText(value, format) {
@@ -43,6 +44,7 @@ export function cellText(value, format) {
   if (format === 'label') return t.statsLabels[value] ?? value;
   if (format === 'date') return formatDateLong(value);
   if (format === 'players') return t.names(value);
+  if (format === 'form') return value.length > 0 ? formLetters(value).join('') : t.statsUi.none;
   if (value === null) return t.statsUi.none;
   return formatValue(value, format);
 }
@@ -65,6 +67,7 @@ export function tableBody({ columns, rows }, { query }) {
       const subject = key === linkKey && row.subject ? row.subject : cellSubject(row[key], format);
       content = h('a', { class: 'link', href: statsHref(subjectPath(subject), query) }, text);
     }
+    if (format === 'form' && row[key].length > 0) content = formStrip(row[key], { compact: true });
     if (key === 'rank') content = h('span', { class: 'stat-rank', 'data-rank': String(row[key]) }, text);
     const className = isNumber(format) ? 'num' : format === 'players' ? 'names' : null;
     return h('td', { class: className, 'data-col': key, 'data-sign': signOf(row[key], format) },

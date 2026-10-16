@@ -182,7 +182,10 @@ export const t = {
    * The stats contract test requires a title for every stat.
    */
   stats: {
-    leaderboard: { title: 'Rangering', description: 'Rating er nåværende rating. Endring og spill gjelder valgt periode.' },
+    leaderboard: {
+      title: 'Rangering',
+      description: ({ formGames }) => `Rating er nåværende rating. Endring, spill og form (siste ${formGames} spill, nyeste til høyre) gjelder valgt periode.`,
+    },
     nightsCount: { title: 'Kvelder' },
     matchesCount: { title: 'Sett' },
     gamesCount: { title: 'Spill' },
@@ -217,6 +220,7 @@ export const t = {
       description: ({ minGames }) => `Prosentpoeng over (eller under) det ratingen tilsier når de spiller sammen som par. Minst ${minGames} spill.`,
     },
     nightsList: { title: 'Kvelder', description: 'Kveldene i perioden, nyeste først. Spillere: alle som var der, også på benken. Kveldens vinner: mest rating vunnet den kvelden.' },
+    form: { title: 'Form', description: ({ formGames }) => `Siste ${formGames} spill i perioden, nyeste til høyre.` },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
   },
   /** Label cells in stat tables (format 'label'). */
@@ -232,6 +236,7 @@ export const t = {
     nights: 'Kvelder', share: 'Andel',
     chemistry: 'Kjemi',
     date: 'Dato', players: 'Spillere', sets: 'Sett', draws: 'Uavgjort', winner: 'Kveldens vinner', winnerGain: '+/−',
+    form: 'Form',
   },
   /** Section headings on the stats pages. */
   statsSections: {
@@ -250,6 +255,7 @@ export const t = {
     attendance: 'Oppmøte',
     chemistry: 'Kjemi',
     nights: 'Kvelder',
+    form: 'Form',
   },
   statsUi: {
     title: 'Statistikk',
@@ -257,6 +263,8 @@ export const t = {
     beat: 'slo',
     setScore: (a, aWins, b, bWins) => `${a.join(', ')} ${aWins}, ${b.join(', ')} ${bWins}`,
     draws: (n) => (n === 1 ? '1 uavgjort' : `${n} uavgjort`),
+    /** Accessible summary of a form strip: "Siste 10: 4 seire, 3 uavgjort, 3 tap". */
+    form: (games, { W, D, L }) => `Siste ${games}: ${W} ${W === 1 ? 'seier' : 'seire'}, ${D} uavgjort, ${L} tap`,
     duel: (left, right, draws) => `${left.name} vant ${left.wins}, ${right.name} vant ${right.wins}, ${draws} uavgjort`,
     noData: 'Ikke nok data',
     provisional: 'ny',

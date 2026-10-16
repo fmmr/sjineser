@@ -17,6 +17,12 @@ export function wdlOf(rows) {
   return totals;
 }
 
+/**
+ * Outcomes of the last `count` rows, oldest first (rows are in canonical order).
+ * @param {PlayerGameRow[]} rows @param {number} count @returns {('W' | 'D' | 'L')[]}
+ */
+export const lastOutcomes = (rows, count) => rows.slice(-count).map((r) => r.outcome);
+
 /** @param {Wdl} wdl */
 export const gamesOf = ({ W, D, L }) => W + D + L;
 

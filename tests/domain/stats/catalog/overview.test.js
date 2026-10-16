@@ -21,7 +21,7 @@ const EMPTY = factsOf([]);
 test('leaderboard: rating, change and games; ties sorted by name; row subject = player', () => {
   const value = compute('leaderboard', factsOf([{ date: N1, matches: [[HF_TP, 'A']] }]));
   assert.deepEqual(value.columns.map((c) => [c.key, c.format]),
-    [['rank', 'int'], ['player', 'player'], ['rating', 'rating'], ['change', 'signed'], ['games', 'int']]);
+    [['rank', 'int'], ['player', 'player'], ['rating', 'rating'], ['change', 'signed'], ['games', 'int'], ['form', 'form']]);
   assert.deepEqual(value.rows.map((r) => [r.rank, r.player, r.rating, r.change, r.games, r.provisional]), [
     [1, 'Frode', 1012, 12, 1, true],
     [2, 'Hans', 1012, 12, 1, true],
@@ -59,6 +59,17 @@ test('leaderboard: everyone who has played is listed; no games in the period →
   assert.equal(hans.games, 0);
   assert.equal(hans.change, null);
   assert.equal(value.rows.length, 5);
+});
+
+test('leaderboard: form is the last 10 games in the period, oldest first; [] without games in the period', () => {
+  const nights = [
+    { date: SPRING, matches: [[HF_TP, 'A']] },
+    { date: N1, matches: [['Tor Per - Frode Ola', 'BBBBBDDDAAAA']] },
+  ];
+  const form = (name) => compute('leaderboard', factsOf(nights, AUTUMN)).rows.find((r) => r.player === name).form;
+  assert.deepEqual(form('Tor'), ['L', 'L', 'L', 'D', 'D', 'D', 'W', 'W', 'W', 'W'], '12 games: the last 10');
+  assert.deepEqual(form('Ola'), ['W', 'W', 'W', 'D', 'D', 'D', 'L', 'L', 'L', 'L']);
+  assert.deepEqual(form('Hans'), []);
 });
 
 test('leaderboard: provisional reflects all games played so far', () => {

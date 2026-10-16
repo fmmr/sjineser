@@ -1,26 +1,28 @@
 import { isISODate } from '../dates.js';
 import { isValidMatchId } from '../match.js';
 import { isValidSubject } from './subjects.js';
+import { FORM_GAMES } from './constants.js';
 
 /**
  * Value kinds a stat can return (spec §9). Each kind has one generic widget.
- * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart'} Kind
+ * @typedef {'number' | 'wdl' | 'duel' | 'table' | 'record' | 'chart' | 'form'} Kind
  * @typedef {'int' | 'percent' | 'rating' | 'signed' | 'decimal' | 'signedPercent'} NumberFormat percent is 0–1;
  *   signed shows +/−; signedPercent is a fraction −1 … 1 shown as signed percentage points
- * @typedef {NumberFormat | 'player' | 'pair' | 'label' | 'date' | 'players'} TableFormat label: an i18n key under
- *   t.statsLabels; date: 'YYYY-MM-DD'; players: a non-empty list of names
+ * @typedef {NumberFormat | 'player' | 'pair' | 'label' | 'date' | 'players' | 'form'} TableFormat label: an i18n key under
+ *   t.statsLabels; date: 'YYYY-MM-DD'; players: a non-empty list of names; form: 0–FORM_GAMES outcomes,
+ *   oldest first ([] = no games in the period)
  * Table rows: one cell per column key, plus optional `subject` (the row links to it) and
  * optional boolean `provisional` (the row's rating cell gets the "ny" marker).
  */
 
 /** @type {Kind[]} */
-export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart'];
+export const KINDS = ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form'];
 
 /** @type {NumberFormat[]} */
 export const NUMBER_FORMATS = ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent'];
 
 /** @type {TableFormat[]} */
-export const TABLE_FORMATS = [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players'];
+export const TABLE_FORMATS = [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form'];
 
 const MARKERS = ['provisional'];
 const WDL_KEYS = ['W', 'D', 'L'];
@@ -29,6 +31,10 @@ const isObject = (value) => typeof value === 'object' && value !== null;
 const isCount = (value) => Number.isInteger(value) && value >= 0;
 const isName = (value) => typeof value === 'string' && value !== '';
 const isOptional = (value, check) => value === undefined || check(value);
+
+/** Up to FORM_GAMES outcomes (oldest first); at least `min`. */
+const isOutcomes = (value, min) => Array.isArray(value) && value.length >= min && value.length <= FORM_GAMES
+  && value.every((outcome) => WDL_KEYS.includes(outcome));
 
 /** A number that fits its format: int → integer, percent → 0–1, signedPercent → −1 … 1, the rest → any finite number. */
 function isFormattedNumber(value, format) {
@@ -45,6 +51,7 @@ const CELL_CHECKS = {
   label: isName,
   date: isISODate,
   players: (value) => Array.isArray(value) && value.length > 0 && value.every(isName),
+  form: (value) => isOutcomes(value, 0),
 };
 
 /** Number cells may be null ("no value in this period", shown as –). */
@@ -86,6 +93,9 @@ const VALUE_CHECKS = {
   chart: ({ series }) => Array.isArray(series) && series.length > 0 && series.every((s) => isObject(s)
     && isName(s.name) && Array.isArray(s.points)
     && s.points.every((p) => isObject(p) && isISODate(p.x) && Number.isFinite(p.y))),
+
+  /** A player's most recent games, oldest first (1–FORM_GAMES). */
+  form: ({ outcomes }) => isOutcomes(outcomes, 1),
 };
 
 /**

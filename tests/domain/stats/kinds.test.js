@@ -6,9 +6,9 @@ const valid = (kind, value) => assert.equal(isValidValue(kind, value), true, JSO
 const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, JSON.stringify(value));
 
 test('known kinds and formats', () => {
-  assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart']);
+  assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form']);
   assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent']);
-  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players']);
+  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form']);
 });
 
 test('unknown kinds and null are never valid', () => {
@@ -103,4 +103,22 @@ test('table rows may carry an optional boolean provisional flag', () => {
   valid('table', { columns, rows: [{ ...row, provisional: false }, { ...row, provisional: true }, row] });
   invalid('table', { columns, rows: [{ ...row, provisional: 'yes' }] });
   invalid('table', { columns, rows: [{ ...row, provisional: 1 }] });
+});
+
+test('form: 1–10 outcomes, oldest first', () => {
+  valid('form', { outcomes: ['W'] });
+  valid('form', { outcomes: ['W', 'D', 'L', 'W', 'W', 'L', 'D', 'D', 'W', 'L'] });
+  invalid('form', { outcomes: [] });
+  invalid('form', { outcomes: Array(11).fill('W') });
+  invalid('form', { outcomes: ['W', 'X'] });
+  invalid('form', { outcomes: 'WDL' });
+  invalid('form', {});
+});
+
+test('table form cells: 0–10 outcomes; [] means no games in the period', () => {
+  const columns = [{ key: 'player', format: 'player' }, { key: 'form', format: 'form' }];
+  valid('table', { columns, rows: [{ player: 'Anne', form: ['W', 'D', 'L'] }, { player: 'Bjørn', form: [] }] });
+  invalid('table', { columns, rows: [{ player: 'Anne', form: null }] });
+  invalid('table', { columns, rows: [{ player: 'Anne', form: ['S'] }] });
+  invalid('table', { columns, rows: [{ player: 'Anne', form: Array(11).fill('L') }] });
 });

@@ -15,6 +15,11 @@ test('table cells: pairs, labels, numbers and empty number cells', () => {
   assert.equal(cellText(null, 'int'), '–');
 });
 
+test('table cells: form as S/U/T letters, oldest first; – without games', () => {
+  assert.equal(cellText(['W', 'D', 'L', 'W'], 'form'), 'SUTS');
+  assert.equal(cellText([], 'form'), '–');
+});
+
 test('sign colour follows the shown, rounded value', () => {
   assert.equal(signOf(12.6, 'signed'), 'up');
   assert.equal(signOf(-0.4, 'signed'), null);

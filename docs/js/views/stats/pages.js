@@ -18,6 +18,7 @@ export const PAGES = {
   ] },
   player: { sections: [
     { id: 'rating', stats: ['rating', 'eloChart'] },
+    { id: 'form', stats: ['form'] },
     { id: 'results', stats: ['gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'drawRate', 'nightsAttended'] },
     { id: 'streaks', stats: ['streaks'] },
     { id: 'people', stats: ['bestPartner', 'nemesis', 'partners', 'opponents'] },

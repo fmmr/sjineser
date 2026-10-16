@@ -385,6 +385,8 @@ winners (everyone when unfinished).
   link to a subject; `provisional: true` marks the row's rating "ny")
 - `record` — `{ value, format, holders: [names], date?, matchId? }`
 - `chart` — `{ series: [{ name, points: [{ x: date, y }] }] }`
+- `form` — `{ outcomes: ['W'|'D'|'L'] }` (a player's last 1–10 games, oldest first; shown as S/U/T chips,
+  newest at the right). `form` is also a table format (0–10 outcomes; `[]` = no games, shown as –)
 Titles and explanations live in `nb.js` under `t.stats[id]`. An explanation that needs a
 domain constant (e.g. minimum games) is a function of one shared params object,
 `views/stats/description-params.js` (`{ minGames, provisionalGames, … }`, built from the
