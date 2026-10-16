@@ -68,7 +68,7 @@ export function mountMatch(root, { store, actions, navigate, tapCooldownMs = TAP
 
   const teamPanel = (match, side, wins, winner) =>
     h('div', { class: 'team-panel', 'data-side': side, 'data-winner': String(winner === side) },
-      h('span', { class: 'team-names' }, teamOf(match, side).join(t.and)),
+      h('span', { class: 'team-names' }, t.names(teamOf(match, side))),
       scoreEl(side, wins));
 
   const resultButtons = () =>
@@ -77,7 +77,7 @@ export function mountMatch(root, { store, actions, navigate, tapCooldownMs = TAP
 
   const winnerBanner = (match, winner, totals) =>
     h('div', { class: 'winner-banner', 'data-side': winner },
-      h('p', {}, t.matchWon(teamOf(match, winner).join(t.and), totals[winner], totals[winner === 'A' ? 'B' : 'A'])),
+      h('p', {}, t.matchWon(t.names(teamOf(match, winner)), totals[winner], totals[winner === 'A' ? 'B' : 'A'])),
       h('button', { class: 'btn btn-primary', type: 'button', onclick: nextMatch }, t.nextMatch));
 
   const noMatch = () =>

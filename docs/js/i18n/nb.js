@@ -36,7 +36,6 @@ export const t = {
   resultShort: { A: 'A', D: 'U', B: 'B' },
   draws: (n) => `Uavgjort: ${n}`,
   undo: 'Angre',
-  and: ' og ',
   /** "Anne", "Anne og Bjørn", "Anne, Bjørn og Cato". @param {string[]} names */
   names: (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} og ${names.at(-1)}`),
   /** What goes before name number i (0-based) of count names: '', ', ' or ' og '. */

@@ -1,6 +1,6 @@
 import { applyOp, emptyDataset } from '../domain/dataset.js';
 import { ELO, expectedScore, rateGames } from '../domain/elo.js';
-import { WINS_NEEDED, makeMatchId } from '../domain/match.js';
+import { WINS_NEEDED, makeMatchId, seatsOf } from '../domain/match.js';
 import { byName } from '../domain/players.js';
 import { proposeTeams } from '../domain/proposal.js';
 import { createRandom } from './random.js';
@@ -27,7 +27,7 @@ function addDays(date, days) {
   return d.toISOString().slice(0, 10);
 }
 
-/** 4 players (60 %), 5 (30 %) or 6 (10 %). */
+/** 4 players (60 %), 5 (30 %) or 6 (10 %); proposeTeams plays them 2 + 2, 3 + 2 and 3 + 3. */
 function rosterSize(random) {
   const roll = random.next();
   return roll < 0.6 ? 4 : roll < 0.9 ? 5 : 6;
@@ -70,7 +70,7 @@ export function generateHistory(seed = SANDBOX_SEED) {
   function playMatch(date, number, abandonable) {
     const { A, B } = proposeTeams(dataset, rateGames(dataset));
     const matchId = makeMatchId(date, number);
-    apply('startMatch', { matchId, date, A1: A[0], A2: A[1], B1: B[0], B2: B[1] });
+    apply('startMatch', { matchId, date, ...seatsOf(A, B) });
     const winA = expectedScore(teamSkill(A), teamSkill(B));
     const wins = { A: 0, B: 0 };
     const stopAt = abandonable ? ABANDON_AT_WINS : WINS_NEEDED;

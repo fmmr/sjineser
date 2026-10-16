@@ -108,6 +108,8 @@
 .team-panel {
   position: relative;
   display: grid;
+  /* Names take the spare height, so both scores line up when one team has longer names. */
+  grid-template-rows: 1fr auto;
   justify-items: center;
   gap: var(--space-3);
   padding: var(--space-5) var(--space-3) var(--space-4);
@@ -142,10 +144,15 @@
 }
 
 .team-names {
+  /* Up to three names: wrap between names, break very long names, never widen the panel. */
+  max-width: 100%;
+  min-width: 0;
   color: var(--text-muted);
   font-size: var(--text-sm);
   font-weight: 600;
   line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .score {

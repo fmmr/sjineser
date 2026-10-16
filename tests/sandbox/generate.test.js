@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SANDBOX_PLAYERS, SANDBOX_SEED, generateHistory } from '../../docs/js/sandbox/generate.js';
-import { gamesOf, isComplete, playersOf } from '../../docs/js/domain/match.js';
+import { gamesOf, isComplete, playersOf, teamOf } from '../../docs/js/domain/match.js';
 import { rateGames, ratingOf } from '../../docs/js/domain/elo.js';
 import { seasonOf } from '../../docs/js/domain/season.js';
 
@@ -51,4 +51,15 @@ test('generation is fast', () => {
   const start = performance.now();
   generateHistory();
   assert.ok(performance.now() - start < 1000);
+});
+
+test('5-player nights are played 3 vs 2 and 6-player nights 3 vs 3', () => {
+  const sizes = new Map(dataset.nights.map((n) => [n.date, n.players.length]));
+  const shape = (m) => `${teamOf(m, 'A').length}+${teamOf(m, 'B').length}`;
+  const shapes = new Set(dataset.matches.map(shape));
+  assert.deepEqual([...shapes].sort(), ['2+2', '3+2', '3+3']);
+  for (const match of dataset.matches) {
+    const expected = { 4: '2+2', 5: '3+2', 6: '3+3' }[sizes.get(match.date)];
+    assert.equal(shape(match), expected, match.matchId);
+  }
 });

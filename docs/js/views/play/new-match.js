@@ -3,12 +3,31 @@ import { showToast } from '../components/toast.js';
 import { confirmSheet } from '../components/sheet.js';
 import { t } from '../../i18n/nb.js';
 import { byName } from '../../domain/players.js';
-import { currentMatch, currentNight, gamesOf, score } from '../../domain/match.js';
+import {
+  MAX_TEAM_SIZE, MIN_TEAM_SIZE, currentMatch, currentNight, gamesOf, score, seatsOf,
+} from '../../domain/match.js';
 import { isProvisional, rateGames, ratingOf } from '../../domain/elo.js';
 import { proposeTeams } from '../../domain/proposal.js';
 
-const TEAM_SIZE = 2;
 const NEXT_SIDE = { bench: 'A', A: 'B', B: 'bench' };
+
+/**
+ * Where a tapped player goes next: bench → A → B → bench, skipping teams that already have
+ * MAX_TEAM_SIZE players.
+ * @param {'bench' | 'A' | 'B'} side the player's side now
+ * @param {{ A: number, B: number }} counts players on each team now
+ * @returns {'bench' | 'A' | 'B'}
+ */
+export function nextSide(side, counts) {
+  let next = NEXT_SIDE[side];
+  if (next === 'A' && counts.A >= MAX_TEAM_SIZE) next = 'B';
+  if (next === 'B' && counts.B >= MAX_TEAM_SIZE) next = 'bench';
+  return next;
+}
+
+/** Both teams have MIN_TEAM_SIZE–MAX_TEAM_SIZE players. @param {{ A: number, B: number }} counts */
+export const canStart = (counts) =>
+  [counts.A, counts.B].every((n) => n >= MIN_TEAM_SIZE && n <= MAX_TEAM_SIZE);
 
 export function mountNewMatch(root, { store, actions, navigate }) {
   /** @type {Map<string, 'A' | 'B'>} players not in the map are on the bench */
@@ -30,9 +49,7 @@ export function mountNewMatch(root, { store, actions, navigate }) {
   /** Moves a player bench → A → B → bench, skipping full teams. */
   function cycle(name) {
     touched = true;
-    let side = NEXT_SIDE[sides.get(name) ?? 'bench'];
-    if (side === 'A' && count('A') === TEAM_SIZE) side = 'B';
-    if (side === 'B' && count('B') === TEAM_SIZE) side = 'bench';
+    const side = nextSide(sides.get(name) ?? 'bench', { A: count('A'), B: count('B') });
     if (side === 'bench') sides.delete(name);
     else sides.set(name, side);
     update();
@@ -74,9 +91,7 @@ export function mountNewMatch(root, { store, actions, navigate }) {
       return;
     }
     update();
-    const [A1, A2] = team('A');
-    const [B1, B2] = team('B');
-    const result = actions.startMatch({ A1, A2, B1, B2 });
+    const result = actions.startMatch(seatsOf(team('A'), team('B')));
     if (!result.ok) {
       starting = false;
       update();
@@ -87,7 +102,7 @@ export function mountNewMatch(root, { store, actions, navigate }) {
 
   const benchLine = ({ bench, benchRule }) => {
     if (bench.length === 0) return null;
-    const names = bench.join(t.and);
+    const names = t.names(bench);
     return benchRule ? t.proposal.bench(names, t.rules[benchRule].benchReason) : t.proposal.benchPlain(names);
   };
 
@@ -115,14 +130,14 @@ export function mountNewMatch(root, { store, actions, navigate }) {
     const rated = rateGames(ds);
     const proposal = proposeTeams(ds, rated);
     if (!touched) applyProposal(proposal);
-    const ready = count('A') === TEAM_SIZE && count('B') === TEAM_SIZE;
+    const ready = canStart({ A: count('A'), B: count('B') });
 
     root.replaceChildren(
       h('section', { class: 'stack' },
         h('h1', {}, t.newMatch),
         proposal && !touched && h('ul', { class: 'proposal-reasons' }, reasons(proposal).map((text) => h('li', {}, text))),
         touched && proposal && h('button', { class: 'btn btn-ghost', type: 'button', onclick: useProposal }, t.proposal.useProposal),
-        h('p', { class: 'muted' }, t.pickTeams),
+        h('p', { class: 'muted' }, t.pickTeams(MIN_TEAM_SIZE, MAX_TEAM_SIZE)),
         h('ul', { class: 'assign-list' }, night.players.map((name) => playerRow(name, rated))),
         h('button', { class: 'btn btn-primary', type: 'button', disabled: !ready || starting, onclick: start }, t.startMatch),
         h('a', { class: 'link center', href: '#/about/teams' }, t.about.teamsLink)),

@@ -236,10 +236,11 @@ sync badge. Links inside screens are contextual only (e.g. "Alle par" on the sta
 2. **Start night** — tap players from the active Players list, or add a new player.
    Saves a Nights row.
 3. **New match** — the app proposes teams (and sit-outs) with a one-line reason per
-   decision; the user may override by tapping players between teams/bench. Start.
+   decision; the user may override by tapping players between teams/bench (bench → A → B →
+   bench, skipping a team that already has 3). Start is enabled when both teams have 2–3 players.
    If a match is still incomplete, the app asks to abandon it first.
 4. **Match** — two large team panels, large score (e.g. **2 – 1**), the game sequence
-   (D A D B …), three large buttons: *Lag A vant* / *Uavgjort* / *Lag B vant*, and
+   (D A D B …; team names read "Anne, Bjørn og Cato" and wrap inside the panel), three large buttons: *Lag A vant* / *Uavgjort* / *Lag B vant*, and
    *Angre* (undo). At 3 wins: a prominent winner banner and a *Neste kamp* button
    showing the next proposal.
 5. **Stats** — sections below, all with a season filter: this season / a past season /
@@ -541,7 +542,7 @@ the **Testmodus** switch on the Mer page (§6), which reloads the current screen
 - **Generated history** (`js/sandbox/generate.js`, seeded PRNG in `js/sandbox/random.js`):
   deterministic for a given seed. Six players with hidden skills; ~16 nights over three
   half-year seasons; rosters of 4–6; 3–4 matches per night; teams chosen by
-  `proposeTeams`; game results drawn from hidden skills (≈35 % draws); occasional
+  `proposeTeams` (so 5-player nights are played 3 vs 2 and 6-player nights 3 vs 3); game results drawn from hidden skills (≈35 % draws); occasional
   abandoned last match. Built by folding ops through `applyOp`, so it is always valid.
 - **Pretend date** (`js/state/clock.js`): `today()` returns the real local date, or in
   sandbox mode a stored pretend date (default: 14 days after the last generated night).
@@ -569,7 +570,14 @@ so all three get the game in their stats and the same Elo change.
 - **Stats:** facts rows carry `partners` (1–2 names) and `opponents` (2–3). Partner tables
   count every teammate. "Pairs" (pairs table, pair page, best partner) mean a 2-player team;
   3-player teams count only per individual. Compare "Sammen" = same team, any size.
-- **Import:** `scripts/import-history.mjs` converts the old "Logg" tab (one row per game:
+- **As implemented** (branch `teams-of-three`): seats `A1, A2, A3, B1, B2, B3` everywhere
+  (`SEATS`, `TEAM_SEATS`, `MIN_TEAM_SIZE` 2 / `MAX_TEAM_SIZE` 3 in `domain/match.js`); the app
+  stores `''` in an empty third seat and treats a missing one the same (old ops and fixtures stay
+  valid); seats 1 and 2 must be filled, seat 3 is optional. `teamOf` returns filled seats only.
+  The status formula moved to I1; seat validation covers C2:H (blanks pass). Proposals: `TEAM_SIZES`
+  and `splitsOf` in `domain/proposal.js` (§7); the 3-player team is team A in a 3 + 2 proposal.
+  Stats semantics in §9 ("Team sizes in stats"). The About page lists the team sizes.
+- **Import:** (separate task, not yet built) `scripts/import-history.mjs` converts the old "Logg" tab (one row per game:
   date, team A 1–3 players, team B 1–3 players, points) into our ops, inferring matches from
   team changes and first-to-3 (same teams with sides swapped = same match), validates them
   with `applyOp`, prints a dry-run summary, and with `--apply` posts them through the API

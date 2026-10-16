@@ -6,14 +6,14 @@ import { formatValue } from './format.js';
 import { statTile } from './tile.js';
 
 /**
- * Record value, its holders (linked, joined with "og") and the date it was set (with the
+ * Record value, its holders (linked; "Anne, Bjørn og Cato" — a team of three has three) and the date it was set (with the
  * year: records span seasons).
  * @param {{ value: number, format: string, holders: string[], date?: string }} value
  * @param {{ query: Record<string, string> }} ctx
  */
 export function recordBody({ value, format, holders, date }, { query }) {
   const names = holders.flatMap((name, i) => [
-    i > 0 ? t.and : null,
+    t.nameSeparator(i, holders.length) || null,
     h('a', { class: 'link', href: statsHref(subjectPath(playerSubject(name)), query) }, name),
   ]);
   return h('div', { class: 'stat-record' },
