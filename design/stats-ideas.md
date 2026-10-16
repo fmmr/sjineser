@@ -30,6 +30,8 @@ Mark ideas `[x]` when shipped.
 - [x] Dårligste makker: lowest win share with a partner as a pair, min. games apply (player page)
 - [x] Høyeste / laveste rating: highest and lowest rating after a game, provisional games left out (overview records; player page Toppnotering / Bunnotering)
 
+- [x] Lengste kveld: night with the most games, who was there (records)
+
 ## Ideas (ranked)
 1. **Avgjørende spill** — win share in games where a team stands at 2 wins (set point); specific to first-to-3.
 2. **Tremannslag vs tomannslag** — a player's win share on 3-player vs 2-player teams; tests whether the team of three really has an edge (relevant for the Elo assumption in spec §18).

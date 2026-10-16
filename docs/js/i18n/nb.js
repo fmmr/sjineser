@@ -191,6 +191,7 @@ export const t = {
     gamesCount: { title: 'Spill' },
     drawRate: { title: 'Uavgjort-andel' },
     longestMatch: { title: 'Lengste sett', description: 'Flest spill i ett sett.' },
+    longestNight: { title: 'Lengste kveld', description: 'Flest spill på én kveld. Viser hvem som var med.' },
     longestDrawStreak: { title: 'Lengste uavgjort-rekke', description: 'Flest uavgjorte spill på rad samme kveld.' },
     cleanSweeps: { title: 'Rene seire (3–0)', description: 'Sett vunnet 3–0 uten uavgjort.' },
     comebacks: { title: 'Comebacks (0–2 → 3–2)', description: 'Sett vunnet 3–2 etter å ha ligget under 0–2.' },

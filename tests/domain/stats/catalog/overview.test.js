@@ -237,3 +237,13 @@ test('highestRating / lowestRating: null when nobody is past the provisional gam
   assert.equal(compute('highestRating', factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }])), null);
   assert.equal(compute('lowestRating', EMPTY), null);
 });
+
+test('longestNight: the night with most games, who was there; tie → most recent; null without games', () => {
+  const facts = factsOf([
+    { date: N1, matches: [[HF_TP, 'ADBDAA'], [HF_TP, 'BBB']] },
+    { date: N2, players: ['Kari'], matches: [[HF_TP, 'DDAAA'], [HF_TP, 'BDBB']] },
+  ]);
+  assert.deepEqual(compute('longestNight', facts),
+    { value: 9, format: 'int', holders: ['Frode', 'Hans', 'Kari', 'Per', 'Tor'], date: N2 });
+  assert.equal(compute('longestNight', EMPTY), null);
+});
