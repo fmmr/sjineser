@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  withValues,
   COMPARE_SECTIONS, PAGES, PAGE_SUBJECTS, deriveCompare, overlaySeries, sideBySideRows, tileTitleHidden,
 } from '../../../docs/js/views/stats/pages.js';
 import { STATS, statById } from '../../../docs/js/domain/stats/registry.js';
@@ -75,4 +76,11 @@ test('a lone stat titled like its section hides its tile title; otherwise titles
   assert.equal(tileTitleHidden({ id: 'streaks', stats: ['streaks'] }), true);
   assert.equal(tileTitleHidden({ id: 'pairs', stats: ['pairsTable'] }), false);
   assert.equal(tileTitleHidden({ id: 'rating', stats: ['rating', 'eloChart'] }), false);
+});
+
+test('withValues keeps only stats with a value, in page order', () => {
+  const stat = (id, value) => ({ id, compute: () => value });
+  const result = withValues([stat('a', { value: 1 }), stat('b', null), stat('c', { value: 3 })], {}, {});
+  assert.deepEqual(result.map(({ stat: { id }, value }) => [id, value.value]), [['a', 1], ['c', 3]]);
+  assert.deepEqual(withValues([stat('b', null)], {}, {}), []);
 });

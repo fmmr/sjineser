@@ -1,7 +1,7 @@
 import { h } from '../components/dom.js';
 import { t } from '../../i18n/nb.js';
 import { compareSubject, playerSubject } from '../../domain/stats/subjects.js';
-import { COMPARE_SECTIONS, deriveCompare, overlaySeries, sideBySideRows } from './pages.js';
+import { COMPARE_SECTIONS, deriveCompare, overlaySeries, sideBySideRows, withValues } from './pages.js';
 import { statsHref, subjectPath } from './links.js';
 import { mountStatsView, notFound, statsHeader, statsSection } from './render-page.js';
 import { renderWidget } from './widgets/index.js';
@@ -47,7 +47,7 @@ export function mountStatsCompare(root, ctx) {
       .filter(({ merged }) => merged)
       .map(({ stat, merged }) => renderWidget(stat, merged.value, { ...ctx, tones: merged.tones }));
     destroyers.push(...charts.map((w) => w.destroy).filter(Boolean));
-    const together = headToHead.map((stat) => renderWidget(stat, stat.compute(facts, subject), ctx));
+    const together = withValues(headToHead, facts, subject).map(({ stat, value }) => renderWidget(stat, value, ctx));
 
     page.append(
       statsHeader({
@@ -61,7 +61,7 @@ export function mountStatsCompare(root, ctx) {
             rows.map(compareRow)),
         ]),
         charts.length > 0 && statsSection(COMPARE_SECTIONS.overlay, charts.map((w) => w.el), { wide: true }),
-        statsSection(COMPARE_SECTIONS.headToHead, together.map((w) => w.el))));
+        together.length > 0 && statsSection(COMPARE_SECTIONS.headToHead, together.map((w) => w.el))));
     return { destroy: () => destroyers.forEach((destroy) => destroy()) };
   });
 }

@@ -78,3 +78,13 @@ export function overlaySeries(values) {
     tones: present.flatMap(({ value, tone }) => value.series.map(() => tone)),
   };
 }
+
+/**
+ * The page's stats that have a value for the subject, in page order. Stats without enough data
+ * (compute → null) are left out instead of showing "Ikke nok data".
+ * @param {import('../../domain/stats/registry.js').Stat[]} stats
+ * @returns {{ stat: import('../../domain/stats/registry.js').Stat, value: object }[]}
+ */
+export const withValues = (stats, facts, subject) => stats
+  .map((stat) => ({ stat, value: stat.compute(facts, subject) }))
+  .filter(({ value }) => value !== null);

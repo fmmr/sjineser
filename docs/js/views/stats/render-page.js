@@ -6,7 +6,7 @@ import { parseFilter } from '../../domain/stats/filter.js';
 import { factsFor } from './facts-cache.js';
 import { seasonFilter } from './season-filter.js';
 import { statsHref } from './links.js';
-import { tileTitleHidden } from './pages.js';
+import { tileTitleHidden, withValues } from './pages.js';
 import { WIDE_KINDS, renderWidget } from './widgets/index.js';
 
 /**
@@ -22,7 +22,8 @@ export const statsSection = (id, children, { wide = false } = {}) =>
     h('div', { class: 'stat-grid' }, children));
 
 /**
- * Renders a page definition (pages.js) for one subject into `root`.
+ * Renders a page definition (pages.js) for one subject into `root`. Stats without data are left
+ * out, and so are sections with none left; a page with nothing at all says "Ikke nok data".
  * @param {HTMLElement} root
  * @param {{ sections: { id: string, stats: string[] }[] }} page
  * @param {import('../../domain/stats/facts.js').Facts} facts
@@ -33,14 +34,16 @@ export const statsSection = (id, children, { wide = false } = {}) =>
 export function renderPage(root, page, facts, subject, ctx) {
   const destroyers = [];
   const sections = page.sections.map((section) => {
-    const { id, stats: ids } = section;
-    const stats = ids.map(statById);
+    const shown = withValues(section.stats.map(statById), facts, subject);
+    if (shown.length === 0) return null;
     const tileCtx = { ...ctx, hideTitle: tileTitleHidden(section) };
-    const widgets = stats.map((stat) => renderWidget(stat, stat.compute(facts, subject), tileCtx));
+    const widgets = shown.map(({ stat, value }) => renderWidget(stat, value, tileCtx));
     destroyers.push(...widgets.map((w) => w.destroy).filter(Boolean));
-    return statsSection(id, widgets.map((w) => w.el), { wide: stats.some((s) => WIDE_KINDS.includes(s.kind)) });
-  });
-  root.append(h('div', { class: 'stats-sections' }, sections));
+    return statsSection(section.id, widgets.map((w) => w.el), { wide: shown.some(({ stat }) => WIDE_KINDS.includes(stat.kind)) });
+  }).filter(Boolean);
+  root.append(sections.length > 0
+    ? h('div', { class: 'stats-sections' }, sections)
+    : h('p', { class: 'muted' }, t.statsUi.noData));
   return { destroy: () => destroyers.forEach((destroy) => destroy()) };
 }
 
