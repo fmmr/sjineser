@@ -235,6 +235,7 @@ export const t = {
     title: 'Statistikk',
     none: '–',
     beat: 'slo',
+    setScore: (a, aWins, b, bWins) => `${a.join(', ')} ${aWins}, ${b.join(', ')} ${bWins}`,
     draws: (n) => (n === 1 ? '1 uavgjort' : `${n} uavgjort`),
     duel: (left, right, draws) => `${left.name} vant ${left.wins}, ${right.name} vant ${right.wins}, ${draws} uavgjort`,
     noData: 'Ikke nok data',

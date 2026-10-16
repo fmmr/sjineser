@@ -63,14 +63,31 @@
 }
 
 .record-match {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+  margin-block: var(--space-1);
 }
 
-.record-score {
-  font-weight: 750;
+.record-team {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  color: var(--text-muted);
+}
+
+.record-team[data-winner="true"] {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.record-team .link {
+  color: inherit;
+  font-weight: inherit;
+}
+
+.record-wins {
+  font-size: var(--text-lg);
   font-variant-numeric: tabular-nums;
 }
 

@@ -14,16 +14,19 @@ function linkedNames(names, query) {
 }
 
 /**
- * The match a record is about: "Anne og Bjørn 3–1 Cato og Dag" (+ draws) for a match, or
- * "Erik og Frida slo Anne og Bjørn" for a single game (no score).
+ * The set a record is about, as a small scoreboard: one line per team with its wins, the
+ * winner in bold, draws underneath. A record about a single game (no score) reads
+ * "Erik og Frida slo Anne og Bjørn".
  */
 function matchLine({ A, B, score }, query) {
   if (!score) return [h('p', {}, linkedNames(A, query), ` ${t.statsUi.beat} `, linkedNames(B, query))];
+  const winner = score.A > score.B ? 'A' : score.B > score.A ? 'B' : null;
+  const team = (side, names, wins) => h('div', { class: 'record-team', 'data-winner': String(winner === side) },
+    h('span', { class: 'record-names' }, linkedNames(names, query)),
+    h('span', { class: 'record-wins' }, String(wins)));
   return [
-    h('p', { class: 'record-match' },
-      h('span', { 'data-side': 'A' }, linkedNames(A, query)),
-      h('span', { class: 'record-score' }, `${score.A}–${score.B}`),
-      h('span', { 'data-side': 'B' }, linkedNames(B, query))),
+    h('div', { class: 'record-match', 'aria-label': t.statsUi.setScore(A, score.A, B, score.B) },
+      team('A', A, score.A), team('B', B, score.B)),
     score.D > 0 && h('p', { class: 'muted' }, t.statsUi.draws(score.D)),
   ];
 }
