@@ -26,6 +26,16 @@ test('attendance: nights on the roster (sitting out counts), share of played nig
   assert.deepEqual(value.rows[0].subject, playerSubject('Hans'));
 });
 
+test('attendance: everyone who has ever played is listed, with 0 for nights missed in the period', () => {
+  const autumn = factsOf([
+    { date: '2026-03-04', players: ['Kari'], matches: [['Kari Hans - Tor Per', 'A']] },
+    { date: N1, matches: [[HF_TP, 'AAA']] },
+  ], { kind: 'season', year: 2026, half: 2 });
+  const kari = compute('attendance', autumn, overallSubject()).rows.find((r) => r.player === 'Kari');
+  assert.deepEqual([kari.nights, kari.share], [0, 0]);
+  assert.equal(compute('attendance', FACTS, overallSubject()).rows.some((r) => r.player === 'Ola'), false, 'never played');
+});
+
 test('attendance: null without played nights', () => {
   assert.equal(compute('attendance', factsOf([{ date: N3, players: ['Ola'], matches: [] }]), overallSubject()), null);
 });

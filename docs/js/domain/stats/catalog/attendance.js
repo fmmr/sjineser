@@ -6,7 +6,8 @@ export const playedNights = (facts) => facts.nights.filter((n) => n.matches.leng
 
 /**
  * Oppmøte: nights each player was there (on the roster — sitting out counts) and their share of
- * the played nights in the period; most nights first. @type {import('../registry.js').Stat}
+ * the played nights in the period; most nights first. Everyone who has ever played is listed,
+ * with 0 for a period they missed (like the leaderboard). @type {import('../registry.js').Stat}
  */
 export const attendance = {
   id: 'attendance',
@@ -15,7 +16,7 @@ export const attendance = {
   compute(facts) {
     const nights = playedNights(facts);
     if (nights.length === 0) return null;
-    const counts = new Map();
+    const counts = new Map([...facts.rated.gamesPlayed.keys()].map((name) => [name, 0]));
     for (const { players } of nights) players.forEach((name) => counts.set(name, (counts.get(name) ?? 0) + 1));
     const rows = [...counts]
       .map(([player, attended]) => ({ player, nights: attended, share: attended / nights.length, subject: playerSubject(player) }))
