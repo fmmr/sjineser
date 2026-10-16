@@ -20,7 +20,7 @@ export const t = {
   minPlayers: (n, min) => `Velg minst ${min} spillere (${n} valgt)`,
 
   newMatch: 'Ny kamp',
-  pickTeams: 'Trykk på en spiller for å flytte: benk → Lag A → Lag B',
+  pickTeams: (min, max) => `Trykk på en spiller for å flytte: benk → Lag A → Lag B. ${min}–${max} spillere per lag.`,
   sides: { bench: 'Benk', A: 'Lag A', B: 'Lag B' },
   startMatch: 'Start kampen',
   abandon: {
@@ -37,6 +37,10 @@ export const t = {
   draws: (n) => `Uavgjort: ${n}`,
   undo: 'Angre',
   and: ' og ',
+  /** "Anne", "Anne og Bjørn", "Anne, Bjørn og Cato". @param {string[]} names */
+  names: (names) => (names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} og ${names.at(-1)}`),
+  /** What goes before name number i (0-based) of count names: '', ', ' or ' og '. */
+  nameSeparator: (i, count) => (i === 0 ? '' : i === count - 1 ? ' og ' : ', '),
   matchWon: (names, wins, losses) => `${names} vinner ${wins}–${losses}!`,
   nextMatch: 'Neste kamp',
 
@@ -75,35 +79,39 @@ export const t = {
     mostSitOutsSeason: { title: 'Flest ganger på benken', description: 'Ved likhet spiller de som har stått over flest kamper denne sesongen.', benchReason: 'har stått over færrest ganger denne sesongen' },
     longestSinceLastPlayed: { title: 'Lengst siden sist', description: 'Ved likhet spiller de som har ventet lengst siden forrige kamp i kveld.', benchReason: 'spilte sist' },
     alphabetical: { title: 'Alfabetisk', description: 'Til slutt avgjøres det alfabetisk, så forslaget alltid blir det samme.', benchReason: 'avgjort alfabetisk' },
-    newPartners: { title: 'Nye makkere', description: 'Oppsett der noen allerede har vært makkere i kveld, unngås. Slik spiller alle med alle.' },
+    newPartners: { title: 'Nye makkere', description: 'Oppsett der noen allerede har vært på lag sammen i kveld, unngås. Slik spiller alle med alle. På et lag med tre er alle tre makkere.' },
     balance: {
       title: 'Jevne lag',
-      description: ({ tolerance }) => `Oppsettet med minst forskjell i lagrating velges. Forskjellen rundes ned til nærmeste ${tolerance} poeng, så små forskjeller teller likt.`,
+      description: ({ tolerance }) => `Oppsettet med minst forskjell i lagrating (snittet av spillerne på laget) velges. Forskjellen rundes ned til nærmeste ${tolerance} poeng, så små forskjeller teller likt.`,
     },
-    seasonVariety: { title: 'Variasjon', description: 'Par som sjelden har spilt sammen denne sesongen, foretrekkes.' },
+    seasonVariety: { title: 'Variasjon', description: 'Makkere som sjelden har vært på lag sammen denne sesongen, foretrekkes.' },
   },
 
   about: {
     teamsLink: 'Slik foreslås lag',
     teamsTitle: 'Slik foreslås lag',
     teamsIntro: 'Før hver kamp foreslår appen lag. Du kan alltid endre forslaget ved å trykke på spillerne.',
+    sizesHeading: 'Lagstørrelse',
+    sizesIntro: 'Et lag har to eller tre spillere. På et lag med tre spiller to av gangen og bytter på; alle tre får resultatet.',
+    teamSize: (players, a, b) => `${players} spillere: ${a} mot ${b}`,
+    teamSizeMore: (max, a, b) => `Flere enn ${max}: ${a} mot ${b}, resten står over`,
     benchHeading: '1. Hvem spiller',
-    benchIntro: 'Gjelder bare når flere enn fire er med. Reglene brukes i rekkefølge; neste regel avgjør bare ved likhet.',
+    benchIntro: (max) => `Gjelder bare når flere enn ${max} er med. Reglene brukes i rekkefølge; neste regel avgjør bare ved likhet.`,
     splitHeading: '2. Hvem spiller sammen',
-    splitIntro: 'De tre mulige lagoppsettene sammenlignes regel for regel, i denne rekkefølgen.',
+    splitIntro: 'Alle mulige lagoppsett sammenlignes regel for regel, i denne rekkefølgen.',
     ratingLink: 'Slik fungerer rating',
     ratingTitle: 'Slik fungerer rating',
     ratingParagraphs: ({ START, K, SCALE, PROVISIONAL_GAMES }) => [
       `Alle starter på ${START} poeng. Ratingen oppdateres etter hvert spill, også i kamper som ikke ble spilt ferdig.`,
-      'Et lags rating er snittet av de to spillerne. Før hvert spill regnes det ut hvor sannsynlig det er at laget vinner, ut fra forskjellen i rating.',
-      `Seier teller 1, uavgjort ½ og tap 0. Endringen er ${K} × (resultat − forventet), og begge på laget får samme endring. Uavgjort mot et sterkere lag gir derfor poeng.`,
+      'Et lags rating er snittet av spillerne på laget (to eller tre), så et lag med tre får ingen ekstra fordel. Før hvert spill regnes det ut hvor sannsynlig det er at laget vinner, ut fra forskjellen i rating.',
+      `Seier teller 1, uavgjort ½ og tap 0. Endringen er ${K} × (resultat − forventet), og alle på laget får samme endring. Uavgjort mot et sterkere lag gir derfor poeng.`,
       `Med ${SCALE} poeng i forskjell er det sterke laget forventet å vinne omtrent 10 av 11 spill.`,
       `De første ${PROVISIONAL_GAMES} spillene er ratingen foreløpig og merket «ny».`,
     ],
     aboutLink: 'Om Sjineser',
     aboutTitle: 'Om Sjineser',
     aboutIntro: ({ winsNeeded }) => [
-      'Sjineser registrerer kortspillet sjineser: to mot to, kamp etter kamp, og regner ut statistikk og rating.',
+      'Sjineser registrerer kortspillet sjineser: to mot to (eller tre mot to og tre mot tre), kamp etter kamp, og regner ut statistikk og rating.',
       `En kamp vinnes av laget som først vinner ${winsNeeded} spill; spill kan ende uavgjort. Lagene byttes mellom kampene, og ratingen (Elo) oppdateres etter hvert spill.`,
     ],
     linksHeading: 'Lenker',

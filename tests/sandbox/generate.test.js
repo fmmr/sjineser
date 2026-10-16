@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SANDBOX_PLAYERS, SANDBOX_SEED, generateHistory } from '../../docs/js/sandbox/generate.js';
-import { gamesOf, isComplete, SEATS } from '../../docs/js/domain/match.js';
+import { gamesOf, isComplete, playersOf } from '../../docs/js/domain/match.js';
 import { rateGames, ratingOf } from '../../docs/js/domain/elo.js';
 import { seasonOf } from '../../docs/js/domain/season.js';
 
@@ -25,7 +25,7 @@ test('the generated dataset is internally consistent', () => {
   for (const match of dataset.matches) {
     assert.ok(gamesOf(dataset, match.matchId).length > 0, `${match.matchId} has no games`);
     const roster = nights.get(match.date)?.players ?? [];
-    for (const seat of SEATS) assert.ok(roster.includes(match[seat]), `${match[seat]} not at ${match.date}`);
+    for (const name of playersOf(match)) assert.ok(roster.includes(name), `${name} not at ${match.date}`);
   }
   for (const game of dataset.games) assert.ok(matchIds.has(game.matchId), game.matchId);
 });

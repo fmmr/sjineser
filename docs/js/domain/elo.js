@@ -17,9 +17,10 @@ export const expectedScore = (rating, opponent) => 1 / (1 + 10 ** ((opponent - r
  */
 
 /**
- * Replays every game in canonical order. A team's rating is the mean of its players;
- * both partners receive K × (actual − expected). Games of unknown matches are skipped.
- * Each timeline entry holds the four players' ratings before the game and their changes.
+ * Replays every game in canonical order. A team's rating is the mean of its players (2 or 3,
+ * so a 3-player team gets no extra advantage); every team member receives K × (actual − expected).
+ * Games of unknown matches are skipped. Each timeline entry holds the ratings before the game
+ * and the changes of everyone in the match (4–6 players).
  * @param {import('./match.js').Dataset} dataset
  * @returns {Rated}
  */
@@ -29,7 +30,7 @@ export function rateGames(dataset) {
   const gamesPlayed = new Map();
   const timeline = [];
   const rating = (name) => ratings.get(name) ?? ELO.START;
-  const teamRating = ([first, second]) => (rating(first) + rating(second)) / 2;
+  const teamRating = (team) => team.reduce((total, name) => total + rating(name), 0) / team.length;
 
   for (const game of [...dataset.games].sort(compareGames)) {
     const match = matches.get(game.matchId);

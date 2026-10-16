@@ -1,15 +1,25 @@
 import { ratingOf } from './elo.js';
-import { SEATS, currentNight, matchesOfNight, teamOf } from './match.js';
+import { MIN_TEAM_SIZE, currentNight, matchesOfNight, playersOf, teamOf } from './match.js';
 import { byName } from './players.js';
 import { inSeason, seasonOf } from './season.js';
 
-const PLAYERS_PER_MATCH = 4;
+/**
+ * Team sizes by number of players present: four play two against two, five three against two,
+ * six three against three. With more than six, the bench rules choose six who play 3 + 3.
+ * A 3-player team rotates (two play each game) and shares the result.
+ */
+export const TEAM_SIZES = Object.freeze({ 4: [2, 2], 5: [3, 2], 6: [3, 3] });
+const MIN_PLAYERS = 2 * MIN_TEAM_SIZE;
+export const MAX_PLAYING = 6;
+
+/** @param {number} present players on the night's roster @returns {[number, number] | null} sizes of team A and B */
+export const teamSizesFor = (present) => (present < MIN_PLAYERS ? null : TEAM_SIZES[Math.min(present, MAX_PLAYING)]);
 
 /** Team rating differences are rounded down to a multiple of this, so small differences count as equal. */
 export const BALANCE_TOLERANCE = 10;
 
 /**
- * Who plays (only when more than four are present). Rules in priority order; for each player
+ * Who plays (only when more than six are present). Rules in priority order; for each player
  * a rule returns a key, lower plays first. Text for each id is in t.rules.
  */
 export const BENCH_RULES = [
@@ -19,7 +29,10 @@ export const BENCH_RULES = [
   { id: 'alphabetical', key: (name, ctx) => ctx.alphabeticalIndex(name) },
 ];
 
-/** How the four players are split into teams. Lower keys win, compared rule by rule. */
+/**
+ * How the players are split into teams. Lower keys win, compared rule by rule. A split's
+ * `pairs` are all teammate pairs within each team (one for a team of two, three for a team of three).
+ */
 export const SPLIT_RULES = [
   { id: 'newPartners', key: (split, ctx) => sum(split.pairs.map(ctx.partneredTonight)) },
   { id: 'balance', key: (split, ctx) => Math.floor(Math.abs(ctx.teamRating(split.A) - ctx.teamRating(split.B)) / BALANCE_TOLERANCE) },
@@ -40,13 +53,15 @@ export const SPLIT_RULES = [
  */
 export function proposeTeams(dataset, rated) {
   const night = currentNight(dataset);
-  if (!night || night.players.length < PLAYERS_PER_MATCH) return null;
+  const sizes = night && teamSizesFor(night.players.length);
+  if (!sizes) return null;
   const ctx = buildContext(withoutEmptyMatches(dataset), night, rated);
 
+  const count = sizes[0] + sizes[1];
   const players = rank(night.players, BENCH_RULES, ctx);
-  const playing = players.slice(0, PLAYERS_PER_MATCH);
-  const benched = players.slice(PLAYERS_PER_MATCH);
-  const splits = rank(splitsOf(playing.map((p) => p.item).sort(byName)), SPLIT_RULES, ctx);
+  const playing = players.slice(0, count);
+  const benched = players.slice(count);
+  const splits = rank(splitsOf(playing.map((p) => p.item).sort(byName), sizes), SPLIT_RULES, ctx);
   const [chosen, ...others] = splits;
 
   return {
@@ -60,7 +75,7 @@ export function proposeTeams(dataset, rated) {
 
 const sum = (numbers) => numbers.reduce((total, n) => total + n, 0);
 const pairKey = (pair) => [...pair].sort(byName).join('+');
-const seated = (match) => SEATS.map((seat) => match[seat]);
+const seated = playersOf;
 
 function compareKeys(x, y) {
   for (let i = 0; i < x.length; i += 1) if (x[i] !== y[i]) return x[i] - y[i];
@@ -87,10 +102,31 @@ function decidingRule(rules, chosen, others) {
   return null;
 }
 
-/** The three ways to split four players (sorted by name) into two teams. */
-function splitsOf([p0, p1, p2, p3]) {
-  return [[[p0, p1], [p2, p3]], [[p0, p2], [p1, p3]], [[p0, p3], [p1, p2]]]
-    .map(([A, B]) => ({ A, B, pairs: [A, B] }));
+/** Subsets of `items` with `size` elements, in lexicographic order of positions. */
+function combinations(items, size) {
+  if (size === 0) return [[]];
+  return items.flatMap((item, i) => combinations(items.slice(i + 1), size - 1).map((rest) => [item, ...rest]));
+}
+
+/** All teammate pairs within a team. @param {string[]} team */
+const pairsWithin = (team) => team.flatMap((name, i) => team.slice(i + 1).map((other) => [name, other]));
+
+/**
+ * Every way to split the players into team A of sizes[0] and team B of sizes[1], in a fixed
+ * order: team A runs through the combinations of players in lexicographic order. With equal
+ * sizes the first player is always on team A, so mirror images are not listed twice
+ * (4 players: 3 splits, 5 players 3 + 2: 10, 6 players 3 + 3: 10).
+ * @param {string[]} players sorted by name; teams keep this order
+ * @param {[number, number]} sizes
+ * @returns {{ A: string[], B: string[], pairs: [string, string][] }[]}
+ */
+export function splitsOf(players, [sizeA, sizeB]) {
+  return combinations(players, sizeA)
+    .filter((A) => sizeA !== sizeB || A[0] === players[0])
+    .map((A) => {
+      const B = players.filter((name) => !A.includes(name));
+      return { A, B, pairs: [...pairsWithin(A), ...pairsWithin(B)] };
+    });
 }
 
 /**
@@ -102,10 +138,11 @@ function withoutEmptyMatches(dataset) {
   return { ...dataset, matches: dataset.matches.filter((m) => withGames.has(m.matchId)) };
 }
 
+/** Times each teammate pair (any pair within a team of 2 or 3) played on the same team. */
 function countPairs(matches) {
   const counts = new Map();
   for (const match of matches) {
-    for (const pair of [teamOf(match, 'A'), teamOf(match, 'B')]) {
+    for (const pair of [...pairsWithin(teamOf(match, 'A')), ...pairsWithin(teamOf(match, 'B'))]) {
       counts.set(pairKey(pair), (counts.get(pairKey(pair)) ?? 0) + 1);
     }
   }
@@ -129,6 +166,6 @@ function buildContext(dataset, night, rated) {
     alphabeticalIndex: (name) => roster.indexOf(name),
     partneredTonight: (pair) => tonightPairs.get(pairKey(pair)) ?? 0,
     partneredThisSeason: (pair) => seasonPairs.get(pairKey(pair)) ?? 0,
-    teamRating: ([first, second]) => (ratingOf(rated, first) + ratingOf(rated, second)) / 2,
+    teamRating: (team) => sum(team.map((name) => ratingOf(rated, name))) / team.length,
   };
 }

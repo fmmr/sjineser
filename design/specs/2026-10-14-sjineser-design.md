@@ -8,8 +8,9 @@ is available to everyone.
 
 - **Player** — a person who plays. Picked from a list; new players can be added.
 - **Night** — a game night on a date, with a fixed roster of players (≥ 4).
-- **Match** — two teams of two players drawn from the night's roster. Rosters larger
-  than 4 means some players sit out a match.
+- **Match** — two teams of 2 or 3 players drawn from the night's roster (§18). On a
+  3-player team two play each game and rotate; the team result is shared. Rosters larger
+  than 6 means some players sit out a match (and anyone may be benched by hand).
 - **Game** — one deal within a match. Result is exactly one of: team A wins, team B wins, draw.
 - A match is **complete** when one team reaches 3 game wins. Draws do not count towards 3,
   so a match may contain any number of games.
@@ -56,7 +57,7 @@ find-and-replace).
 
 **Managing players** (Mer → Spillere, §6; ops in §4):
 - **Rename** (`renamePlayer`) changes the Players row, every Nights roster containing the old
-  name and every Matches seat (A1–B2) equal to it, in one locked server request (Players first,
+  name and every Matches seat (A1–B3) equal to it, in one locked server request (Players first,
   so the seat validation accepts the new name). The new name follows the name rules below and
   must not belong to another player; another casing of the same player is allowed.
 - **Deactivate / activate** (`setPlayerActive`) flips `active`.
@@ -72,14 +73,18 @@ find-and-replace).
 
 **Matches**
 
-| matchId | date | A1 | A2 | B1 | B2 | status |
-|---|---|---|---|---|---|---|
-| 2026-10-14#1 | 2026-10-14 | Hans | Frode | Tor | Per | A won 3–1 |
+| matchId | date | A1 | A2 | A3 | B1 | B2 | B3 | status |
+|---|---|---|---|---|---|---|---|---|
+| 2026-10-14#1 | 2026-10-14 | Hans | Frode | | Tor | Per | | A won 3–1 |
+| 2026-10-14#2 | 2026-10-14 | Hans | Tor | Kari | Frode | Per | | B won 3–2 |
 
 - `matchId` = night date + `#` + running number within the night.
+- A3 / B3 are blank for a 2-player team (the app stores `''`; an op without them means a
+  2-player team). Each team has 2–3 distinct players and nobody is on both teams (§18).
 - `status` is a **sheet formula** (single ARRAYFORMULA in the header row) computed
   from Games, for human readers only. The app never writes or reads it.
-- Player columns have data validation from Players (protects hand edits).
+- Player columns (C–H) have data validation from Players (protects hand edits; blank
+  cells pass, so the third seats may stay empty). `status` is column I.
 
 **Games**
 
@@ -115,7 +120,7 @@ and are unique case-insensitively. Enforced in both UI and `addPlayer` / `rename
   (dates → `YYYY-MM-DD` strings, `active` → boolean).
 - The status ARRAYFORMULA leaves unused rows truly blank (e.g. `IF(A2:A="",,…)`).
 - The script computes the next row from column A rather than relying on
-  `appendRow`/`getLastRow`, and writes only columns A–F of Matches.
+  `appendRow`/`getLastRow`, and writes only columns A–H of Matches.
 
 `setup()` in the Apps Script creates tabs, headers, formats, the status formula and
 data validation. It is idempotent and is run once per sheet.
@@ -136,7 +141,7 @@ its format is known. Not part of the first version.
 | POST | `setPlayerActive` | `{ name, active }` | Sets `active`; `noop` if it already has that value; `invalid` if the player is unknown or `active` is not a boolean. |
 | POST | `deletePlayer` | `{ name }` | Deletes the Players row; `noop` if absent; `invalid` if the player is on any night roster or in any match seat. |
 | POST | `startNight` | `{ date, players }` | `noop` if identical night exists; `conflict` if date exists with a different roster. |
-| POST | `startMatch` | `{ matchId, date, A1, A2, B1, B2 }` | `noop` if identical; `conflict` if `matchId` exists with different players. |
+| POST | `startMatch` | `{ matchId, date, A1, A2, A3?, B1, B2, B3? }` | `noop` if identical (a missing third seat equals a blank one); `conflict` if `matchId` exists with different players; `invalid` unless each team has 2–3 distinct players and nobody is on both teams. |
 | POST | `addGame` | `{ matchId, gameNo, result, timestamp }` | `noop` if `(matchId, gameNo)` exists with the same result; `conflict` if different result; `invalid` if the match does not exist. |
 | POST | `deleteGame` | `{ matchId, gameNo }` | Deletes the row; `noop` if absent. |
 | POST | `deleteMatch` | `{ matchId }` | Deletes the row; `noop` if absent; `invalid` if the match has games. |
@@ -268,16 +273,24 @@ Rules are defined as data in `domain/proposal.js`: each rule has an id, a Norweg
 title, a description and its scoring logic. The About page and the per-proposal
 reasons are rendered from these definitions, so documentation cannot drift from code.
 
-**Step 1 — who plays** (only when roster > 4), applied in order:
+**Team sizes** (§18): 4 present → 2 + 2, 5 → 3 + 2, 6 → 3 + 3; with more than 6 the bench
+rules choose six, who play 3 + 3 (`TEAM_SIZES` in `domain/proposal.js`, listed on the About
+page).
+
+**Step 1 — who plays** (only when roster > 6), applied in order:
 1. Fewest matches played tonight play.
 2. Tie: most sit-outs this season play.
 3. Tie: longest since last played plays.
 4. Tie: alphabetical (deterministic).
 
-**Step 2 — split the 4 players.** Score each of the 3 possible splits; lowest wins:
-1. Pairs already partnered tonight — heavy penalty (primary rule: everyone partners everyone).
-2. Absolute Elo difference between the teams (balance).
-3. Times each pair has partnered this season — small penalty (variety).
+**Step 2 — split the players.** Score every valid split for the team sizes (4 players: 3
+splits, 5 as 3 + 2: 10, 6 as 3 + 3: 10; generated in a fixed order — team A runs through the
+name-sorted combinations, and with equal sizes the first name is always on team A so mirror
+images are not repeated); lowest wins. A split's teammate pairs are all pairs within each team
+(one for a team of two, three for a team of three):
+1. Teammate pairs already together tonight — heavy penalty (primary rule: everyone partners everyone).
+2. Absolute difference between the team ratings (means, §8) (balance).
+3. Times each teammate pair has been together this season — small penalty (variety).
 
 With 4 players over 3 matches, each split occurs once; Elo decides order (most balanced first).
 
@@ -294,9 +307,10 @@ Details:
 ## 8. Elo
 
 - Updated **per game**, chronologically over all games (incomplete matches included).
-- Team rating = mean of its two players. Expected score
+- Team rating = mean of its players (2 or 3). Expected score
   `E = 1 / (1 + 10^((Rb − Ra) / 400))`. Actual score: win 1, draw ½, loss 0.
-- Both partners receive `K × (S − E)`.
+- Every team member receives `K × (S − E)` (all three on a 3-player team, though only two
+  play each game).
 - Constants (in `domain/elo.js`, shown on the About page): start **1000**, **K = 24**,
   provisional for the first **10** games. "Provisional" is a display marker only;
   it does not change K.

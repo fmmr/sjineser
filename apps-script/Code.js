@@ -2,16 +2,25 @@
  * Sjineser backend: a thin, locked read/write layer over the sheet.
  * Script Properties: SHEET_ID (target spreadsheet), PIN (shared write PIN).
  * Every response is a JSON envelope: { ok: true, result, data } | { ok: false, error, message }.
+ *
+ * Matches layout (teams of 2 or 3): matchId, date, A1, A2, A3, B1, B2, B3, status (formula in I1).
+ * A3 / B3 are blank for a 2-player team. This replaced the old layout (A1, A2, B1, B2, status in
+ * G1); a sheet with the old layout is migrated by wiping its data tabs and running setup() again
+ * (only development data existed then).
  */
 
 const TABS = {
   Players: ['name', 'active'],
   Nights: ['date', 'players'],
-  Matches: ['matchId', 'date', 'A1', 'A2', 'B1', 'B2'],
+  Matches: ['matchId', 'date', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3'],
   Games: ['matchId', 'gameNo', 'result', 'timestamp'],
 };
 const TEXT_COLUMNS = { Nights: ['A'], Matches: ['A', 'B'], Games: ['A', 'D'] };
-const SEATS = ['A1', 'A2', 'B1', 'B2'];
+const SEATS = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3'];
+/** Seat columns of Matches: C (3) to H (8). The status formula sits right after them, in I. */
+const FIRST_SEAT_COLUMN = 3;
+const STATUS_CELL = 'I1';
+const SEAT_RANGE = 'C2:H';
 const RESULTS = ['A', 'B', 'D'];
 const MATCH_ID = /^\d{4}-\d{2}-\d{2}#\d+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -98,7 +107,7 @@ const HANDLERS = {
       const names = String(cells[0]).split(',').map((p) => p.trim()).filter(Boolean);
       return names.includes(old) ? [names.map((n) => (n === old ? name : n)).join(', ')] : null;
     });
-    rewriteColumns('Matches', 3, SEATS.length, (cells) => {
+    rewriteColumns('Matches', FIRST_SEAT_COLUMN, SEATS.length, (cells) => {
       const seats = cells.map((c) => String(c).trim());
       return seats.includes(old) ? seats.map((n) => (n === old ? name : n)) : null;
     });
@@ -121,7 +130,7 @@ const HANDLERS = {
     if (!player) return done('noop');
     const stored = player.value.name;
     const inNights = readTab('Nights').some((r) => r.value.players.includes(stored));
-    const inMatches = readTab('Matches').some((r) => SEATS.some((seat) => r.value[seat] === stored));
+    const inMatches = readTab('Matches').some((r) => SEATS.some((seat) => r.value[seat] !== '' && r.value[seat] === stored));
     if (inNights || inMatches) return fail('invalid', 'Player has history');
     tab('Players').deleteRow(player.row);
     return done('applied');
@@ -149,9 +158,7 @@ const HANDLERS = {
       return same ? done('noop') : fail('conflict', 'Match exists with other players');
     }
     const validId = MATCH_ID.test(payload.matchId) && payload.matchId.split('#')[0] === payload.date;
-    if (!validId || seats.some((s) => !s) || new Set(seats).size !== 4) {
-      return fail('invalid', 'Invalid match');
-    }
+    if (!validId || !validSeats(payload)) return fail('invalid', 'Invalid match');
     append('Matches', [payload.matchId, payload.date].concat(seats));
     return done('applied');
   },
@@ -189,10 +196,11 @@ const HANDLERS = {
 const PARSERS = {
   Players: ([name, active]) => ({ name: String(name).trim(), active: active === true || String(active).toUpperCase() === 'TRUE' }),
   Nights: ([date, players]) => ({ date: isoDate(date), players: String(players).split(',').map((p) => p.trim()).filter(Boolean) }),
-  Matches: ([matchId, date, A1, A2, B1, B2]) => ({
-    matchId: String(matchId).trim(), date: isoDate(date),
-    A1: String(A1).trim(), A2: String(A2).trim(), B1: String(B1).trim(), B2: String(B2).trim(),
-  }),
+  Matches: ([matchId, date, ...seats]) => {
+    const match = { matchId: String(matchId).trim(), date: isoDate(date) };
+    SEATS.forEach((seat, i) => { match[seat] = String(seats[i] == null ? '' : seats[i]).trim(); });
+    return match;
+  },
   Games: ([matchId, gameNo, result, timestamp]) => ({
     matchId: String(matchId).trim(), gameNo: Number(gameNo),
     result: String(result).trim().toUpperCase(), timestamp: String(timestamp),
@@ -275,8 +283,9 @@ function setup() {
   const players = ss.getSheetByName('Players');
   players.getRange('B2:B').insertCheckboxes();
   const matches = ss.getSheetByName('Matches');
-  matches.getRange('G1').setFormula(STATUS_FORMULA);
-  matches.getRange('C2:F').setDataValidation(
+  matches.getRange(STATUS_CELL).setFormula(STATUS_FORMULA);
+  // Blank cells always pass data validation, so the optional third seats (A3, B3) may stay empty.
+  matches.getRange(SEAT_RANGE).setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInRange(players.getRange('A2:A'), true).setAllowInvalid(false).build(),
   );
 }
@@ -300,6 +309,22 @@ function cleanName(name) {
 function findPlayerRow(rows, name) {
   const wanted = String(name).trim().toLowerCase();
   return rows.find((r) => r.value.name.toLowerCase() === wanted);
+}
+
+/**
+ * Mirrors validSeats in docs/js/domain/match.js: each team has 2–3 distinct non-empty players
+ * (seats 1 and 2 filled, seat 3 optional) and nobody is on both teams.
+ */
+function validSeats(payload) {
+  const names = [];
+  for (const side of ['A', 'B']) {
+    const team = [1, 2, 3].map((n) => payload[side + n]);
+    if (!team.every((name) => name == null || typeof name === 'string')) return false;
+    const clean = team.map((name) => (name == null ? '' : name.trim()));
+    if (!clean[0] || !clean[1]) return false;
+    names.push(...clean.filter(Boolean));
+  }
+  return new Set(names).size === names.length;
 }
 
 function sameMembers(a, b) {

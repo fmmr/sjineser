@@ -2,7 +2,7 @@ import { applyOp } from '../domain/dataset.js';
 import { toISODate } from '../domain/dates.js';
 import { findPlayer, hasHistory, validateNewName, validateRename } from '../domain/players.js';
 import {
-  currentMatch, currentNight, gamesOf, latestMatch, nextGameNo, nextMatchId, parseMatchId, validSeats,
+  SEATS, currentMatch, currentNight, gamesOf, latestMatch, nextGameNo, nextMatchId, parseMatchId, validSeats,
 } from '../domain/match.js';
 
 /**
@@ -87,15 +87,20 @@ export function createActions({ store, outbox, today = () => toISODate(new Date(
       return submit('startNight', { date: today(), players });
     },
 
-    /** Starts the next match. An empty current match is abandoned by removing it. */
-    startMatch({ A1, A2, B1, B2 }) {
+    /**
+     * Starts the next match. Teams have 2 or 3 players; A3 / B3 may be left out (or '') for
+     * a 2-player team. An empty current match is abandoned by removing it.
+     * @param {{ A1: string, A2: string, A3?: string, B1: string, B2: string, B3?: string }} seats
+     */
+    startMatch(seats) {
       const night = currentNight(view());
       if (!night) return { ok: false, error: 'noNight' };
-      if (!validSeats({ A1, A2, B1, B2 })) return { ok: false, error: 'invalid' };
+      const filled = Object.fromEntries(SEATS.map((seat) => [seat, seats[seat] ?? '']));
+      if (!validSeats(filled)) return { ok: false, error: 'invalid' };
       const open = currentMatch(view());
       if (open && gamesOf(view(), open.matchId).length === 0) removeMatch(open.matchId);
       const matchId = nextFreeMatchId(night.date);
-      return submit('startMatch', { matchId, date: night.date, A1, A2, B1, B2 });
+      return submit('startMatch', { matchId, date: night.date, ...filled });
     },
 
     recordGame(result) {

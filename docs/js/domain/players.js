@@ -1,4 +1,4 @@
-import { SEATS } from './match.js';
+import { SEATS, playersOf } from './match.js';
 
 /** @typedef {{ name: string, active: boolean }} Player */
 
@@ -52,8 +52,8 @@ export function validateRename(from, to, players) {
   return other && other !== findPlayer(players, from) ? 'duplicate' : null;
 }
 
-/** @param {{ A1: string, A2: string, B1: string, B2: string }} match @param {string} name */
-const seated = (match, name) => SEATS.some((seat) => match[seat] === name);
+/** @param {import('./match.js').Match} match @param {string} name */
+const seated = (match, name) => name !== '' && SEATS.some((seat) => match[seat] === name);
 
 /**
  * True if the exact name is on any night roster or in any match seat; such a player can
@@ -80,11 +80,11 @@ export function playerOverview(dataset) {
   for (const game of dataset.games) {
     const match = matches.get(game.matchId);
     if (!match) continue;
-    for (const seat of SEATS) {
-      const entry = played.get(match[seat]) ?? { games: 0, lastPlayed: null };
+    for (const name of playersOf(match)) {
+      const entry = played.get(name) ?? { games: 0, lastPlayed: null };
       entry.games += 1;
       if (!entry.lastPlayed || match.date > entry.lastPlayed) entry.lastPlayed = match.date;
-      played.set(match[seat], entry);
+      played.set(name, entry);
     }
   }
   return dataset.players.map(({ name, active }) => ({

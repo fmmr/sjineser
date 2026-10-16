@@ -35,6 +35,27 @@ test('startMatch: applied, noop if identical, conflict if seats differ, invalid 
   assert.equal(outcome(base, 'startMatch', { matchId: 'bad', date: DATE, ...seats }), 'invalid');
 });
 
+test('startMatch: a payload without A3/B3 is a 2 vs 2 match stored with empty third seats', () => {
+  const { dataset: ds, outcome: o } = applyOp(nightWithMatch(), op('startMatch', { matchId: `${DATE}#2`, date: DATE, ...seats }));
+  assert.equal(o, 'applied');
+  assert.deepEqual(ds.matches.at(-1), { matchId: `${DATE}#2`, date: DATE, ...seats, A3: '', B3: '' });
+  assert.equal(outcome(ds, 'startMatch', { matchId: `${DATE}#2`, date: DATE, ...seats, A3: '', B3: '' }), 'noop');
+});
+
+test('startMatch: teams of three', () => {
+  const base = { ...nightWithMatch(), nights: [{ date: DATE, players: [...FOUR, 'Kari', 'Ola'] }] };
+  const three = { matchId: `${DATE}#2`, date: DATE, ...seats, A3: 'Kari' };
+  const { dataset: ds, outcome: o } = applyOp(base, op('startMatch', three));
+  assert.equal(o, 'applied');
+  assert.deepEqual(ds.matches.at(-1), { ...three, B3: '' });
+  assert.equal(outcome(ds, 'startMatch', three), 'noop');
+  assert.equal(outcome(ds, 'startMatch', { ...three, A3: '' }), 'conflict');
+  assert.equal(outcome(ds, 'startMatch', { ...three, B3: 'Ola' }), 'conflict');
+  assert.equal(outcome(base, 'startMatch', { ...three, B3: 'Ola' }), 'applied');
+  assert.equal(outcome(base, 'startMatch', { ...three, B3: 'Kari' }), 'invalid');
+  assert.equal(outcome(base, 'startMatch', { ...three, A3: 'Tor' }), 'invalid');
+});
+
 test('addGame: applied, noop for same result, conflict for different, invalid for unknown match or result', () => {
   const g = { matchId: MATCH_1, gameNo: 1, result: 'D', timestamp: 'T' };
   const { dataset: ds, outcome: o } = applyOp(nightWithMatch(), op('addGame', g));
@@ -175,6 +196,22 @@ test('deletePlayer: only players without history; noop if absent', () => {
   assert.equal(outcome(ds, 'deletePlayer', { name: 'Kari' }), 'noop');
   assert.equal(outcome(withKari(), 'deletePlayer', { name: 'Hans' }), 'invalid');
   assert.equal(outcome(withKari(), 'deletePlayer', { name: 42 }), 'invalid');
+});
+
+test('renamePlayer rewrites third seats too and leaves empty seats alone', () => {
+  const base = withKari();
+  base.matches = [...base.matches, { matchId: `${DATE}#2`, date: DATE, A1: 'Hans', A2: 'Frode', A3: 'Kari', B1: 'Tor', B2: 'Per', B3: '' }];
+  const { dataset: ds } = applyOp(base, op('renamePlayer', { from: 'Kari', to: 'Karianne' }));
+  assert.deepEqual(ds.matches[1], { ...base.matches[1], A3: 'Karianne' });
+  assert.deepEqual(ds.matches[0], base.matches[0]);
+  assert.equal(Object.hasOwn(ds.matches[0], 'A3'), false);
+});
+
+test('deletePlayer refuses a player who only sat in a third seat', () => {
+  const base = withKari();
+  base.matches = [{ matchId: `${DATE}#2`, date: DATE, A1: 'Hans', A2: 'Frode', A3: '', B1: 'Tor', B2: 'Per', B3: 'Kari' }];
+  base.nights = [];
+  assert.equal(outcome(base, 'deletePlayer', { name: 'Kari' }), 'invalid');
 });
 
 test('deletePlayer refuses a player who is only on a night roster', () => {

@@ -77,3 +77,15 @@ test('hasHistory looks at rosters and seats, exact names', () => {
   assert.equal(hasHistory(history, 'Kari'), false);
   assert.equal(hasHistory({ nights: [], matches: [history.matches[0]] }, 'Frode'), true);
 });
+
+test('playerOverview counts a third seat; empty seats count for nobody', () => {
+  const ds = {
+    players: [{ name: 'Hans', active: true }, { name: 'Kari', active: true }],
+    nights: [],
+    matches: [{ matchId: '2026-10-14#1', date: '2026-10-14', A1: 'Hans', A2: 'Per', A3: 'Kari', B1: 'Tor', B2: 'Frode', B3: '' }],
+    games: [{ matchId: '2026-10-14#1', gameNo: 1, result: 'A', timestamp: 'T' }],
+  };
+  const overview = playerOverview(ds);
+  assert.deepEqual(overview.map((p) => [p.name, p.games, p.deletable]), [['Hans', 1, false], ['Kari', 1, false]]);
+  assert.equal(hasHistory(ds, ''), false);
+});

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   compareGames, currentMatch, currentNight, isValidMatchId, latestMatch, makeMatchId,
-  nextGameNo, nextMatchId, parseMatchId, score, validSeats, winnerOf,
+  nextGameNo, nextMatchId, parseMatchId, sameSeats, score, seatsOf, teamOf, validSeats, winnerOf,
 } from '../../docs/js/domain/match.js';
 import { DATE, FOUR, MATCH_1, dataset, game, nightWithMatch } from '../helpers.js';
 
@@ -34,10 +34,37 @@ test('winnerOf returns the first team to three wins', () => {
   assert.equal(winnerOf(nightWithMatch(['A', 'B', 'A', 'B', 'D']).games), null);
 });
 
-test('validSeats requires four distinct non-empty names', () => {
+test('validSeats: each team 2–3 distinct non-empty names, nobody on both teams', () => {
   assert.equal(validSeats({ A1: 'a', A2: 'b', B1: 'c', B2: 'd' }), true);
+  assert.equal(validSeats({ A1: 'a', A2: 'b', A3: '', B1: 'c', B2: 'd', B3: '' }), true);
+  assert.equal(validSeats({ A1: 'a', A2: 'b', A3: 'e', B1: 'c', B2: 'd' }), true);
+  assert.equal(validSeats({ A1: 'a', A2: 'b', A3: 'e', B1: 'c', B2: 'd', B3: 'f' }), true);
   assert.equal(validSeats({ A1: 'a', A2: 'a', B1: 'c', B2: 'd' }), false);
   assert.equal(validSeats({ A1: 'a', A2: '', B1: 'c', B2: 'd' }), false);
+  assert.equal(validSeats({ A1: 'a', A2: '', A3: 'e', B1: 'c', B2: 'd' }), false, 'A3 never replaces A2');
+  assert.equal(validSeats({ A1: 'a', A2: 'b', A3: 'c', B1: 'c', B2: 'd' }), false, 'on both teams');
+  assert.equal(validSeats({ A1: 'a', A2: 'b', A3: 'b', B1: 'c', B2: 'd' }), false);
+  assert.equal(validSeats({ A1: 'a', A2: 'b', A3: 42, B1: 'c', B2: 'd' }), false);
+  assert.equal(validSeats({ A1: 'a', A2: 'b', B1: 'c', B2: ['d'] }), false);
+});
+
+test('teamOf returns only the filled seats', () => {
+  const match = { A1: 'a', A2: 'b', A3: 'e', B1: 'c', B2: 'd', B3: '' };
+  assert.deepEqual(teamOf(match, 'A'), ['a', 'b', 'e']);
+  assert.deepEqual(teamOf(match, 'B'), ['c', 'd']);
+  assert.deepEqual(teamOf({ A1: 'a', A2: 'b', B1: 'c', B2: 'd' }, 'B'), ['c', 'd']);
+});
+
+test('sameSeats treats a missing third seat as empty', () => {
+  const two = { A1: 'a', A2: 'b', B1: 'c', B2: 'd' };
+  assert.equal(sameSeats(two, { ...two, A3: '', B3: '' }), true);
+  assert.equal(sameSeats(two, { ...two, A3: 'e' }), false);
+  assert.equal(sameSeats({ ...two, B3: 'f' }, { ...two, B3: 'f' }), true);
+});
+
+test('seatsOf turns two teams into all six seats', () => {
+  assert.deepEqual(seatsOf(['a', 'b', 'e'], ['c', 'd']), { A1: 'a', A2: 'b', A3: 'e', B1: 'c', B2: 'd', B3: '' });
+  assert.deepEqual(seatsOf(['a', 'b'], ['c', 'd']), { A1: 'a', A2: 'b', A3: '', B1: 'c', B2: 'd', B3: '' });
 });
 
 test('currentNight is the latest by date, not by row order', () => {

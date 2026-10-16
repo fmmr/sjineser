@@ -75,6 +75,18 @@ test('startMatch needs a night and numbers matches within it', () => {
   assert.equal(store.get().matches.length, 2);
 });
 
+test('startMatch sends all six seats; teams of three are kept, missing third seats are empty', () => {
+  const night = { ...nightWithMatch(['A', 'A', 'A']), nights: [{ date: DATE, players: [...FOUR, 'Kari'] }] };
+  const { actions, outbox, store } = setup(night);
+  assert.deepEqual(actions.startMatch({ ...seats, A3: 'Kari' }), { ok: true });
+  assert.deepEqual(outbox.queue[0].payload, { matchId: `${DATE}#2`, date: DATE, ...seats, A3: 'Kari', B3: '' });
+  assert.deepEqual(store.get().matches.at(-1).A3, 'Kari');
+  const two = setup(nightWithMatch(['A', 'A', 'A']));
+  two.actions.startMatch(seats);
+  assert.deepEqual(two.outbox.queue[0].payload, { matchId: `${DATE}#2`, date: DATE, ...seats, A3: '', B3: '' });
+  assert.deepEqual(setup(night).actions.startMatch({ ...seats, A3: 'Hans' }), { ok: false, error: 'invalid' });
+});
+
 test('starting a new match replaces an empty unsent match', () => {
   const { actions, outbox } = setup({ ...nightWithMatch(), matches: [] });
   actions.startMatch({ A1: 'Hans', A2: 'Frode', B1: 'Tor', B2: 'Per' });

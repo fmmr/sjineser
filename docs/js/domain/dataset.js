@@ -54,7 +54,7 @@ const HANDLERS = {
       players: ds.players.map((p) => (p === player ? { ...p, name } : p)),
       nights: ds.nights.map((n) => (n.players.includes(old) ? { ...n, players: n.players.map(swap) } : n)),
       matches: ds.matches.map((m) => (SEATS.some((seat) => m[seat] === old)
-        ? { ...m, ...Object.fromEntries(SEATS.map((seat) => [seat, swap(m[seat])])) }
+        ? { ...m, ...Object.fromEntries(SEATS.filter((seat) => m[seat] === old).map((seat) => [seat, name])) }
         : m)),
     });
   },
@@ -86,8 +86,9 @@ const HANDLERS = {
     return changed(ds, { nights: [...ds.nights, { date, players: [...players] }] });
   },
 
-  startMatch(ds, { matchId, date, A1, A2, B1, B2 }) {
-    const match = { matchId, date, A1, A2, B1, B2 };
+  /** A payload without A3 / B3 is a 2 vs 2 match; empty third seats are stored as ''. */
+  startMatch(ds, { matchId, date, A1, A2, A3 = '', B1, B2, B3 = '' }) {
+    const match = { matchId, date, A1, A2, A3: A3 ?? '', B1, B2, B3: B3 ?? '' };
     const existing = ds.matches.find((m) => m.matchId === matchId);
     if (existing) return unchanged(ds, sameSeats(existing, match) ? 'noop' : 'conflict');
     if (typeof matchId !== 'string' || !isValidMatchId(matchId) || date !== parseMatchId(matchId).date || !validSeats(match)) {

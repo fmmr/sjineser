@@ -80,3 +80,39 @@ test('games of unknown matches do not count as played', () => {
   ds.games.push(game(`${DATE}#9`, 1, 'A'));
   assert.equal(rateGames(ds).gamesPlayed.get('Hans'), 1);
 });
+
+test('3 vs 2 between equal teams: all three winners gain K/2, both losers lose K/2', () => {
+  const ds = dataset({
+    matches: [{ matchId: M1, date: DATE, A1: 'Hans', A2: 'Frode', A3: 'Kari', B1: 'Tor', B2: 'Per', B3: '' }],
+    games: [game(M1, 1, 'A')],
+  });
+  const rated = rateGames(ds);
+  for (const name of ['Hans', 'Frode', 'Kari']) close(ratingOf(rated, name), ELO.START + ELO.K / 2);
+  for (const name of ['Tor', 'Per']) close(ratingOf(rated, name), ELO.START - ELO.K / 2);
+  assert.equal(rated.timeline[0].before.size, 5);
+  assert.equal(rated.gamesPlayed.get('Kari'), 1);
+});
+
+test('3 vs 2: expected score from the team means; every team member gets the same change', () => {
+  const M2 = `${DATE}#2`;
+  const ds = dataset({
+    matches: [
+      { matchId: M1, date: DATE, A1: 'Hans', A2: 'Frode', A3: 'Kari', B1: 'Tor', B2: 'Per', B3: '' },
+      { matchId: M2, date: DATE, A1: 'Hans', A2: 'Kari', A3: 'Tor', B1: 'Frode', B2: 'Per', B3: '' },
+    ],
+    games: [game(M1, 1, 'A'), game(M2, 1, 'B')],
+  });
+  const up = ELO.START + ELO.K / 2;
+  const down = ELO.START - ELO.K / 2;
+  // Game 2: A = Hans, Kari (up) and Tor (down); B = Frode (up) and Per (down).
+  const meanA = (up + up + down) / 3;
+  const meanB = (up + down) / 2;
+  const delta = ELO.K * (0 - expectedScore(meanA, meanB));
+  const rated = rateGames(ds);
+  close(ratingOf(rated, 'Hans'), up + delta);
+  close(ratingOf(rated, 'Kari'), up + delta);
+  close(ratingOf(rated, 'Tor'), down + delta);
+  close(ratingOf(rated, 'Frode'), up - delta);
+  close(ratingOf(rated, 'Per'), down - delta);
+  assert.ok(delta < -ELO.K / 2, 'the favourite loses more than K/2');
+});

@@ -1,10 +1,17 @@
 /** @typedef {{ date: string, players: string[] }} Night */
-/** @typedef {{ matchId: string, date: string, A1: string, A2: string, B1: string, B2: string }} Match */
+/**
+ * A team has 2 or 3 players. A3 / B3 are '' (or absent in older data) for a 2-player team.
+ * @typedef {{ matchId: string, date: string, A1: string, A2: string, A3?: string, B1: string, B2: string, B3?: string }} Match
+ */
 /** @typedef {{ matchId: string, gameNo: number, result: 'A' | 'B' | 'D', timestamp: string }} Game */
 /** @typedef {{ players: import('./players.js').Player[], nights: Night[], matches: Match[], games: Game[] }} Dataset */
 
 export const WINS_NEEDED = 3;
-export const SEATS = ['A1', 'A2', 'B1', 'B2'];
+export const SEATS = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3'];
+/** Seats per side; the first two are required, the third is optional. */
+export const TEAM_SEATS = { A: ['A1', 'A2', 'A3'], B: ['B1', 'B2', 'B3'] };
+export const MIN_TEAM_SIZE = 2;
+export const MAX_TEAM_SIZE = 3;
 
 /** @param {string} date @param {number} number */
 export const makeMatchId = (date, number) => `${date}#${number}`;
@@ -52,16 +59,40 @@ export function winnerOf(games) {
 /** @param {Game[]} games */
 export const isComplete = (games) => winnerOf(games) !== null;
 
-/** Four distinct, non-empty player names. */
+/** A seat's name, '' when empty or absent. */
+const seatName = (match, seat) => match[seat] ?? '';
+
+/**
+ * Each team has 2–3 distinct non-empty names (seats 1 and 2 filled, seat 3 optional) and no
+ * player is on both teams.
+ */
 export function validSeats(match) {
-  const names = SEATS.map((seat) => match[seat]);
-  return names.every(Boolean) && new Set(names).size === SEATS.length;
+  const names = [];
+  for (const seats of Object.values(TEAM_SEATS)) {
+    const team = seats.map((seat) => seatName(match, seat));
+    if (!team.every((name) => typeof name === 'string')) return false;
+    if (!team.slice(0, MIN_TEAM_SIZE).every(Boolean)) return false;
+    names.push(...team.filter(Boolean));
+  }
+  return new Set(names).size === names.length;
 }
 
-export const sameSeats = (a, b) => SEATS.every((seat) => a[seat] === b[seat]);
+/** Same players in the same seats; a missing third seat equals an empty one. */
+export const sameSeats = (a, b) => SEATS.every((seat) => seatName(a, seat) === seatName(b, seat));
 
-/** @param {Match} match @param {'A' | 'B'} side */
-export const teamOf = (match, side) => (side === 'A' ? [match.A1, match.A2] : [match.B1, match.B2]);
+/** The players of one side: only filled seats. @param {Match} match @param {'A' | 'B'} side @returns {string[]} */
+export const teamOf = (match, side) => TEAM_SEATS[side].map((seat) => seatName(match, seat)).filter(Boolean);
+
+/** All players of a match, team A first. @param {Match} match @returns {string[]} */
+export const playersOf = (match) => [...teamOf(match, 'A'), ...teamOf(match, 'B')];
+
+/**
+ * All six seats from two teams of 2–3 players ('' for an empty third seat).
+ * @param {string[]} A @param {string[]} B
+ */
+export const seatsOf = (A, B) => Object.fromEntries(
+  Object.entries({ A, B }).flatMap(([side, team]) => TEAM_SEATS[side].map((seat, i) => [seat, team[i] ?? ''])),
+);
 
 /** The night with the latest date. @param {Dataset} dataset */
 export const currentNight = (dataset) =>
