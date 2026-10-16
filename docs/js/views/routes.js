@@ -21,6 +21,7 @@ export const routes = [
   ['/play/new-match', mountNewMatch],
   ['/play/match', mountMatch],
   ['/stats', mountStatsOverview],
+  ['/stats/player', mountStatsPlayer],
   ['/stats/player/:name', mountStatsPlayer],
   ['/stats/pairs', mountStatsPairs],
   ['/stats/pair/:pair', mountStatsPair],

@@ -409,9 +409,21 @@ shown side by side for both players; `chart` stats overlay both series (under a 
 **Dates**: records show the full date with year ("14. okt. 2025"); chart axes use the
 short form ("14. okt.") when all points fall in one calendar year, the long form otherwise.
 
-**Routes**: `#/stats`, `#/stats/player/<name>`, `#/stats/pairs`,
-`#/stats/pair/<a>+<b>`, `#/stats/compare/<a>/<b>` (router supports `:params` and a
-query string).
+**Routes**: `#/stats`, `#/stats/player` (no player chosen yet), `#/stats/player/<name>`,
+`#/stats/pairs`, `#/stats/pair/<a>+<b>`, `#/stats/compare/<a>/<b>` (router supports `:params`
+and a query string).
+
+**Selector bar** (player and compare pages, `views/stats/selector-bar.js`): three selects side by
+side, a third of the width each (text truncated), each under a small uppercase label:
+**Spiller** · **Sammenlign** · **Sesong**. Every change navigates at once (hash only, so `?sandbox`
+stays; `s` is kept). Spiller lists everyone who has played a game (ever), Norwegian order, after an
+empty "Velg …"; on `#/stats/player` it is empty and the page says "Velg en spiller". Sammenlign is
+empty ("–") by default, lists the other players and is disabled until a player is chosen; choosing
+opens `#/stats/compare/<player>/<other>`, the empty option goes back to `#/stats/player/<player>`.
+On the compare page Spiller = a and Sammenlign = b; neither list offers the player chosen in the
+other. Sesong is the season filter. The bar replaces the title-row season pill on these pages (the
+overview and pair pages keep it); the page heading is visually hidden (the player's name /
+"A mot B").
 
 **Starter set**
 - Overview: Elo leaderboard (provisional marker, change in the selected season);
@@ -426,7 +438,7 @@ query string).
   best partner and nemesis (minimum games apply).
 - Pairs (2-player teams): table of all pairs; pair page with W/D/L, win %, head-to-head vs other pairs.
 - Compare: the shared player stats side by side, Elo curves overlaid, record together,
-  record against.
+  record against. Reached from the selector bar's Sammenlign.
 
 **Layout**: mobile first — headline numbers and one chart, details one tap deeper;
 wide screens add columns (tiles in an auto-fit grid, tables full width). Charts use

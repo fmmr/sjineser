@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { activeTab, buildHash, matchRoute, parseHash, sandboxUrl } from '../docs/js/routing.js';
+import { routes } from '../docs/js/views/routes.js';
+import { mountStatsPlayer } from '../docs/js/views/stats/player.js';
+import { mountStatsCompare } from '../docs/js/views/stats/compare.js';
 
 const home = () => 'home';
 const stats = () => 'stats';
@@ -47,6 +50,12 @@ test('matchRoute falls back to the home route', () => {
   assert.deepEqual(matchRoute(ROUTES, '/stats/player'), { mount: home, params: {} });
   assert.deepEqual(matchRoute(ROUTES, '/stats/player/Anne/extra'), { mount: home, params: {} });
   assert.deepEqual(matchRoute(ROUTES, '/stats/player/%E0%A4%A'), { mount: home, params: {} });
+});
+
+test('app routes: the player page with and without a name, and compare', () => {
+  assert.deepEqual(matchRoute(routes, '/stats/player'), { mount: mountStatsPlayer, params: {} });
+  assert.deepEqual(matchRoute(routes, '/stats/player/Anne'), { mount: mountStatsPlayer, params: { name: 'Anne' } });
+  assert.deepEqual(matchRoute(routes, '/stats/compare/Anne/Per'), { mount: mountStatsCompare, params: { a: 'Anne', b: 'Per' } });
 });
 
 test('buildHash omits an empty query and encodes values', () => {

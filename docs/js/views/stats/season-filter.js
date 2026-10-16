@@ -17,14 +17,26 @@ export function seasonOptions(dataset, today) {
 }
 
 /**
+ * The season options with the filter's own season added (before "Alle") when it has no nights.
+ * @param {import('../../domain/match.js').Dataset} dataset
+ * @param {import('../../domain/stats/filter.js').Filter} filter
+ * @param {string} today YYYY-MM-DD
+ * @returns {{ options: { value: string, label: string }[], selected: string }}
+ */
+export function seasonChoices(dataset, filter, today) {
+  const selected = formatFilter(filter);
+  const options = seasonOptions(dataset, today);
+  if (!options.some((o) => o.value === selected)) options.splice(-1, 0, { value: selected, label: t.statsUi.season(filter) });
+  return { options, selected };
+}
+
+/**
  * Season select; choosing navigates to the same page with ?s=<season>.
  * @param {{ dataset: object, filter: import('../../domain/stats/filter.js').Filter, today: string,
  *   path: string, query: Record<string, string>, navigate: (path: string) => void }} options
  */
 export function seasonFilter({ dataset, filter, today, path, query, navigate }) {
-  const selected = formatFilter(filter);
-  const options = seasonOptions(dataset, today);
-  if (!options.some((o) => o.value === selected)) options.splice(-1, 0, { value: selected, label: t.statsUi.season(filter) });
+  const { options, selected } = seasonChoices(dataset, filter, today);
   return h('select', {
     class: 'field stats-filter',
     'aria-label': t.statsUi.seasonLabel,

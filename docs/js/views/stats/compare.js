@@ -3,14 +3,15 @@ import { t } from '../../i18n/nb.js';
 import { compareSubject, playerSubject } from '../../domain/stats/subjects.js';
 import { COMPARE_SECTIONS, deriveCompare, overlaySeries, sideBySideRows, withValues } from './pages.js';
 import { statsHref, subjectPath } from './links.js';
-import { mountStatsView, notFound, statsHeader, statsSection } from './render-page.js';
+import { mountStatsView, notFound, statsSection } from './render-page.js';
+import { selectorHeader } from './selector-bar.js';
 import { renderWidget } from './widgets/index.js';
 import { numberBody } from './widgets/number.js';
 import { wdlBody, wdlKeys } from './widgets/wdl.js';
 
 /**
- * #/stats/compare/:a/:b — a (team A colour) and b (team B colour): the player stats side by
- * side, their charts overlaid, then the head-to-head stats.
+ * #/stats/compare/:a/:b — under the selector bar (Spiller = a, Sammenlign = b), a (team A colour)
+ * and b (team B colour): the player stats side by side, their charts overlaid, then the head-to-head stats.
  */
 export function mountStatsCompare(root, ctx) {
   const { a, b } = ctx.params;
@@ -50,10 +51,7 @@ export function mountStatsCompare(root, ctx) {
     const together = withValues(headToHead, facts, subject).map(({ stat, value }) => renderWidget(stat, value, ctx));
 
     page.append(
-      statsHeader({
-        title: h('span', { class: 'compare-title' }, playerLink('A', a), ` ${t.statsUi.versus} `, playerLink('B', b)),
-        path: subjectPath(subject),
-      }, ctx, data),
+      selectorHeader(`${a} ${t.statsUi.versus} ${b}`, data, { player: a, other: b, path: subjectPath(subject) }, ctx),
       h('div', { class: 'stats-sections' },
         rows.length > 0 && statsSection(COMPARE_SECTIONS.sideBySide, [
           h('div', { class: 'compare-table stat-wide' },
