@@ -94,7 +94,7 @@ test('rating extremes: overview records end with highest/lowest; player peak/low
   assert.deepEqual(PAGES.overview.sections.find((s) => s.id === 'records').stats.slice(-3),
     ['biggestUpset', 'highestRating', 'lowestRating']);
   assert.deepEqual(PAGES.player.sections.find((s) => s.id === 'rating').stats,
-    ['rating', 'peakRating', 'lowRating', 'eloChart']);
+    ['rating', 'eloChart', 'peakRating', 'lowRating']);
 });
 
 test('a lone stat titled like its section hides its tile title; otherwise titles show', () => {

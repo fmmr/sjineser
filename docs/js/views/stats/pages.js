@@ -17,7 +17,7 @@ export const PAGES = {
     { id: 'attendance', stats: ['attendance'] },
   ] },
   player: { sections: [
-    { id: 'rating', stats: ['rating', 'peakRating', 'lowRating', 'eloChart'] },
+    { id: 'rating', stats: ['rating', 'eloChart', 'peakRating', 'lowRating'] },
     { id: 'form', stats: ['form'] },
     { id: 'results', stats: ['gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'drawRate', 'nightsAttended'] },
     { id: 'streaks', stats: ['streaks'] },
