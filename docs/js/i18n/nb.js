@@ -184,7 +184,7 @@ export const t = {
    */
   stats: {
     leaderboard: {
-      title: 'Rangering',
+      title: 'Spillere',
       description: ({ formGames }) => `Rating er nåværende rating. Endring, spill, oppmøte (kvelder og andel av kveldene) og form (siste ${formGames} spill, nyeste til høyre) gjelder valgt periode.`,
     },
     nightsCount: { title: 'Kvelder' },
@@ -254,7 +254,7 @@ export const t = {
   },
   /** Section headings on the stats pages. */
   statsSections: {
-    leaderboard: 'Rangering',
+    leaderboard: 'Spillere',
     summary: 'Oppsummering',
     records: 'Rekorder',
     rating: 'Rating',

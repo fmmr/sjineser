@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { appVersion, cacheVersion, canRegisterServiceWorker, registerServiceWorker } from '../docs/js/pwa.js';
+import { appVersion, cacheVersion, canRegisterServiceWorker, registerServiceWorker, throttledUpdate } from '../docs/js/pwa.js';
 import {
   ABOUT_DATA, codeStats, computeVersion, countLines, isShippable, renderAboutData, shippableFiles,
 } from '../scripts/stamp-sw.mjs';
@@ -284,4 +284,39 @@ test('appVersion looks again once the worker is active when the cache is not the
   assert.equal(await pending, '0123456789ab');
   assert.equal(await appVersion({ caches: { keys: async () => ['sjineser-fedcba'] }, container: { ready: new Promise(() => {}) } }), 'fedcba');
   assert.equal(await appVersion({ caches: { keys: async () => [] }, container: undefined }), null);
+});
+
+test('throttledUpdate asks for an update at most once per interval', () => {
+  let calls = 0;
+  let time = 0;
+  const check = throttledUpdate(() => { calls += 1; return Promise.resolve(); }, { intervalMs: 60000, now: () => time });
+  check();
+  check();
+  assert.equal(calls, 1);
+  time = 59999;
+  check();
+  assert.equal(calls, 1);
+  time = 60000;
+  check();
+  assert.equal(calls, 2);
+});
+
+test('registerServiceWorker also checks on in-app navigation and on a timer while visible', async () => {
+  const listeners = {};
+  const on = (target) => (type, listener) => { (listeners[`${target}:${type}`] ??= []).push(listener); };
+  let updates = 0;
+  let tick;
+  const registration = { update: async () => { updates += 1; } };
+  registerServiceWorker({
+    container: { controller: {}, register: async () => registration, addEventListener() {} },
+    location: { protocol: 'https:', hostname: 'x' },
+    window: { addEventListener: on('win') },
+    document: { readyState: 'complete', visibilityState: 'visible', addEventListener: on('doc') },
+    setInterval: (fn) => { tick = fn; },
+    now: (() => { let t = 0; return () => (t += 61000); })(),
+  });
+  await new Promise((resolve) => setTimeout(resolve));
+  listeners['win:hashchange'].forEach((listener) => listener());
+  tick();
+  assert.equal(updates, 2);
 });
