@@ -276,3 +276,50 @@ test('longestNight: the night with most games, who was there; tie → most recen
     { value: 9, format: 'int', holders: ['Frode', 'Hans', 'Kari', 'Per', 'Tor'], date: N2 });
   assert.equal(compute('longestNight', EMPTY), null);
 });
+
+// ---------- attendanceStreak ----------
+
+test('attendanceStreak: longest run of played nights on the roster; sitting out counts; a missed night breaks it', () => {
+  const facts = factsOf([
+    { date: N1, matches: [[HF_TP, 'A']] },
+    { date: N2, players: ['Kari'], matches: [[HF_TP, 'A']] },
+    { date: N3, matches: [[HF_TP, 'A']] },
+  ]);
+  assert.deepEqual(compute('attendanceStreak', facts),
+    { value: 3, format: 'int', holders: ['Frode', 'Hans', 'Per', 'Tor'], date: N3 });
+  const broken = factsOf([
+    { date: N1, matches: [[HF_TP, 'A']] },
+    { date: N2, matches: [['Kari Dag - Hans Per', 'A']] },
+  ]);
+  assert.deepEqual(compute('attendanceStreak', broken),
+    { value: 2, format: 'int', holders: ['Hans', 'Per'], date: N2 });
+});
+
+test('attendanceStreak: tie → most recent run end, only those whose run ended then; nights without games are skipped', () => {
+  const facts = factsOf([
+    { date: N1, matches: [[HF_TP, 'A']] },
+    { date: N2, matches: [[HF_TP, 'A']] },
+    { date: '2026-09-23', matches: [['Hans Kari - Frode Per', '']] },
+    { date: N3, matches: [['Kari Dag - Frode Per', 'A']] },
+    { date: '2026-10-07', matches: [['Kari Dag - Frode Per', 'B']] },
+  ]);
+  assert.deepEqual(compute('attendanceStreak', facts),
+    { value: 4, format: 'int', holders: ['Frode', 'Per'], date: '2026-10-07' });
+});
+
+test('attendanceStreak: equal runs → the one ending last wins; earlier-ending holders are left out', () => {
+  const facts = factsOf([
+    { date: N1, matches: [['Hans Tor - Anne Bo', 'A']] },
+    { date: N2, matches: [['Hans Tor - Anne Bo', 'A']] },
+    { date: N3, matches: [['Kari Dag - Cato Eli', 'A']] },
+    { date: '2026-10-07', matches: [['Kari Dag - Cato Eli', 'B']] },
+  ]);
+  // Anne, Bo, Hans, Tor: 2 ending N2; Kari, Dag, Cato, Eli: 2 ending 10-07.
+  assert.deepEqual(compute('attendanceStreak', facts),
+    { value: 2, format: 'int', holders: ['Cato', 'Dag', 'Eli', 'Kari'], date: '2026-10-07' });
+});
+
+test('attendanceStreak: null without played nights', () => {
+  assert.equal(compute('attendanceStreak', factsOf([{ date: N1, matches: [[HF_TP, '']] }])), null);
+  assert.equal(compute('attendanceStreak', EMPTY), null);
+});
