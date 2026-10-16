@@ -46,6 +46,7 @@ import { seasonPlayers } from './catalog/seasonPlayers.js';
 import { seasonTitles } from './catalog/seasonTitles.js';
 import { gamesPerSetChart } from './catalog/gamesPerSetChart.js';
 import { drawRateChart } from './catalog/drawRateChart.js';
+import { headToHeadMatrix } from './catalog/headToHeadMatrix.js';
 
 /**
  * The catalog of stat plugins (spec §9). Adding a stat = one file in catalog/, one import
@@ -66,6 +67,7 @@ export const STATS = [
   partners, opponents, bestPartner, worstPartner, nemesis, favoriteVictim, pairsTable, pairVsPairs, togetherWdl, headToHead, nightsAttended,
   pairChemistry, nightsList, form, nightSets, nightLeaderboard, nightWinner, decisiveTable, seasonPlayers,
   gamesPerSetChart, drawRateChart,
+  headToHeadMatrix,
 ];
 
 /** @param {string} id @returns {Stat | null} */

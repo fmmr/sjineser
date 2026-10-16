@@ -83,8 +83,10 @@ test('overview: leaderboard, summary, trends, records, … (the nights table liv
   assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'trends', 'records', 'seasonPlayers', 'decisive']);
 });
 
-test('list pages: Spillere is the leaderboard of everyone who has played, Kvelder the nights table', () => {
-  assert.deepEqual(PAGES.players.sections, [{ id: 'leaderboard', stats: ['leaderboard'] }]);
+test('list pages: Spillere is the leaderboard of everyone who has played and the head-to-head matrix, Kvelder the nights table', () => {
+  assert.deepEqual(PAGES.players.sections, [
+    { id: 'leaderboard', stats: ['leaderboard'] }, { id: 'versusMatrix', stats: ['headToHeadMatrix'] },
+  ]);
   assert.deepEqual(PAGES.nights.sections, [{ id: 'nights', stats: ['nightsList'] }]);
   assert.equal(PAGE_SUBJECTS.players, 'overall');
   assert.equal(PAGE_SUBJECTS.nights, 'overall');

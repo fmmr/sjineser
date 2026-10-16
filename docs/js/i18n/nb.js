@@ -252,6 +252,10 @@ export const t = {
     gamesPerSetChart: { title: 'Spill per sett', description: 'Snitt antall spill per sett, kveld for kveld.' },
     drawRateChart: { title: 'Uavgjort-andel', description: 'Andel uavgjorte spill, kveld for kveld.' },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
+    headToHeadMatrix: {
+      title: 'Mot hverandre',
+      description: 'Rad mot kolonne: radens seiersandel i prosent, i spill der de sto på hvert sitt lag (to eller tre). Grønn: flere seire enn tap, rød: flere tap enn seire; uavgjort teller ikke på fargen. Trykk på en rute for å sammenligne dem.',
+    },
   },
   /** Label cells in stat tables (format 'label') and chart series named by a label key. */
   statsLabels: {
@@ -295,6 +299,7 @@ export const t = {
     decisive: 'Avgjørende spill',
     seasonPlayers: 'Sesongens spiller',
     trends: 'Utvikling',
+    versusMatrix: 'Mot hverandre',
   },
   statsUi: {
     title: 'Statistikk',
@@ -323,6 +328,9 @@ export const t = {
     notFound: 'Fant ikke dette i dataene.',
     setTitle: (n) => `Sett ${n}`,
     setStatus: { ongoing: 'pågår', unfinished: 'ikke ferdig' },
+    matrixCaption: 'Mot hverandre. Rad mot kolonne: radens seiersandel i prosent.',
+    /** A matrix cell's tooltip: "Anne mot Bjørn: 3 seire, 1 uavgjort, 1 tap". */
+    matrixCell: (a, b, { W, D, L }) => `${a} mot ${b}: ${W} ${W === 1 ? 'seier' : 'seire'}, ${D} uavgjort, ${L} tap`,
   },
 
   sandbox: { label: 'TESTMODUS', reset: 'Nullstill', resetConfirm: 'Tilbakestille testdataene?', resetMessage: 'Testdataene genereres på nytt, og endringer i testmodus forsvinner.', exit: 'Avslutt', date: 'Dato' },

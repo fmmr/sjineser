@@ -38,9 +38,10 @@ Mark ideas `[x]` when shipped.
 - [x] Flest uavgjort i ett sett: the set with the most drawn games, shown as a scoreboard (overview and night records)
 - [x] Oppmøte-rekke: most played nights in a row one player was there, sitting out counts (overview records)
 - [x] Snitt spill per sett / uavgjort-andel over tid: one point per played night, from 2 played nights (overview section Utvikling)
+- [x] Mot hverandre-matrise: player vs player grid of the row player's win share against the column player, tinted by more wins / more losses, a cell opens compare (Spillere tab)
 
 ## Ideas (ranked)
-1. **Mot hverandre-matrise** — player vs player win share table (best on wide screens).
+(none right now — add new ideas here)
 
 ## Dropped
 - ~~Sit-outs per player~~ — with 3 vs 2 and 3 vs 3 nobody sits out with six or fewer players, so it would almost always be empty.
