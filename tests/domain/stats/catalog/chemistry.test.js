@@ -24,28 +24,30 @@ const expected = (facts, names) => {
   return rows.reduce((sum, r) => sum + ACTUAL[r.outcome] - expectedScore(r.teamRating, r.opponentRating), 0) / rows.length;
 };
 
-test('chemistry: pairs with enough games, score above expectation, best first; row subject = pair', () => {
+test('pairsTable kjemi: mean actual − expected per pair with enough games, else null; last column', () => {
   assert.equal(MIN_GAMES_TOGETHER, 10, 'the fixture assumes 10');
-  const value = compute('chemistry', FACTS, overallSubject());
-  assert.deepEqual(value.columns, [
-    { key: 'pair', format: 'pair' }, { key: 'games', format: 'int' }, { key: 'chemistry', format: 'signedPercent' },
-  ]);
-  assert.deepEqual(value.rows.map((r) => [r.pair, r.games]), [[['Frode', 'Hans'], 11], [['Per', 'Tor'], 14]]);
-  const [fh, pt] = value.rows;
+  const value = compute('pairsTable', FACTS, overallSubject());
+  assert.deepEqual(value.columns.at(-1), { key: 'chemistry', format: 'signedPercent' });
+  const byPair = new Map(value.rows.map((r) => [r.pair.join(' & '), r]));
+  const fh = byPair.get('Frode & Hans');
+  const pt = byPair.get('Per & Tor');
+  assert.equal(fh.games, 11);
+  assert.equal(pt.games, 14);
   assert.ok(Math.abs(fh.chemistry - expected(FACTS, ['Frode', 'Hans'])) < 1e-12);
   assert.ok(Math.abs(pt.chemistry - expected(FACTS, ['Per', 'Tor'])) < 1e-12);
   assert.ok(fh.chemistry > 0 && pt.chemistry < fh.chemistry);
-  assert.deepEqual(fh.subject, pairSubject('Hans', 'Frode'));
+  assert.equal(byPair.get('Hans & Tor').chemistry, null, 'only 3 games');
+  assert.equal(byPair.get('Frode & Per').chemistry, null, 'only 3 games');
 });
 
-test('chemistry: ties go to more games, then pair name; null when no pair qualifies', () => {
+test('pairsTable kjemi: exactly as expected is 0, not null; still sorted by games, not kjemi', () => {
   // Ten draws between equally rated pairs: both exactly as expected (0).
-  const draws = factsOf([{ date: N1, matches: [['Tor Per - Hans Frode', 'DDDDD'], [HF_TP, 'DDDDD']] }]);
-  const rows = compute('chemistry', draws, overallSubject()).rows;
-  assert.deepEqual(rows.map((r) => [r.pair, r.games, r.chemistry]), [[['Frode', 'Hans'], 10, 0], [['Per', 'Tor'], 10, 0]]);
   const more = factsOf([{ date: N1, matches: [['Tor Per - Hans Frode', 'DDDDD'], [HF_TP, 'DDDDD'], ['Tor Per - Kari Ola', 'D']] }]);
-  assert.deepEqual(compute('chemistry', more, overallSubject()).rows.map((r) => r.pair), [['Per', 'Tor'], ['Frode', 'Hans']]);
-  assert.equal(compute('chemistry', factsOf([{ date: N1, matches: [[HF_TP, 'AAA']] }]), overallSubject()), null);
+  const rows = compute('pairsTable', more, overallSubject()).rows;
+  assert.deepEqual(rows.map((r) => [r.pair, r.games, r.chemistry]), [
+    [['Per', 'Tor'], 11, rows[0].chemistry], [['Frode', 'Hans'], 10, 0], [['Kari', 'Ola'], 1, null],
+  ]);
+  assert.equal(typeof rows[0].chemistry, 'number');
 });
 
 test('pairChemistry: the chemistry of a and b as a pair; null unless they qualify', () => {

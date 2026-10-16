@@ -214,15 +214,14 @@ export const t = {
     worstPartner: { title: 'Dårligste makker', description: ({ minGames }) => `Lavest seiersandel sammen, minst ${minGames} spill som par.` },
     nemesis: { title: 'Erkefiende', description: ({ minGames }) => `Lavest seiersandel mot, minst ${minGames} spill.` },
     favoriteVictim: { title: 'Favorittoffer', description: ({ minGames }) => `Høyest seiersandel mot, minst ${minGames} spill.` },
-    pairsTable: { title: 'Alle par', description: 'Lag på to. På lag med tre telles hver spiller for seg.' },
+    pairsTable: {
+      title: 'Alle par',
+      description: ({ minGames }) => `Lag på to. På lag med tre telles hver spiller for seg. Kjemi: prosentpoeng over (eller under) det ratingen tilsier, per spill (seier 1, uavgjort ½). Vises med minst ${minGames} spill sammen.`,
+    },
     pairVsPairs: { title: 'Mot andre par', description: 'Bare spill mot lag på to.' },
     togetherWdl: { title: 'Sammen', description: 'Spill der de var på samme lag (to eller tre): S/U/T for laget.' },
     attendance: { title: 'Oppmøte', description: 'Kvelder hver spiller var med (også på benken), og andel av kveldene i perioden.' },
     nightsAttended: { title: 'Kvelder', description: 'Kvelder spilleren var med i perioden.' },
-    chemistry: {
-      title: 'Kjemi',
-      description: ({ minGames }) => `Hvor mye bedre (eller dårligere) paret scorer enn ratingen tilsier, i prosentpoeng per spill (seier 1, uavgjort ½). Minst ${minGames} spill sammen som par.`,
-    },
     pairChemistry: {
       title: 'Kjemi som par',
       description: ({ minGames }) => `Prosentpoeng over (eller under) det ratingen tilsier når de spiller sammen som par. Minst ${minGames} spill.`,
@@ -267,7 +266,6 @@ export const t = {
     overlay: 'Over tid',
     headToHead: 'Sammen og mot hverandre',
     attendance: 'Oppmøte',
-    chemistry: 'Kjemi',
     nights: 'Kvelder',
     form: 'Form',
     sets: 'Sett',

@@ -52,11 +52,12 @@ test('player results count games and matches on 3-player teams', () => {
 });
 
 test('pairsTable lists 2-player teams only', () => {
-  assert.deepEqual(compute('pairsTable', FACTS, overallSubject()), { columns: WDL_COLUMNS('pair', 'pair'), rows: [
-    { pair: ['Frode', 'Hans'], games: 6, W: 0, D: 1, L: 5, winRate: 0, subject: pairSubject('Frode', 'Hans') },
-    { pair: ['Per', 'Tor'], games: 5, W: 2, D: 0, L: 3, winRate: 0.4, subject: pairSubject('Per', 'Tor') },
-    { pair: ['Frode', 'Per'], games: 4, W: 1, D: 0, L: 3, winRate: 0.25, subject: pairSubject('Frode', 'Per') },
-    { pair: ['Hans', 'Tor'], games: 4, W: 3, D: 0, L: 1, winRate: 0.75, subject: pairSubject('Hans', 'Tor') },
+  const columns = [...WDL_COLUMNS('pair', 'pair'), { key: 'chemistry', format: 'signedPercent' }];
+  assert.deepEqual(compute('pairsTable', FACTS, overallSubject()), { columns, rows: [
+    { pair: ['Frode', 'Hans'], games: 6, W: 0, D: 1, L: 5, winRate: 0, chemistry: null, subject: pairSubject('Frode', 'Hans') },
+    { pair: ['Per', 'Tor'], games: 5, W: 2, D: 0, L: 3, winRate: 0.4, chemistry: null, subject: pairSubject('Per', 'Tor') },
+    { pair: ['Frode', 'Per'], games: 4, W: 1, D: 0, L: 3, winRate: 0.25, chemistry: null, subject: pairSubject('Frode', 'Per') },
+    { pair: ['Hans', 'Tor'], games: 4, W: 3, D: 0, L: 1, winRate: 0.75, chemistry: null, subject: pairSubject('Hans', 'Tor') },
   ] });
 });
 

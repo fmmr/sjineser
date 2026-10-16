@@ -37,11 +37,15 @@ test('pairVsPairs: per opposing pair from the subject pair’s perspective', () 
   ] });
 });
 
-test('pairsTable: every pair with games, most games first; row subject = pair', () => {
-  assert.deepEqual(compute('pairsTable', FACTS, overallSubject()), { columns: COLUMNS, rows: [
-    { pair: ['Frode', 'Hans'], games: 10, W: 5, D: 2, L: 3, winRate: 0.5, subject: PAIR },
-    { pair: ['Ola', 'Per'], games: 5, W: 3, D: 2, L: 0, winRate: 0.6, subject: pairSubject('Ola', 'Per') },
-    { pair: ['Per', 'Tor'], games: 5, W: 0, D: 0, L: 5, winRate: 0, subject: pairSubject('Per', 'Tor') },
-  ] });
+test('pairsTable: every pair with games, most games first, kjemi last; row subject = pair', () => {
+  const value = compute('pairsTable', FACTS, overallSubject());
+  assert.deepEqual(value.columns, [...COLUMNS, { key: 'chemistry', format: 'signedPercent' }]);
+  const [fh] = value.rows;
+  assert.equal(typeof fh.chemistry, 'number', '10 games together: kjemi shown');
+  assert.deepEqual(value.rows, [
+    { pair: ['Frode', 'Hans'], games: 10, W: 5, D: 2, L: 3, winRate: 0.5, chemistry: fh.chemistry, subject: PAIR },
+    { pair: ['Ola', 'Per'], games: 5, W: 3, D: 2, L: 0, winRate: 0.6, chemistry: null, subject: pairSubject('Ola', 'Per') },
+    { pair: ['Per', 'Tor'], games: 5, W: 0, D: 0, L: 5, winRate: 0, chemistry: null, subject: pairSubject('Per', 'Tor') },
+  ]);
   assert.equal(compute('pairsTable', factsOf([]), overallSubject()), null);
 });
