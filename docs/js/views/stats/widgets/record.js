@@ -40,6 +40,9 @@ function matchLine(match, query) {
   return scoreboard(match, query);
 }
 
+/** "Høst 2026 og Vår 2025": seasons by name, in the given order. @param {{ year: number, half: 1 | 2 }[]} seasons */
+export const seasonNames = (seasons) => t.names(seasons.map(t.statsUi.season));
+
 /** "Anne 5 · Dag 4 · Cato 2": the players a count record is mostly about, names linked. */
 function rankingLine(ranking, query) {
   return h('p', { class: 'record-ranking' }, ranking.flatMap(({ name, count }, i) => [
@@ -53,19 +56,20 @@ function rankingLine(ranking, query) {
 /**
  * Record value, then what it is about: a ranking of players (count records), the set (both
  * teams and the score), or its holders (linked; a team of three has three); and the date it was
- * set (with the year: records span seasons).
+ * set (with the year: records span seasons); seasons (e.g. seasons won) as a muted line of names.
  * @param {{ value: number, format: string, holders: string[], date?: string, match?: object,
- *   ranking?: { name: string, count: number }[] }} value
+ *   ranking?: { name: string, count: number }[], seasons?: { year: number, half: 1 | 2 }[] }} value
  * @param {{ query: Record<string, string> }} ctx
  */
-export function recordBody({ value, format, holders, date, match, ranking }, { query }) {
+export function recordBody({ value, format, holders, date, match, ranking, seasons }, { query }) {
   const about = ranking ? rankingLine(ranking, query)
     : match ? matchLine(match, query)
       : holders.length > 0 && h('p', {}, linkedNames(holders, query));
   return h('div', { class: 'stat-record' },
     h('p', { class: 'stat-value' }, formatValue(value, format)),
     about,
-    date && h('p', { class: 'muted' }, formatDateLong(date)));
+    date && h('p', { class: 'muted' }, formatDateLong(date)),
+    seasons && h('p', { class: 'muted' }, seasonNames(seasons)));
 }
 
 /** @returns {{ el: HTMLElement }} */

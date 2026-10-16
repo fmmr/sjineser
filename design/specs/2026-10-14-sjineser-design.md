@@ -381,9 +381,11 @@ winners (everyone when unfinished).
 - `number` — `{ value, format }` (format: `int`, `percent`, `rating`, `decimal`)
 - `wdl` — `{ W, D, L }` (D omitted/0 for match records)
 - `duel` — `{ left: { name, wins }, right: { name, wins }, draws }` (head-to-head; shown with names in the compare colours)
-- `table` — `{ columns: [{ key, format }], rows: [{ …, subject?, provisional? }] }` (rows may
+- `table` — `{ columns: [{ key, format }], rows: [{ …, subject?, provisional? }] }` (table format `season`
+  is `{ year, half }`, shown as "Vår 2026"; rows may
   link to a subject; `provisional: true` marks the row's rating "ny")
-- `record` — `{ value, format, holders: [names], date?, matchId? }`
+- `record` — `{ value, format, holders: [names], date?, matchId?, match?, ranking?, seasons? }` (`seasons`: a non-empty
+  list of `{ year, half }`, shown by name as a muted line, e.g. the seasons a player won)
 - `chart` — `{ series: [{ name, points: [{ x: date, y }] }] }`
 - `sets` — `{ sets: [{ matchId, number, A, B, score: { A, B, D }, winner, complete }] }` (sets in play order; night page)
 - `form` — `{ outcomes: ['W'|'D'|'L'] }` (a player's last 1–10 games, oldest first; shown as S/U/T chips,
@@ -492,6 +494,14 @@ on compare) is the player's win share in deciding games; `decisiveTable` (overal
 W/D/L and win share in them, by win share, then games, then name. Both need `MIN_DECISIVE_GAMES` (5)
 deciding games, one on a night page (`minGamesFor(filter, min)`). Placement: player page Resultater
 (after Seier i sett), an overview section after Rekorder, a night page section after Kveldens par.
+
+**Sesongens spiller** (added 2026-10-16): per season (half-year) with games, the player with the largest
+total rating change (sum of deltas); tie → more games, then name (`seasonWinners` in
+`catalog/seasonPlayers.js`). `seasonPlayers` (overall table: season, player, change, games; newest season
+first, the current season included) sits on the overview after Rekorder; `seasonTitles` (player `record`:
+the number of seasons won, with `seasons` listing them, newest first) on the player page after peak/low.
+Both are inherently across seasons, so they are computed only when the filter is all seasons (the
+default) and return null for a season or night filter.
 
 **Layout**: mobile first — headline numbers and one chart, details one tap deeper;
 wide screens add columns (tiles in an auto-fit grid, tables full width). Charts use

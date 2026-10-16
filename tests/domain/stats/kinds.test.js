@@ -8,7 +8,7 @@ const invalid = (kind, value) => assert.equal(isValidValue(kind, value), false, 
 test('known kinds and formats', () => {
   assert.deepEqual(KINDS, ['number', 'wdl', 'duel', 'table', 'record', 'chart', 'form', 'sets']);
   assert.deepEqual(NUMBER_FORMATS, ['int', 'percent', 'rating', 'signed', 'decimal', 'signedPercent']);
-  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form', 'countShare']);
+  assert.deepEqual(TABLE_FORMATS, [...NUMBER_FORMATS, 'player', 'pair', 'label', 'date', 'players', 'form', 'countShare', 'season']);
 });
 
 test('unknown kinds and null are never valid', () => {
@@ -86,6 +86,23 @@ test('record', () => {
   invalid('record', { value: 7, format: 'int', holders: [], date: '14.10.2026' });
   invalid('record', { value: 7, format: 'int', holders: [], matchId: 'x' });
   invalid('record', { value: 7, format: 'pair', holders: [] });
+});
+
+test('record: optional seasons, a non-empty list of { year, half }', () => {
+  valid('record', { value: 2, format: 'int', holders: [], seasons: [{ year: 2026, half: 1 }, { year: 2025, half: 2 }] });
+  invalid('record', { value: 0, format: 'int', holders: [], seasons: [] });
+  invalid('record', { value: 1, format: 'int', holders: [], seasons: [{ year: 2026, half: 3 }] });
+  invalid('record', { value: 1, format: 'int', holders: [], seasons: [{ year: '2026', half: 1 }] });
+  invalid('record', { value: 1, format: 'int', holders: [], seasons: '2026-1' });
+});
+
+test('table season cells: { year, half }', () => {
+  const columns = [{ key: 'season', format: 'season' }, { key: 'player', format: 'player' }];
+  valid('table', { columns, rows: [{ season: { year: 2026, half: 2 }, player: 'Anne' }] });
+  invalid('table', { columns, rows: [{ season: { year: 2026, half: 0 }, player: 'Anne' }] });
+  invalid('table', { columns, rows: [{ season: { year: 2026.5, half: 1 }, player: 'Anne' }] });
+  invalid('table', { columns, rows: [{ season: '2026-2', player: 'Anne' }] });
+  invalid('table', { columns, rows: [{ season: null, player: 'Anne' }] });
 });
 
 test('chart', () => {

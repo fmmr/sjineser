@@ -72,7 +72,7 @@ test('every registered stat is shown somewhere: on a page or in the derived comp
 });
 
 test('overview: leaderboard, summary, records, attendance (the nights table lives on the Kvelder tab)', () => {
-  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records', 'decisive']);
+  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'records', 'seasonPlayers', 'decisive']);
 });
 
 test('list pages: Spillere is the leaderboard of everyone who has played, Kvelder the nights table', () => {
@@ -100,7 +100,7 @@ test('player page: people records first (best/worst partner, nemesis/favourite v
 test('rating extremes: overview records end with highest/lowest; player peak/low sit next to the rating tile', () => {
   assert.deepEqual(PAGES.overview.sections.find((s) => s.id === 'records').stats.slice(-3),
     ['biggestUpset', 'highestRating', 'lowestRating']);
-  assert.deepEqual(PAGES.player.sections.find((s) => s.id === 'rating').stats,
+  assert.deepEqual(PAGES.player.sections.find((s) => s.id === 'rating').stats.slice(0, 4),
     ['rating', 'eloChart', 'peakRating', 'lowRating']);
 });
 
@@ -132,6 +132,13 @@ test('avgjørende spill: a table on the overview and night pages, the win share 
   const results = PAGES.player.sections.find((s) => s.id === 'results').stats;
   assert.equal(results[results.indexOf('matchWinRate') + 1], 'decisiveWinRate');
   assert.equal(tileTitleHidden({ id: 'decisive', stats: ['decisiveTable'] }), true);
+});
+
+test('sesongens spiller: an overview table after the records; season titles after peak/low on the player page', () => {
+  assert.deepEqual(PAGES.overview.sections.find((s) => s.id === 'seasonPlayers').stats, ['seasonPlayers']);
+  assert.deepEqual(PAGES.player.sections.find((s) => s.id === 'rating').stats,
+    ['rating', 'eloChart', 'peakRating', 'lowRating', 'seasonTitles']);
+  assert.equal(tileTitleHidden({ id: 'seasonPlayers', stats: ['seasonPlayers'] }), true);
 });
 
 test('night page: no stat with a minimum of games or that skips provisional games (one night is too short)', () => {

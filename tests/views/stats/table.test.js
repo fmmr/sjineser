@@ -20,6 +20,11 @@ test('table cells: form as S/U/T letters, oldest first; – without games', () =
   assert.equal(cellText([], 'form'), '–');
 });
 
+test('table cells: a season by name', () => {
+  assert.equal(cellText({ year: 2026, half: 1 }, 'season'), 'Vår 2026');
+  assert.equal(cellText({ year: 2025, half: 2 }, 'season'), 'Høst 2025');
+});
+
 test('sign colour follows the shown, rounded value', () => {
   assert.equal(signOf(12.6, 'signed'), 'up');
   assert.equal(signOf(-0.4, 'signed'), null);

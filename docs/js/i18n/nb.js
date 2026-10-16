@@ -242,6 +242,11 @@ export const t = {
       title: 'Avgjørende spill',
       description: ({ minDecisiveGames }) => `Spill der et lag kunne vinne settet, fordi et lag sto med 2 seire (2–0, 2–1 eller 2–2). Spillere med minst ${minDecisiveGames} slike spill (på kveldssiden fra første spill).`,
     },
+    seasonPlayers: {
+      title: 'Sesongens spiller',
+      description: 'Spilleren med mest rating vunnet hvert halvår (sum av endringene), nyeste først. Vises når alle sesonger er valgt.',
+    },
+    seasonTitles: { title: 'Sesongens spiller', description: 'Halvår spilleren vant mest rating. Vises når alle sesonger er valgt.' },
     headToHead: { title: 'Mot hverandre', description: 'Spill der de sto på hvert sitt lag (to eller tre): hvem som vant, og hvor mange som endte uavgjort.' },
   },
   /** Label cells in stat tables (format 'label'). */
@@ -259,6 +264,7 @@ export const t = {
     chemistry: 'Kjemi',
     date: 'Dato', players: 'Spillere', sets: 'Sett', draws: 'Uavgjort', winner: 'Kveldens vinner', winnerGain: '+/−',
     form: 'Form',
+    season: 'Sesong',
   },
   /** Section headings on the stats pages. */
   statsSections: {
@@ -280,6 +286,7 @@ export const t = {
     nightLeaderboard: 'Kveldens rangering',
     nightPairs: 'Kveldens par',
     decisive: 'Avgjørende spill',
+    seasonPlayers: 'Sesongens spiller',
   },
   statsUi: {
     title: 'Statistikk',

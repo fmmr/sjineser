@@ -47,11 +47,11 @@ export function signOf(value, format) {
 }
 
 /** Formats that are not numbers: left-aligned, never signed. */
-const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players', 'form'];
+const TEXT_FORMATS = [...LINK_FORMATS, 'label', 'date', 'players', 'form', 'season'];
 
 /**
  * Text of a cell; pairs read "Anne & Bjørn", player lists "Anne, Bjørn og Cato", dates
- * "14. okt. 2025", labels come from t.statsLabels, form reads "SSUT" (– without games).
+ * "14. okt. 2025", labels come from t.statsLabels, form reads "SSUT" (– without games), seasons "Vår 2026".
  * @param {unknown} value @param {string} format
  */
 /** "Anne, Bjørn og Cato" with each name linking to the player page. */
@@ -67,6 +67,7 @@ export function cellText(value, format) {
   if (format === 'pair') return t.statsUi.pair(value[0], value[1]);
   if (format === 'label') return t.statsLabels[value] ?? value;
   if (format === 'date') return formatDateLong(value);
+  if (format === 'season') return t.statsUi.season(value);
   if (format === 'players') return t.names(value);
   if (format === 'countShare') return `${formatValue(value.count, 'int')} (${formatValue(value.share, 'percent')})`;
   if (format === 'form') return value.length > 0 ? formLetters(value).join('') : t.statsUi.none;

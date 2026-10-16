@@ -13,13 +13,14 @@ export const PAGES = {
     { id: 'leaderboard', stats: ['leaderboard'] },
     { id: 'summary', stats: ['nightsCount', 'matchesCount', 'gamesCount', 'drawRate'] },
     { id: 'records', stats: ['longestMatch', 'longestNight', 'longestDrawStreak', 'longestWinStreak', 'cleanSweeps', 'comebacks', 'biggestUpset', 'highestRating', 'lowestRating'] },
+    { id: 'seasonPlayers', stats: ['seasonPlayers'] },
     { id: 'decisive', stats: ['decisiveTable'] },
   ] },
   players: { sections: [
     { id: 'leaderboard', stats: ['leaderboard'] },
   ] },
   player: { sections: [
-    { id: 'rating', stats: ['rating', 'eloChart', 'peakRating', 'lowRating'] },
+    { id: 'rating', stats: ['rating', 'eloChart', 'peakRating', 'lowRating', 'seasonTitles'] },
     { id: 'form', stats: ['form'] },
     { id: 'results', stats: ['gamesWdl', 'gameWinRate', 'matchesWdl', 'matchWinRate', 'decisiveWinRate', 'drawRate', 'nightsAttended'] },
     { id: 'streaks', stats: ['streaks'] },
