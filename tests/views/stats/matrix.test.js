@@ -4,8 +4,8 @@ import { abbreviate, matrixCellText, matrixTone, winShare } from '../../../docs/
 import { t } from '../../../docs/js/i18n/nb.js';
 
 test('matrix: a cell tooltip names both players and the results', () => {
-  assert.equal(t.statsUi.matrixCell('Anne', 'Bjørn', { W: 3, D: 1, L: 1 }), 'Anne mot Bjørn: 3 seire, 1 uavgjort, 1 tap');
-  assert.equal(t.statsUi.matrixCell('Anne', 'Bjørn', { W: 1, D: 0, L: 0 }), 'Anne mot Bjørn: 1 seier, 0 uavgjort, 0 tap');
+  assert.equal(t.statsUi.matrixCell('Anne', 'Bjørn', { W: 3, D: 1, L: 1 }), 'Anne mot Bjørn: 3 seire, 1 uavgjort, 1 tap av 5 spill.');
+  assert.equal(t.statsUi.matrixCell('Anne', 'Bjørn', { W: 1, D: 0, L: 0 }), 'Anne mot Bjørn: 1 seier, 0 uavgjort, 0 tap av 1 spill.');
 });
 
 test('matrix: column headers are the first three letters', () => {

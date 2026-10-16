@@ -41,24 +41,39 @@ export function matrixTone(cell) {
 /**
  * Player vs player grid: row headers are the players (linked to their page), column headers
  * their first three letters (full name as a tooltip), each cell the row player's win share
- * against the column player, tinted by who won more of their games (matrixTone) and linked to the
- * compare page.
+ * against the column player, tinted by who won more of their games (matrixTone). Tapping (or
+ * hovering / focusing) a cell shows its full record under the grid — wins, draws and losses of
+ * how many games — with a link to the compare page.
  * @param {{ players: string[], cells: MatrixCell[][] }} value
  * @param {{ query: Record<string, string> }} ctx
  */
 export function matrixBody({ players, cells }, { query }) {
+  const detail = h('p', { class: 'matrix-detail', 'aria-live': 'polite' }, t.statsUi.matrixHint);
+  let selected = null;
+
+  function show(td, row, col, wdl) {
+    selected?.removeAttribute('data-selected');
+    selected = td;
+    td.setAttribute('data-selected', '');
+    const href = statsHref(subjectPath(compareSubject(players[row], players[col])), query);
+    detail.replaceChildren(
+      h('span', {}, t.statsUi.matrixCell(players[row], players[col], wdl)), ' ',
+      h('a', { class: 'link', href }, t.statsUi.matrixCompare));
+  }
+
   const cell = (row, col, wdl) => {
     if (row === col || !wdl) return h('td', { class: 'matrix-cell', 'data-empty': row === col ? 'self' : 'none' });
     const label = t.statsUi.matrixCell(players[row], players[col], wdl);
     const { tone, strength } = matrixTone(wdl);
-    const td = h('td', { class: 'matrix-cell', 'data-tone': tone },
-      h('a', { href: statsHref(subjectPath(compareSubject(players[row], players[col])), query), title: label, 'aria-label': label },
-        matrixCellText(wdl)));
+    const td = h('td', { class: 'matrix-cell', 'data-tone': tone });
+    const select = () => show(td, row, col, wdl);
+    td.append(h('button', { type: 'button', title: label, 'aria-label': label, onclick: select, onmouseenter: select, onfocus: select },
+      matrixCellText(wdl)));
     td.style.setProperty('--strength', String(strength));
     return td;
   };
 
-  return h('div', { class: 'matrix-wrap' },
+  return h('div', { class: 'matrix-block' }, h('div', { class: 'matrix-wrap' },
     h('table', { class: 'matrix' },
       h('caption', { class: 'visually-hidden' }, t.statsUi.matrixCaption),
       h('thead', {}, h('tr', {},
@@ -66,7 +81,7 @@ export function matrixBody({ players, cells }, { query }) {
         players.map((name) => h('th', { scope: 'col' }, h('abbr', { title: name }, abbreviate(name)))))),
       h('tbody', {}, players.map((name, i) => h('tr', {},
         h('th', { scope: 'row' }, h('a', { class: 'link', href: statsHref(subjectPath(playerSubject(name)), query) }, name)),
-        cells[i].map((wdl, j) => cell(i, j, wdl)))))));
+        cells[i].map((wdl, j) => cell(i, j, wdl))))))), detail);
 }
 
 /** @returns {{ el: HTMLElement }} */
