@@ -41,7 +41,10 @@ Mark ideas `[x]` when shipped.
 - [x] Mot hverandre-matrise: player vs player grid of the row player's win share against the column player, tinted by more wins / more losses, a cell opens compare (Spillere tab)
 
 ## Ideas (ranked)
-(none right now — add new ideas here)
+1. **Kveldens MVP** — combination of rating gain and wins in deciding games tonight.
+2. **Rivalisering** — the two players who have met most often, with the score between them.
+3. **Comeback-konge** — the player with most sets won after trailing.
+4. **Uavgjort-kongen** — the player with the highest draw rate.
 
 ## Dropped
 - ~~Sit-outs per player~~ — with 3 vs 2 and 3 vs 3 nobody sits out with six or fewer players, so it would almost always be empty.
