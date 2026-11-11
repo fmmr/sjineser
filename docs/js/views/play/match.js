@@ -21,6 +21,28 @@ export function changedSides(before, after) {
   return ['A', 'B'].filter((side) => before[side] !== after[side]);
 }
 
+/**
+ * Result button text: the winning team by name ("Fredrik og HP vant"), or "Uavgjort",
+ * so nobody has to work out which team is A and which is B.
+ * @param {import('../../domain/match.js').Match} match
+ * @param {'A' | 'D' | 'B'} result
+ * @returns {string}
+ */
+export function resultLabel(match, result) {
+  return result === 'D' ? t.resultDraw : t.resultWon(t.names(teamOf(match, result)));
+}
+
+/**
+ * Accessible label for a team panel: names and score ("Fredrik og HP: 2 seire").
+ * @param {import('../../domain/match.js').Match} match
+ * @param {'A' | 'B'} side
+ * @param {number} wins
+ * @returns {string}
+ */
+export function teamLabel(match, side, wins) {
+  return t.teamScore(t.names(teamOf(match, side)), wins);
+}
+
 /** tapCooldownMs: taps closer together than this count as one (guards against double taps). */
 export function mountMatch(root, { store, actions, navigate, clock, tapCooldownMs = TAP_COOLDOWN_MS }) {
   let lastTap = 0;
@@ -58,7 +80,7 @@ export function mountMatch(root, { store, actions, navigate, clock, tapCooldownM
    * confirms the game), so a fresh element continues the pop where it was instead of restarting.
    */
   function scoreEl(side, wins) {
-    const el = h('span', { class: 'score' }, String(wins));
+    const el = h('span', { class: 'score', 'aria-hidden': 'true' }, String(wins));
     const elapsed = Date.now() - changedAt[side];
     if (elapsed < BUMP_MS) {
       el.classList.add('score-bump');
@@ -69,12 +91,14 @@ export function mountMatch(root, { store, actions, navigate, clock, tapCooldownM
 
   const teamPanel = (match, side, wins, winner) =>
     h('div', { class: 'team-panel', 'data-side': side, 'data-winner': String(winner === side) },
-      h('span', { class: 'team-names' }, t.names(teamOf(match, side))),
+      // Screen readers get one natural phrase instead of the names and a bare number.
+      h('span', { class: 'visually-hidden' }, teamLabel(match, side, wins)),
+      h('span', { class: 'team-names', 'aria-hidden': 'true' }, t.names(teamOf(match, side))),
       scoreEl(side, wins));
 
-  const resultButtons = () =>
+  const resultButtons = (match) =>
     h('div', { class: 'result-buttons' }, RESULT_ORDER.map((result) =>
-      h('button', { class: 'btn btn-result', type: 'button', 'data-side': result, onclick: () => record(result) }, t.results[result])));
+      h('button', { class: 'btn btn-result', type: 'button', 'data-side': result, onclick: () => record(result) }, resultLabel(match, result))));
 
   const winnerBanner = (match, winner, totals) =>
     h('div', { class: 'winner-banner', 'data-side': winner },
@@ -112,7 +136,7 @@ export function mountMatch(root, { store, actions, navigate, clock, tapCooldownM
         h('div', { class: 'teams' }, teamPanel(match, 'A', totals.A, winner), teamPanel(match, 'B', totals.B, winner)),
         h('p', { class: 'draws center' }, t.draws(totals.D)),
         h('ol', { class: 'sequence' }, games.map((g) => h('li', { 'data-side': g.result }, t.resultShort[g.result]))),
-        winner ? winnerBanner(match, winner, totals) : resultButtons(),
+        winner ? winnerBanner(match, winner, totals) : resultButtons(match),
         h('button', { class: 'btn btn-ghost', type: 'button', onclick: undo }, t.undo),
         h('p', { class: 'center' }, nightStatsLink(night.date))),
     );

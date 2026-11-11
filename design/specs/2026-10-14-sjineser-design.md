@@ -284,7 +284,10 @@ proposal); the stats section adds its own sub-navigation (§9 Navigation).
    A page rather than a bottom sheet: the list updates live as switches flip, and the field
    and chips need room on a small phone.
 4. **Match** — two large team panels, large score (e.g. **2 – 1**), the game sequence
-   (D A D B …; team names read "Anne, Bjørn og Cato" and wrap inside the panel), three large buttons: *Lag A vant* / *Uavgjort* / *Lag B vant*, and
+   (D A D B …; team names read "Anne, Bjørn og Cato", large and bold above the score, and
+   wrap inside the panel), three large buttons in team colours that name the winners instead
+   of "Lag A/B": *Anne og Bjørn vant* / *Uavgjort* / *Cato og Dag vant* (the text wraps inside
+   the button; no "Lag A/Lag B" labels on this screen), and
    *Angre* (undo). At 3 wins: a prominent winner banner and a *Neste kamp* button
    showing the next proposal.
 5. **Stats** — sections below, all with a season filter: a season by name /

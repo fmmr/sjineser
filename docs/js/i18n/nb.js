@@ -52,7 +52,11 @@ export const t = {
 
   matchTitle: (n) => `Sett ${n}`,
   noMatch: 'Ikke noe sett i gang.',
-  results: { A: 'Lag A vant', D: 'Uavgjort', B: 'Lag B vant' },
+  /** Result button text: "Fredrik og HP vant" (names from t.names). */
+  resultWon: (names) => `${names} vant`,
+  resultDraw: 'Uavgjort',
+  /** Team panel label for screen readers: "Fredrik og HP: 2 seire". */
+  teamScore: (names, wins) => `${names}: ${wins} ${wins === 1 ? 'seier' : 'seire'}`,
   resultShort: { A: 'A', D: 'U', B: 'B' },
   draws: (n) => `Uavgjort: ${n}`,
   undo: 'Angre',
