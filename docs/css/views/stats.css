@@ -442,6 +442,32 @@
   font-weight: 600;
 }
 
+/* Night page: the "email the summary" button under the stats, and its confirm sheet's preview. */
+.stats-night-email-row {
+  display: grid;
+  margin-top: var(--space-5);
+}
+
+.email-subject {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.email-preview {
+  max-height: 40dvh;
+  margin: 0;
+  padding: var(--space-3);
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .stats-filter {
   flex: 0 1 auto;
   min-height: 40px;

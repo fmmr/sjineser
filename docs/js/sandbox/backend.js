@@ -28,6 +28,8 @@ export function createSandboxApi({ storage, seed = SANDBOX_SEED }) {
   }
 
   function post(action, payload) {
+    // Like the server's reply, but nothing is sent: there are no email addresses in sandbox mode.
+    if (action === 'sendNightSummary') return Promise.resolve({ ok: true, result: 'applied', data: { recipients: 0 } });
     const { dataset, outcome } = applyOp(load(), { action, payload });
     if (outcome === 'conflict' || outcome === 'invalid') {
       return Promise.resolve({ ok: false, error: outcome, message: outcome });

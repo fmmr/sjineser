@@ -15,3 +15,12 @@ export const REPO_URL = 'https://github.com/fmmr/sjineser/';
 
 /** The Google Sheet holding the data (about page); opens only for people it is shared with. */
 export const SHEET_URL = 'https://docs.google.com/spreadsheets/d/170on0ejd0VDtE9G3fg8fNirwNvpRsbzm6odd-EuA7Wk/edit';
+
+/** The published app (links in emails, e.g. the night summary). Ends with a slash. */
+export const SITE_URL = 'https://sjineser.rodland.no/';
+
+/**
+ * The player who gets a test send of the night summary ("Send test til …"). A name only: the
+ * server looks up the address in the private Players email column, never sent to the app.
+ */
+export const SUMMARY_TEST_PLAYER = 'Fredrik';
