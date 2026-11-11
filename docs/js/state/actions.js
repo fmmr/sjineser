@@ -168,14 +168,14 @@ export function createActions({
      * with `testPlayer` only to that player. Sent at once, never queued: offline it fails and the
      * user tries again. A wrong PIN asks for it once and retries. Any night, also after it is over.
      * @param {string} date
-     * @param {{ subject: string, text: string }} mail
+     * @param {{ subject: string, text: string, html: string }} mail the HTML body and its plain-text fallback
      * @param {{ testPlayer?: string }} [options]
      * @returns {Promise<{ ok: true, recipients: number } | { ok: false, error: string }>}
      */
-    async sendNightSummary(date, { subject, text }, { testPlayer } = {}) {
+    async sendNightSummary(date, { subject, text, html }, { testPlayer } = {}) {
       if (!view().nights.some((n) => n.date === date)) return { ok: false, error: 'invalid' };
       if (!online()) return { ok: false, error: 'offline' };
-      const payload = { date, subject, text, ...(testPlayer ? { testPlayer } : {}) };
+      const payload = { date, subject, text, html, ...(testPlayer ? { testPlayer } : {}) };
       const send = () => api.post('sendNightSummary', payload, pin());
       let response = await send();
       if (!response.ok && response.error === 'pin') {
@@ -183,7 +183,11 @@ export function createActions({
         await askPin();
         if (pin() !== before) response = await send();
       }
-      if (response.ok) return { ok: true, recipients: response.data?.recipients ?? 0 };
+      if (response.ok) {
+        // The server stamped the night's summarySent: fetch it so the page shows it at once.
+        if (!testPlayer) store.refresh();
+        return { ok: true, recipients: response.data?.recipients ?? 0 };
+      }
       return { ok: false, error: mailError(response) };
     },
   };
@@ -192,6 +196,8 @@ export function createActions({
 /** The t.errors key for a failed sendNightSummary reply. */
 function mailError({ error, message }) {
   if (error === 'pin' || error === 'network') return error;
+  if (error === 'conflict' && message === ALREADY_SENT) return 'summaryAlreadySent';
+  if (error === 'quota' && message === DAILY_LIMIT) return 'summaryDailyLimit';
   if (error === 'quota') return 'mailQuota';
   if (error === 'invalid' && message === NO_RECIPIENTS) return 'noRecipients';
   if (error === 'invalid' && message === NO_TEST_RECIPIENT) return 'noTestRecipient';
@@ -201,3 +207,6 @@ function mailError({ error, message }) {
 /** The server's messages for a summary nobody would receive, and a test player without an address (apps-script/Code.js). */
 const NO_RECIPIENTS = 'No recipients';
 const NO_TEST_RECIPIENT = 'Test player has no email';
+/** …a night whose summary already went out (Nights.summarySent), and the daily cap of real sends. */
+const ALREADY_SENT = 'Summary already sent';
+const DAILY_LIMIT = 'Daily send limit reached';

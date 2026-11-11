@@ -94,6 +94,8 @@ export const t = {
     mailQuota: 'Dagens kvote for e-post er brukt opp. Prøv igjen i morgen.',
     noTestRecipient: 'Testmottakeren har ingen e-postadresse i regnearket',
     sendFailed: 'E-posten ble ikke sendt',
+    summaryAlreadySent: 'Oppsummeringen for denne kvelden er allerede sendt',
+    summaryDailyLimit: 'Dagens grense for oppsummeringer er nådd. Prøv igjen i morgen.',
   },
 
   /** The night summary email (built here, sent as plain text) and its button and sheet on the night page. */
@@ -103,18 +105,39 @@ export const t = {
     heading: (date) => `Kveld ${date}`,
     players: (names) => `Med: ${names}`,
     winner: (name, gain) => `Kveldens vinner: ${name} (${gain})`,
+    /** The talking point under the winner: the night's most notable record. */
+    highlight: {
+      winStreak: (names, n) => `${names} vant ${n} spill på rad.`,
+      comeback: (names) => `${names} snudde 0–2 til 3–2.`,
+      longestSet: (set, games) => `Sett ${set} varte i ${games} spill.`,
+    },
     leaderboardHeading: 'Kveldens rangering',
-    leaderboardRow: (rank, name, change, games) => `${rank}. ${name}: ${change} (${games} spill)`,
+    leaderboardRow: (rank, name, change, games, rating, form) =>
+      `${rank}. ${name}: ${change} (${games} spill), rating ${rating}${form ? `, form ${form}` : ''}`,
     satOut: (rank, name) => `${rank}. ${name}: sto over`,
+    satOutLabel: 'sto over',
     setsHeading: 'Sett',
     score: (a, aWins, bWins, b) => `${a} ${aWins}–${bWins} ${b}`,
     set: (n, score) => `Sett ${n}: ${score}`,
     noGames: 'Ingen spill denne kvelden.',
+    /** "2 S, 1 U, 0 T" */
+    wdl: (W, D, L) => `${W} S, ${D} U, ${L} T`,
+    decisiveRow: (name, games, wdl, winRate) => `${name}: ${games} spill, ${wdl} (${winRate} seier)`,
+    pairRow: (names, games, wdl, chemistry) => `${names}: ${games} spill, ${wdl}${chemistry ? `, kjemi ${chemistry}` : ''}`,
     recordsHeading: 'Rekorder',
     record: (title, value, about) => `${title}: ${value} (${about})`,
+    recordPlain: (title, value) => `${title}: ${value}`,
     games: (n) => `${n} spill`,
+    ratingGap: (n) => `${n} ratingpoeng`,
     ranking: (entries) => entries.map(({ name, count }) => `${name} ${count}`).join(', '),
+    seasonHeading: (season) => `${season} så langt`,
+    leagueRow: (rank, name, points, nights, setsWon) => `${rank}. ${name}: ${points} poeng (${nights} ${nights === 1 ? 'kveld' : 'kvelder'}, ${setsWon} sett vunnet)`,
+    eloHeading: 'Rating og endring i sesongen',
+    eloRow: (rank, name, rating, change, games) => `${rank}. ${name}: ${rating} (${change}, ${games} spill)`,
     link: (url) => `Se hele kvelden: ${url}`,
+    statsLink: (url) => `All statistikk: ${url}`,
+    nightLinkLabel: 'Se hele kvelden',
+    statsLinkLabel: 'All statistikk',
     confirmTitle: 'Sende oppsummeringen?',
     confirmMessage: 'Den sendes på e-post til alle aktive spillere som har e-postadresse i regnearket.',
     sandboxNote: 'Testmodus: ingen e-post blir sendt.',
@@ -125,6 +148,10 @@ export const t = {
     sending: 'Sender …',
     sent: (n) => `Sendt til ${n} ${n === 1 ? 'spiller' : 'spillere'}`,
     sentTest: (name) => `Test sendt til ${name}`,
+    /** The night's real summary already went out (Nights.summarySent). */
+    sentAt: (date, time) => `Oppsummering sendt ${date} kl. ${time}`,
+    sentAtUnknown: (text) => `Oppsummering sendt (${text})`,
+    resendHint: 'Tøm summarySent i regnearket for å sende på nytt',
   },
 
   proposal: {
@@ -416,6 +443,11 @@ function localDate(iso) {
 
 /** "2026-10-14" → "14. okt." */
 export const formatDate = (iso) => dateFormat.format(localDate(iso));
+
+const timeFormat = new Intl.DateTimeFormat('nb-NO', { hour: '2-digit', minute: '2-digit' });
+
+/** A moment's local clock time: "21:03". @param {Date} date */
+export const formatTime = (date) => timeFormat.format(date);
 
 /** "2025-10-14" → "14. okt. 2025" */
 export const formatDateLong = (iso) => longDateFormat.format(localDate(iso));

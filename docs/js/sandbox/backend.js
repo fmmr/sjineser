@@ -28,8 +28,7 @@ export function createSandboxApi({ storage, seed = SANDBOX_SEED }) {
   }
 
   function post(action, payload) {
-    // Like the server's reply, but nothing is sent: there are no email addresses in sandbox mode.
-    if (action === 'sendNightSummary') return Promise.resolve({ ok: true, result: 'applied', data: { recipients: 0 } });
+    if (action === 'sendNightSummary') return Promise.resolve(sendNightSummary(payload));
     const { dataset, outcome } = applyOp(load(), { action, payload });
     if (outcome === 'conflict' || outcome === 'invalid') {
       return Promise.resolve({ ok: false, error: outcome, message: outcome });
@@ -39,6 +38,22 @@ export function createSandboxApi({ storage, seed = SANDBOX_SEED }) {
     // Like the server: addPlayer reports the stored spelling of the name.
     if (action === 'addPlayer') response.data = { name: findPlayer(dataset.players, payload.name).name };
     return Promise.resolve(response);
+  }
+
+  /**
+   * Like the server's reply, but nothing is sent: there are no email addresses in sandbox mode.
+   * A real send stamps the night's summarySent once and is refused after that, as on the server.
+   */
+  function sendNightSummary({ date, testPlayer }) {
+    const sent = { ok: true, result: 'applied', data: { recipients: 0 } };
+    if (testPlayer) return sent;
+    const dataset = load();
+    const night = dataset.nights.find((n) => n.date === date);
+    if (!night) return { ok: false, error: 'invalid', message: 'Unknown night' };
+    if (night.summarySent) return { ok: false, error: 'conflict', message: 'Summary already sent' };
+    night.summarySent = new Date().toISOString();
+    storage.set(DATA_KEY, dataset);
+    return sent;
   }
 
   // Seed now, so the pretend date exists before anything asks the clock for today.

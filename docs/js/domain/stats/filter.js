@@ -20,6 +20,9 @@ export function parseFilter(text, today) {
   return seasonFilter(found ? { year: Number(found[1]), half: Number(found[2]) } : seasonOf(today));
 }
 
+/** The season a date falls in, e.g. a night's season. @param {string} date YYYY-MM-DD @returns {Filter} */
+export const seasonFilterOf = (date) => seasonFilter(seasonOf(date));
+
 /** One night's games (the night page). @param {string} date YYYY-MM-DD @returns {Filter} */
 export const nightFilter = (date) => ({ kind: 'night', date });
 

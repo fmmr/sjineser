@@ -3,7 +3,7 @@ import { addDays } from './dates.js';
 /**
  * `players` is everyone who was there that night (attendance; only grows during the night);
  * `left` those of them who have gone home (absent in older data = nobody).
- * @typedef {{ date: string, players: string[], left?: string[] }} Night
+ * @typedef {{ date: string, players: string[], left?: string[], summarySent?: string }} Night
  */
 /**
  * A team has 2 or 3 players. A3 / B3 are '' (or absent in older data) for a 2-player team.

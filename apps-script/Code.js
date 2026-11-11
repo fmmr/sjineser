@@ -9,8 +9,10 @@
  * (only development data existed then).
  *
  * Nights layout: date, players (everyone who was there, comma-joined), left (those of them who
- * have gone home, comma-joined, may be blank). setup() adds the `left` header to an older sheet;
- * existing rows keep a blank cell, which reads as nobody left.
+ * have gone home, comma-joined, may be blank), summarySent (ISO timestamp of the night's real
+ * summary email, blank until sent; clear it by hand to allow another send). ensureHeaders() adds
+ * missing headers (e.g. `left`, `summarySent`) to an older sheet on every request; existing rows
+ * keep blank cells, which read as nobody left / not sent.
  *
  * Players layout: name, active, email. `email` is PRIVATE: it is only read by sendNightSummary
  * and never leaves the script (doGet is public; PARSERS.Players returns only { name, active }).
@@ -18,16 +20,18 @@
  *
  * sendNightSummary uses MailApp, which needs the "Send email as you" scope (script.send_mail):
  * the owner authorises it once by running a function from the editor after deploying. Mail goes
- * against the account's daily recipient quota (MailApp.getRemainingDailyQuota()).
+ * against the account's daily recipient quota (MailApp.getRemainingDailyQuota()). Anti-spam: a
+ * night's summary goes out for real once (Nights.summarySent), and at most MAX_DAILY_SENDS real
+ * sends a day across all nights (Script Property SUMMARY_SENDS = 'YYYY-MM-DD:n').
  */
 
 const TABS = {
   Players: ['name', 'active', 'email'],
-  Nights: ['date', 'players', 'left'],
+  Nights: ['date', 'players', 'left', 'summarySent'],
   Matches: ['matchId', 'date', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3'],
   Games: ['matchId', 'gameNo', 'result', 'timestamp'],
 };
-const TEXT_COLUMNS = { Nights: ['A'], Matches: ['A', 'B'], Games: ['A', 'D'] };
+const TEXT_COLUMNS = { Nights: ['A', 'D'], Matches: ['A', 'B'], Games: ['A', 'D'] };
 const SEATS = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3'];
 /** Seat columns of Matches: C (3) to H (8). The status formula sits right after them, in I. */
 const FIRST_SEAT_COLUMN = 3;
@@ -37,10 +41,16 @@ const RESULTS = ['A', 'B', 'D'];
 const MATCH_ID = /^\d{4}-\d{2}-\d{2}#\d+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const LOCK_TIMEOUT_MS = 10000;
-/** Caps for the night summary email (the client builds the text; this only bounds it). */
+/** Caps for the night summary email (the client builds the text and HTML; this only bounds them). */
 const MAX_SUBJECT = 200;
 const MAX_TEXT = 20000;
+const MAX_HTML = 100000;
 const TEST_SUBJECT_PREFIX = '[TEST] ';
+/** Nights column of summarySent (D). */
+const SUMMARY_SENT_COLUMN = 4;
+/** Real summary sends allowed per day (script time zone), all nights together; counted in SUMMARY_SENDS. */
+const MAX_DAILY_SENDS = 3;
+const SENDS_PROPERTY = 'SUMMARY_SENDS';
 /** A plain address check: something@domain.tld, no spaces or list separators. */
 const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const STATUS_FORMULA =
@@ -51,7 +61,10 @@ const STATUS_FORMULA =
 // ---------- HTTP entry points ----------
 
 function doGet() {
-  return respond(() => done('noop', readAll()));
+  return respond(() => {
+    ensureHeaders();
+    return done('noop', readAll());
+  });
 }
 
 function doPost(e) {
@@ -87,6 +100,7 @@ function handlePost(e) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(LOCK_TIMEOUT_MS)) return fail('busy', 'Busy, try again');
   try {
+    ensureHeaders();
     return handler(request.payload || {});
   } finally {
     lock.releaseLock();
@@ -240,30 +254,50 @@ const HANDLERS = {
   },
 
   /**
-   * Emails a night summary (subject and plain text built by the app) in ONE message: to the
-   * script owner, every active player with an address in BCC. With `testPlayer` (a name) only
-   * that player gets it, as `to`, with "[TEST] " before the subject. Changes no data and is not
-   * idempotent (a retry sends again); the reply holds the count only, never addresses.
+   * Emails a night summary (subject, HTML body and plain-text fallback, all built by the app) in
+   * ONE message: to the script owner, every active player with an address in CC (the players see
+   * who got it). With `testPlayer` (a name) only that player gets it, as `to`, with "[TEST] "
+   * before the subject. A real send happens once per night (refused as `conflict` once
+   * summarySent is set; stamps it after sending) and at most MAX_DAILY_SENDS times a day
+   * (`quota`); test sends skip both and stamp nothing. Not idempotent otherwise; the reply holds
+   * the count only, never addresses.
    */
-  sendNightSummary({ date, subject, text, testPlayer }) {
-    if (!readTab('Nights').some((r) => r.value.date === date)) return fail('invalid', 'Unknown night');
-    if (typeof subject !== 'string' || !subject.trim() || typeof text !== 'string' || !text.trim()) {
+  sendNightSummary({ date, subject, text, html, testPlayer }) {
+    const night = readTab('Nights').find((r) => r.value.date === date);
+    if (!night) return fail('invalid', 'Unknown night');
+    if (typeof subject !== 'string' || !subject.trim() || typeof text !== 'string' || !text.trim()
+      || typeof html !== 'string' || !html.trim()) {
       return fail('invalid', 'Empty email');
     }
     const test = typeof testPlayer === 'string' && testPlayer.trim() !== '';
+    if (!test && night.value.summarySent) return fail('conflict', 'Summary already sent');
+    const sends = test ? null : sendsToday();
+    if (sends && sends.count >= MAX_DAILY_SENDS) return fail('quota', 'Daily send limit reached');
     const recipients = summaryRecipients(readPlayersWithEmail(), test ? testPlayer : undefined);
     if (recipients.length === 0) return fail('invalid', test ? 'Test player has no email' : 'No recipients');
     const message = test
       ? { to: recipients[0], subject: TEST_SUBJECT_PREFIX + subject }
-      : { to: Session.getEffectiveUser().getEmail(), bcc: recipients.join(','), subject };
+      : { to: Session.getEffectiveUser().getEmail(), cc: recipients.join(','), subject };
     // The owner (`to`) counts against the quota as well.
     if (MailApp.getRemainingDailyQuota() < (test ? 1 : recipients.length + 1)) return fail('quota', 'Daily email quota used up');
     message.subject = message.subject.slice(0, MAX_SUBJECT);
     message.body = text.slice(0, MAX_TEXT);
+    message.htmlBody = html.slice(0, MAX_HTML);
     MailApp.sendEmail(message);
+    if (!test) {
+      PropertiesService.getScriptProperties().setProperty(SENDS_PROPERTY, `${sends.day}:${sends.count + 1}`);
+      tab('Nights').getRange(night.row, SUMMARY_SENT_COLUMN).setNumberFormat('@').setValue(new Date().toISOString());
+    }
     return done('applied', { recipients: recipients.length });
   },
 };
+
+/** Real summary sends so far today (script time zone), from SUMMARY_SENDS; another day counts from 0. */
+function sendsToday() {
+  const day = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const found = /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(PropertiesService.getScriptProperties().getProperty(SENDS_PROPERTY) || '');
+  return { day, count: found && found[1] === day ? Number(found[2]) : 0 };
+}
 
 /**
  * Who gets the night summary: the valid addresses (trimmed, no duplicates in any casing) of the
@@ -292,7 +326,9 @@ const PARSERS = {
   // PRIVACY: never add `email` (column C) here. doGet returns these objects to anyone; addresses
   // are read only by readPlayersWithEmail() for sendNightSummary (tests/apps-script/code.test.js checks doGet).
   Players: ([name, active]) => ({ name: String(name).trim(), active: active === true || String(active).toUpperCase() === 'TRUE' }),
-  Nights: ([date, players, left]) => ({ date: isoDate(date), players: splitNames(players), left: splitNames(left) }),
+  Nights: ([date, players, left, summarySent]) => ({
+    date: isoDate(date), players: splitNames(players), left: splitNames(left), summarySent: timestamp(summarySent),
+  }),
   Matches: ([matchId, date, ...seats]) => {
     const match = { matchId: String(matchId).trim(), date: isoDate(date) };
     SEATS.forEach((seat, i) => { match[seat] = String(seats[i] == null ? '' : seats[i]).trim(); });
@@ -378,6 +414,26 @@ function append(name, cells) {
   sheet.getRange(row, 1, 1, cells.length).setValues([cells]);
 }
 
+let headersChecked = false;
+
+/**
+ * Writes any missing header cell of row 1 of every tab (e.g. `summarySent` on an older Nights
+ * tab), so a new column needs no setup() run. Cheap and idempotent: one read per tab, writes
+ * only blanks; once per execution. Tabs that do not exist yet are left to setup().
+ */
+function ensureHeaders() {
+  if (headersChecked) return;
+  headersChecked = true;
+  Object.keys(TABS).forEach((name) => {
+    const sheet = tab(name);
+    if (!sheet) return;
+    const cells = sheet.getRange(1, 1, 1, TABS[name].length).getValues()[0];
+    TABS[name].forEach((title, i) => {
+      if (String(cells[i] == null ? '' : cells[i]).trim() === '') sheet.getRange(1, i + 1).setValue(title);
+    });
+  });
+}
+
 // ---------- Setup (run once per sheet from the editor) ----------
 
 function setup() {
@@ -423,6 +479,12 @@ function isoDate(value) {
   return value instanceof Date
     ? Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd')
     : String(value).trim();
+}
+
+/** A timestamp cell as an ISO string ('' when blank); a cell Sheets turned into a date is converted back. */
+function timestamp(cell) {
+  if (cell instanceof Date) return cell.toISOString();
+  return String(cell == null ? '' : cell).trim();
 }
 
 /** A comma-joined cell as trimmed names; blank (or missing) is an empty list. */

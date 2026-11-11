@@ -283,7 +283,8 @@ function mailSetup(replies, { online = true, pin = '1234', newPin = null } = {})
   storage.set('dataset', nightWithMatch());
   storage.set('pin', pin);
   const outbox = fakeOutbox();
-  const store = createStore({ storage, outbox, api: { getAll: async () => ({ ok: false }) } });
+  const refreshes = [];
+  const store = createStore({ storage, outbox, api: { getAll: async () => { refreshes.push(true); return { ok: false }; } } });
   const calls = [];
   const api = {
     post: async (action, payload, sentPin) => {
@@ -301,22 +302,31 @@ function mailSetup(replies, { online = true, pin = '1234', newPin = null } = {})
       if (newPin) storage.set('pin', newPin);
     },
   });
-  return { actions, calls, asked, outbox };
+  return { actions, calls, asked, outbox, refreshes };
 }
-const MAIL = { subject: 'S', text: 'T' };
+const MAIL = { subject: 'S', text: 'T', html: '<p>T</p>' };
 const SENT = (recipients) => ({ ok: true, result: 'applied', data: { recipients } });
 
 test('sendNightSummary posts once, straight to the api (not the outbox), and reports the recipient count', async () => {
   const { actions, calls, outbox } = mailSetup([SENT(5)]);
   assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 5 });
-  assert.deepEqual(calls, [{ action: 'sendNightSummary', payload: { date: DATE, subject: 'S', text: 'T' }, pin: '1234' }]);
+  assert.deepEqual(calls, [{ action: 'sendNightSummary', payload: { date: DATE, subject: 'S', text: 'T', html: '<p>T</p>' }, pin: '1234' }]);
   assert.deepEqual(outbox.queue, []);
 });
 
 test('sendNightSummary with a test player sends the name along (the server mails only them)', async () => {
   const { actions, calls } = mailSetup([SENT(1)]);
   assert.deepEqual(await actions.sendNightSummary(DATE, MAIL, { testPlayer: 'Fredrik' }), { ok: true, recipients: 1 });
-  assert.deepEqual(calls[0].payload, { date: DATE, subject: 'S', text: 'T', testPlayer: 'Fredrik' });
+  assert.deepEqual(calls[0].payload, { date: DATE, subject: 'S', text: 'T', html: '<p>T</p>', testPlayer: 'Fredrik' });
+});
+
+test('sendNightSummary: after a real send the store refreshes (the night now shows summarySent); not after a test', async () => {
+  const sent = mailSetup([SENT(5)]);
+  await sent.actions.sendNightSummary(DATE, MAIL);
+  assert.equal(sent.refreshes.length, 1);
+  const tested = mailSetup([SENT(1)]);
+  await tested.actions.sendNightSummary(DATE, MAIL, { testPlayer: 'Fredrik' });
+  assert.equal(tested.refreshes.length, 0);
 });
 
 test('sendNightSummary works after the night is over, but needs a known night', async () => {
@@ -338,6 +348,8 @@ test('sendNightSummary maps server errors to t.errors keys', async () => {
     [{ ok: false, error: 'invalid', message: 'No recipients' }, 'noRecipients'],
     [{ ok: false, error: 'quota', message: 'Daily email quota used up' }, 'mailQuota'],
     [{ ok: false, error: 'invalid', message: 'Test player has no email' }, 'noTestRecipient'],
+    [{ ok: false, error: 'conflict', message: 'Summary already sent' }, 'summaryAlreadySent'],
+    [{ ok: false, error: 'quota', message: 'Daily send limit reached' }, 'summaryDailyLimit'],
     [{ ok: false, error: 'invalid', message: 'Unknown night' }, 'sendFailed'],
     [{ ok: false, error: 'busy' }, 'sendFailed'],
     [{ ok: false, error: 'server', message: 'boom' }, 'sendFailed'],
