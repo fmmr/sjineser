@@ -92,6 +92,34 @@ export function createActions({ store, outbox, clock = createClock(), now = () =
       return submit('startNight', { date: clock.today(), players });
     },
 
+    /** Puts an existing player on the active night's roster, or brings back one who went home. */
+    joinNight(name) {
+      const active = night();
+      if (!active) return { ok: false, error: 'noNight' };
+      const player = findPlayer(view().players, name);
+      if (!player) return { ok: false, error: 'unknownPlayer' };
+      return submit('joinNight', { date: active.date, name: player.name });
+    },
+
+    /** Marks a player on the active night's roster as gone home. */
+    leaveNight(name) {
+      const active = night();
+      if (!active) return { ok: false, error: 'noNight' };
+      const player = findPlayer(view().players, name);
+      if (!player || !active.players.includes(player.name)) return { ok: false, error: 'unknownPlayer' };
+      return submit('leaveNight', { date: active.date, name: player.name });
+    },
+
+    /** Creates a new player (same rules as addPlayer) and puts them on the active night's roster. */
+    addPlayerToNight(name) {
+      const active = night();
+      if (!active) return { ok: false, error: 'noNight' };
+      const error = validateNewName(name, view().players);
+      if (error) return { ok: false, error };
+      const added = submit('addPlayer', { name: name.trim() });
+      return added.ok ? submit('joinNight', { date: active.date, name: name.trim() }) : added;
+    },
+
     /**
      * Starts the next match. Teams have 2 or 3 players; A3 / B3 may be left out (or '') for
      * a 2-player team. An empty current match is abandoned by removing it.

@@ -233,3 +233,62 @@ test('player ops with a missing payload do not throw', () => {
     assert.equal(applyOp(withKari(), { action }).outcome, 'invalid', action);
   }
 });
+
+// ---------- Joining and leaving a night ----------
+
+const nightOf = (ds) => ds.nights.find((n) => n.date === DATE);
+
+test('startNight stores an empty left list', () => {
+  const { dataset: ds } = applyOp(dataset(), op('startNight', { date: DATE, players: FOUR }));
+  assert.deepEqual(nightOf(ds), { date: DATE, players: FOUR, left: [] });
+});
+
+test('joinNight appends an existing player to the roster under the stored name', () => {
+  const { dataset: ds, outcome: o } = applyOp(withKari(), op('joinNight', { date: DATE, name: ' kari ' }));
+  assert.equal(o, 'applied');
+  assert.deepEqual(nightOf(ds).players, [...FOUR, 'Kari']);
+  assert.equal(outcome(ds, 'joinNight', { date: DATE, name: 'Kari' }), 'noop', 'a retry is a noop');
+  assert.equal(outcome(withKari(), 'joinNight', { date: DATE, name: 'Hans' }), 'noop', 'already here');
+});
+
+test('joinNight is invalid without such a night or such a player', () => {
+  assert.equal(outcome(withKari(), 'joinNight', { date: '2026-10-15', name: 'Kari' }), 'invalid');
+  assert.equal(outcome(withKari(), 'joinNight', { date: DATE, name: 'Ukjent' }), 'invalid');
+  assert.equal(outcome(withKari(), 'joinNight', { date: DATE, name: 42 }), 'invalid');
+  assert.equal(outcome(withKari(), 'joinNight', {}), 'invalid');
+  assert.equal(applyOp(withKari(), { action: 'joinNight' }).outcome, 'invalid');
+});
+
+test('leaveNight marks a roster player as gone home; joinNight brings them back', () => {
+  const { dataset: gone, outcome: o } = applyOp(withKari(), op('leaveNight', { date: DATE, name: 'per' }));
+  assert.equal(o, 'applied');
+  assert.deepEqual(nightOf(gone).players, FOUR, 'attendance keeps everyone who was there');
+  assert.deepEqual(nightOf(gone).left, ['Per']);
+  assert.equal(outcome(gone, 'leaveNight', { date: DATE, name: 'Per' }), 'noop', 'a retry is a noop');
+
+  const { dataset: back, outcome: again } = applyOp(gone, op('joinNight', { date: DATE, name: 'Per' }));
+  assert.equal(again, 'applied');
+  assert.deepEqual(nightOf(back), { date: DATE, players: FOUR, left: [] });
+});
+
+test('leaveNight is invalid for a player who is not on the roster, or without such a night', () => {
+  assert.equal(outcome(withKari(), 'leaveNight', { date: DATE, name: 'Kari' }), 'invalid');
+  assert.equal(outcome(withKari(), 'leaveNight', { date: DATE, name: 'Ukjent' }), 'invalid');
+  assert.equal(outcome(withKari(), 'leaveNight', { date: '2026-10-15', name: 'Hans' }), 'invalid');
+  assert.equal(outcome(withKari(), 'leaveNight', {}), 'invalid');
+  assert.equal(applyOp(withKari(), { action: 'leaveNight' }).outcome, 'invalid');
+});
+
+test('joinNight and leaveNight do not mutate the input', () => {
+  const ds = withKari();
+  const snapshot = structuredClone(ds);
+  applyOp(ds, op('joinNight', { date: DATE, name: 'Kari' }));
+  applyOp(ds, op('leaveNight', { date: DATE, name: 'Hans' }));
+  assert.deepEqual(ds, snapshot);
+});
+
+test('renamePlayer also renames the player in the left list', () => {
+  const { dataset: gone } = applyOp(withKari(), op('leaveNight', { date: DATE, name: 'Hans' }));
+  const { dataset: ds } = applyOp(gone, op('renamePlayer', { from: 'Hans', to: 'Johannes' }));
+  assert.deepEqual(nightOf(ds).left, ['Johannes']);
+});

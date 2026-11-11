@@ -229,6 +229,43 @@ test('setPlayerActive enqueues only real changes', () => {
   assert.equal(store.get().players.find((p) => p.name === 'Hans').active, false);
 });
 
+test('joinNight adds an existing player to the active night under the stored name', () => {
+  const base = nightWithMatch();
+  const { actions, outbox, store } = setup({ ...base, players: [...base.players, { name: 'Kari', active: true }] });
+  assert.deepEqual(actions.joinNight('Nobody'), { ok: false, error: 'unknownPlayer' });
+  assert.deepEqual(actions.joinNight('kari'), { ok: true });
+  assert.deepEqual(actions.joinNight('Kari'), { ok: true }, 'already here: nothing to do');
+  assert.deepEqual(outbox.queue.map((op) => [op.action, op.payload]), [['joinNight', { date: DATE, name: 'Kari' }]]);
+  assert.deepEqual(store.get().nights[0].players, [...FOUR, 'Kari']);
+});
+
+test('leaveNight marks a player on the roster as gone home; joinNight brings them back', () => {
+  const { actions, outbox, store } = setup(nightWithMatch());
+  assert.deepEqual(actions.leaveNight('Nobody'), { ok: false, error: 'unknownPlayer' });
+  assert.deepEqual(actions.leaveNight('per'), { ok: true });
+  assert.deepEqual(store.get().nights[0].left, ['Per']);
+  assert.deepEqual(actions.joinNight('Per'), { ok: true });
+  assert.deepEqual(store.get().nights[0].left, []);
+  assert.deepEqual(queued(outbox), ['leaveNight Per', 'joinNight Per']);
+});
+
+test('addPlayerToNight creates a new player and puts them on the roster', () => {
+  const { actions, outbox, store } = setup(nightWithMatch());
+  assert.deepEqual(actions.addPlayerToNight('hans'), { ok: false, error: 'duplicate' });
+  assert.deepEqual(actions.addPlayerToNight('A, B'), { ok: false, error: 'comma' });
+  assert.deepEqual(actions.addPlayerToNight(' Kari '), { ok: true });
+  assert.deepEqual(queued(outbox), ['addPlayer Kari', 'joinNight Kari']);
+  assert.deepEqual(store.get().nights[0].players, [...FOUR, 'Kari']);
+});
+
+test('roster changes need an active night', () => {
+  const { actions, outbox } = setup(nightWithMatch(), NEXT_NOON);
+  assert.deepEqual(actions.joinNight('Hans'), { ok: false, error: 'noNight' });
+  assert.deepEqual(actions.leaveNight('Hans'), { ok: false, error: 'noNight' });
+  assert.deepEqual(actions.addPlayerToNight('Kari'), { ok: false, error: 'noNight' });
+  assert.deepEqual(outbox.queue, []);
+});
+
 test('deletePlayer refuses players with history and removes the others', () => {
   const base = nightWithMatch();
   const { actions, outbox, store } = setup({ ...base, players: [...base.players, { name: 'Kari', active: true }] });

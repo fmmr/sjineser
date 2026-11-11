@@ -1,5 +1,5 @@
 import { ratingOf } from './elo.js';
-import { MIN_TEAM_SIZE, currentNight, matchesOfNight, playersOf, teamOf } from './match.js';
+import { MIN_TEAM_SIZE, currentNightAvailable, matchesOfNight, playersOf, teamOf } from './match.js';
 import { byName } from './players.js';
 import { inSeason, seasonOf } from './season.js';
 
@@ -52,7 +52,7 @@ export const SPLIT_RULES = [
  * @returns {Proposal | null}
  */
 export function proposeTeams(dataset, rated) {
-  const night = currentNight(dataset);
+  const night = currentNightAvailable(dataset);
   const sizes = night && teamSizesFor(night.players.length);
   if (!sizes) return null;
   const ctx = buildContext(withoutEmptyMatches(dataset), night, rated);

@@ -1,6 +1,6 @@
 import { isISODate } from './dates.js';
 import { findPlayer, hasHistory, nameFormatError } from './players.js';
-import { SEATS, isValidMatchId, parseMatchId, sameSeats, validSeats } from './match.js';
+import { SEATS, isValidMatchId, leftOf, parseMatchId, sameSeats, validSeats } from './match.js';
 
 /** @typedef {'applied' | 'noop' | 'conflict' | 'invalid'} Outcome */
 /** @typedef {{ action: string, payload: object }} Op */
@@ -27,6 +27,8 @@ const unchanged = (dataset, outcome) => ({ dataset, outcome });
 const changed = (dataset, patch) => ({ dataset: { ...dataset, ...patch }, outcome: 'applied' });
 const sameMembers = (a, b) => a.length === b.length && a.every((name) => b.includes(name));
 const isGame = (matchId, gameNo) => (g) => g.matchId === matchId && g.gameNo === gameNo;
+/** Replaces `night` with `change(night)`. */
+const withNight = (ds, night, change) => changed(ds, { nights: ds.nights.map((n) => (n === night ? change(n) : n)) });
 
 const HANDLERS = {
   addPlayer(ds, { name }) {
@@ -36,7 +38,7 @@ const HANDLERS = {
   },
 
   /**
-   * Renames a player everywhere: the Players row, every night roster and every match seat.
+   * Renames a player everywhere: the Players row, every night roster (and left list) and every match seat.
    * `to` may be another casing of the same player. A retry after success finds `from` gone
    * (or already spelled `to`) and is a noop.
    */
@@ -52,7 +54,7 @@ const HANDLERS = {
     const swap = (n) => (n === old ? name : n);
     return changed(ds, {
       players: ds.players.map((p) => (p === player ? { ...p, name } : p)),
-      nights: ds.nights.map((n) => (n.players.includes(old) ? { ...n, players: n.players.map(swap) } : n)),
+      nights: ds.nights.map((n) => (n.players.includes(old) ? { ...n, players: n.players.map(swap), left: leftOf(n).map(swap) } : n)),
       matches: ds.matches.map((m) => (SEATS.some((seat) => m[seat] === old)
         ? { ...m, ...Object.fromEntries(SEATS.filter((seat) => m[seat] === old).map((seat) => [seat, name])) }
         : m)),
@@ -83,7 +85,32 @@ const HANDLERS = {
     if (!isISODate(date) || players.length < 4 || new Set(players).size !== players.length) {
       return unchanged(ds, 'invalid');
     }
-    return changed(ds, { nights: [...ds.nights, { date, players: [...players] }] });
+    return changed(ds, { nights: [...ds.nights, { date, players: [...players], left: [] }] });
+  },
+
+  /**
+   * Puts an existing player on a night's roster, or brings back one who had gone home.
+   * Stores the Players spelling of the name.
+   */
+  joinNight(ds, { date, name }) {
+    const night = ds.nights.find((n) => n.date === date);
+    const player = typeof name === 'string' ? findPlayer(ds.players, name) : null;
+    if (!night || !player) return unchanged(ds, 'invalid');
+    const stored = player.name;
+    if (leftOf(night).includes(stored)) {
+      return withNight(ds, night, (n) => ({ ...n, left: leftOf(n).filter((p) => p !== stored) }));
+    }
+    if (night.players.includes(stored)) return unchanged(ds, 'noop');
+    return withNight(ds, night, (n) => ({ ...n, players: [...n.players, stored], left: leftOf(n) }));
+  },
+
+  /** Marks a player on the roster as gone home; they stay on the roster (attendance). */
+  leaveNight(ds, { date, name }) {
+    const night = ds.nights.find((n) => n.date === date);
+    const player = typeof name === 'string' ? findPlayer(ds.players, name) : null;
+    if (!night || !player || !night.players.includes(player.name)) return unchanged(ds, 'invalid');
+    if (leftOf(night).includes(player.name)) return unchanged(ds, 'noop');
+    return withNight(ds, night, (n) => ({ ...n, left: [...leftOf(n), player.name] }));
   },
 
   /** A payload without A3 / B3 is a 2 vs 2 match; empty third seats are stored as ''. */

@@ -7,11 +7,15 @@
  * A3 / B3 are blank for a 2-player team. This replaced the old layout (A1, A2, B1, B2, status in
  * G1); a sheet with the old layout is migrated by running resetAllData() and then setup()
  * (only development data existed then).
+ *
+ * Nights layout: date, players (everyone who was there, comma-joined), left (those of them who
+ * have gone home, comma-joined, may be blank). setup() adds the `left` header to an older sheet;
+ * existing rows keep a blank cell, which reads as nobody left.
  */
 
 const TABS = {
   Players: ['name', 'active'],
-  Nights: ['date', 'players'],
+  Nights: ['date', 'players', 'left'],
   Matches: ['matchId', 'date', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3'],
   Games: ['matchId', 'gameNo', 'result', 'timestamp'],
 };
@@ -88,7 +92,7 @@ const HANDLERS = {
   },
 
   /**
-   * Renames a player in Players, every Nights roster and every Matches seat, in that order:
+   * Renames a player in Players, every Nights roster (and left list) and every Matches seat, in that order:
    * the Matches seat validation requires the new name to exist in Players first.
    */
   renamePlayer({ from, to }) {
@@ -103,9 +107,10 @@ const HANDLERS = {
     if (other && other.row !== player.row) return fail('conflict', 'Another player has that name');
 
     tab('Players').getRange(player.row, 1).setValue(name);
-    rewriteColumns('Nights', 2, 1, (cells) => {
-      const names = String(cells[0]).split(',').map((p) => p.trim()).filter(Boolean);
-      return names.includes(old) ? [names.map((n) => (n === old ? name : n)).join(', ')] : null;
+    rewriteColumns('Nights', 2, 2, (cells) => {
+      const lists = cells.map(splitNames);
+      if (!lists.some((names) => names.includes(old))) return null;
+      return lists.map((names) => names.map((n) => (n === old ? name : n)).join(', '));
     });
     rewriteColumns('Matches', FIRST_SEAT_COLUMN, SEATS.length, (cells) => {
       const seats = cells.map((c) => String(c).trim());
@@ -146,7 +151,37 @@ const HANDLERS = {
     if (!ISO_DATE.test(date) || list.length < 4 || new Set(list).size !== list.length) {
       return fail('invalid', 'Invalid night');
     }
-    append('Nights', [date, list.join(', ')]);
+    append('Nights', [date, list.join(', '), '']);
+    return done('applied');
+  },
+
+  /** Puts an existing player on a night's roster, or brings back one who had gone home. */
+  joinNight({ date, name }) {
+    const night = readTab('Nights').find((r) => r.value.date === date);
+    const player = typeof name === 'string' ? findPlayerRow(readTab('Players'), name) : null;
+    if (!night || !player) return fail('invalid', 'Unknown night or player');
+    const stored = player.value.name;
+    const { players, left } = night.value;
+    if (left.includes(stored)) {
+      writeRoster(night.row, players, left.filter((n) => n !== stored));
+      return done('applied');
+    }
+    if (players.includes(stored)) return done('noop');
+    writeRoster(night.row, players.concat([stored]), left);
+    return done('applied');
+  },
+
+  /** Marks a player on the roster as gone home; they stay on the roster (attendance). */
+  leaveNight({ date, name }) {
+    const night = readTab('Nights').find((r) => r.value.date === date);
+    const player = typeof name === 'string' ? findPlayerRow(readTab('Players'), name) : null;
+    if (!night || !player || !night.value.players.includes(player.value.name)) {
+      return fail('invalid', 'Player is not on the night roster');
+    }
+    const stored = player.value.name;
+    const { players, left } = night.value;
+    if (left.includes(stored)) return done('noop');
+    writeRoster(night.row, players, left.concat([stored]));
     return done('applied');
   },
 
@@ -195,7 +230,7 @@ const HANDLERS = {
 
 const PARSERS = {
   Players: ([name, active]) => ({ name: String(name).trim(), active: active === true || String(active).toUpperCase() === 'TRUE' }),
-  Nights: ([date, players]) => ({ date: isoDate(date), players: String(players).split(',').map((p) => p.trim()).filter(Boolean) }),
+  Nights: ([date, players, left]) => ({ date: isoDate(date), players: splitNames(players), left: splitNames(left) }),
   Matches: ([matchId, date, ...seats]) => {
     const match = { matchId: String(matchId).trim(), date: isoDate(date) };
     SEATS.forEach((seat, i) => { match[seat] = String(seats[i] == null ? '' : seats[i]).trim(); });
@@ -263,6 +298,11 @@ function rewriteColumns(name, column, width, change) {
   if (changed) range.setValues(values);
 }
 
+/** Writes a Nights row's players and left cells (columns B–C). */
+function writeRoster(row, players, left) {
+  tab('Nights').getRange(row, 2, 1, 2).setValues([[players.join(', '), left.join(', ')]]);
+}
+
 function append(name, cells) {
   const sheet = tab(name);
   const row = dataRowCount(sheet) + 2;
@@ -315,6 +355,11 @@ function isoDate(value) {
   return value instanceof Date
     ? Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd')
     : String(value).trim();
+}
+
+/** A comma-joined cell as trimmed names; blank (or missing) is an empty list. */
+function splitNames(cell) {
+  return String(cell == null ? '' : cell).split(',').map((p) => p.trim()).filter(Boolean);
 }
 
 /** A valid trimmed player name, or null. ',' joins names in Nights; '+' joins a pair in stats links. */

@@ -1,6 +1,10 @@
 import { addDays } from './dates.js';
 
-/** @typedef {{ date: string, players: string[] }} Night */
+/**
+ * `players` is everyone who was there that night (attendance; only grows during the night);
+ * `left` those of them who have gone home (absent in older data = nobody).
+ * @typedef {{ date: string, players: string[], left?: string[] }} Night
+ */
 /**
  * A team has 2 or 3 players. A3 / B3 are '' (or absent in older data) for a 2-player team.
  * @typedef {{ matchId: string, date: string, A1: string, A2: string, A3?: string, B1: string, B2: string, B3?: string }} Match
@@ -118,6 +122,21 @@ export const isNightOngoing = (nightDate, today, hour) =>
 export function activeNight(dataset, today, hour) {
   const night = currentNight(dataset);
   return night && isNightOngoing(night.date, today, hour) ? night : null;
+}
+
+/** The players who have gone home. @param {Night} night @returns {string[]} */
+export const leftOf = (night) => night.left ?? [];
+
+/** The roster minus those who have gone home, in roster order. @param {Night} night @returns {string[]} */
+export const availablePlayers = (night) => night.players.filter((name) => !leftOf(night).includes(name));
+
+/**
+ * The current night with its roster narrowed to the available players, or null.
+ * @param {Dataset} dataset @returns {Night | null}
+ */
+export function currentNightAvailable(dataset) {
+  const night = currentNight(dataset);
+  return night && { ...night, players: availablePlayers(night) };
 }
 
 /** @param {Dataset} dataset @param {string} date */

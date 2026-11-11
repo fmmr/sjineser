@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  NIGHT_ENDS_AT_HOUR, activeNight, compareGames, currentMatch, currentNight, isNightOngoing, isValidMatchId, latestMatch, makeMatchId,
+  NIGHT_ENDS_AT_HOUR, activeNight, availablePlayers, compareGames, currentNightAvailable, leftOf, currentMatch, currentNight, isNightOngoing, isValidMatchId, latestMatch, makeMatchId,
   nextGameNo, nextMatchId, parseMatchId, sameSeats, score, seatsOf, teamOf, validSeats, winnerOf,
 } from '../../docs/js/domain/match.js';
 import { DATE, FOUR, MATCH_1, dataset, game, nightWithMatch } from '../helpers.js';
@@ -133,4 +133,16 @@ test('nextMatchId counts numerically within the night', () => {
 test('nextGameNo is one past the highest game number', () => {
   assert.equal(nextGameNo([]), 1);
   assert.equal(nextGameNo([game(MATCH_1, 1, 'A'), game(MATCH_1, 3, 'D')]), 4);
+});
+
+test('availablePlayers is the roster minus those who went home; a missing left list means nobody left', () => {
+  assert.deepEqual(availablePlayers({ date: DATE, players: FOUR }), FOUR);
+  assert.deepEqual(availablePlayers({ date: DATE, players: FOUR, left: ['Hans'] }), ['Frode', 'Per', 'Tor']);
+  assert.deepEqual(leftOf({ date: DATE, players: FOUR }), []);
+});
+
+test('currentNightAvailable is the current night with only the available players', () => {
+  const ds = dataset({ nights: [{ date: DATE, players: [...FOUR, 'Kari'], left: ['Per'] }] });
+  assert.deepEqual(currentNightAvailable(ds), { date: DATE, players: ['Frode', 'Hans', 'Tor', 'Kari'], left: ['Per'] });
+  assert.equal(currentNightAvailable(dataset()), null);
 });

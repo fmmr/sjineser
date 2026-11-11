@@ -256,6 +256,19 @@ test('player ops belong to no night or match and never cascade', () => {
   }
 });
 
+test('joinNight and leaveNight belong to their night and cascade with a dropped startNight', () => {
+  const start = { id: 'n', action: 'startNight', payload: { date: DATE, players: [] } };
+  const join = { id: 'j', action: 'joinNight', payload: { date: DATE, name: 'Kari' } };
+  const leave = { id: 'l', action: 'leaveNight', payload: { date: DATE, name: 'Hans' } };
+  const otherNight = { id: 'o', action: 'startNight', payload: { date: '2026-10-21', players: [] } };
+  assert.deepEqual(opScope(join), { night: DATE, match: null });
+  assert.deepEqual(opScope(leave), { night: DATE, match: null });
+  assert.equal(dependsOn(join, start), true);
+  assert.equal(dependsOn(leave, start), true);
+  assert.equal(dependsOn(join, otherNight), false);
+  assert.equal(dependsOn(leave, join), false, 'a dropped join drops only itself');
+});
+
 test('a dropped renamePlayer drops only itself', async () => {
   const { outbox, log } = setup({ responses: [{ ok: false, error: 'conflict' }] });
   outbox.enqueue('renamePlayer', { from: 'Hans', to: 'Kari' });

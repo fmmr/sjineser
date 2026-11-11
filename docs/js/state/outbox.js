@@ -12,9 +12,12 @@ export function randomId() {
 
 const isOp = (op) => isObject(op) && typeof op.id === 'string' && typeof op.action === 'string' && isObject(op.payload);
 
+/** Ops that change a night's roster; they belong to that night. */
+const NIGHT_ACTIONS = new Set(['startNight', 'joinNight', 'leaveNight']);
+
 /** The night and match an op belongs to. */
 export function opScope(op) {
-  if (op.action === 'startNight') return { night: op.payload.date, match: null };
+  if (NIGHT_ACTIONS.has(op.action)) return { night: op.payload.date, match: null };
   if (typeof op.payload.matchId === 'string') return { night: parseMatchId(op.payload.matchId).date, match: op.payload.matchId };
   return { night: null, match: null };
 }

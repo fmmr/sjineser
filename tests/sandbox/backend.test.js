@@ -51,6 +51,18 @@ test('addPlayer returns the name like the server', async () => {
   assert.deepEqual(await api.post('addPlayer', { name: 'anne' }), { ok: true, result: 'noop', data: { name: 'Anne' } });
 });
 
+test('joinNight and leaveNight change the stored roster like the server', async () => {
+  const storage = freshStorage();
+  const api = await withMatch(storage);
+  await api.post('addPlayer', { name: 'Gro' });
+  assert.deepEqual(await api.post('joinNight', { date: DATE, name: 'gro' }), { ok: true, result: 'applied' });
+  assert.deepEqual(await api.post('leaveNight', { date: DATE, name: 'Anne' }), { ok: true, result: 'applied' });
+  assert.deepEqual(await api.post('leaveNight', { date: DATE, name: 'Anne' }), { ok: true, result: 'noop' });
+  assert.deepEqual(await api.post('leaveNight', { date: DATE, name: 'Ukjent' }), { ok: false, error: 'invalid', message: 'invalid' });
+  const { data } = await createSandboxApi({ storage }).getAll();
+  assert.deepEqual(data.nights.find((n) => n.date === DATE), { date: DATE, players: ['Anne', 'Bjørn', 'Cato', 'Dag', 'Gro'], left: ['Anne'] });
+});
+
 test('duplicate ops are noops; conflicting and invalid ops fail with an envelope', async () => {
   const api = await withMatch();
   const game = { matchId: MATCH, gameNo: 1, result: 'A', timestamp: 't' };

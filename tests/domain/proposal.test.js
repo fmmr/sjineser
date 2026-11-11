@@ -207,3 +207,10 @@ test('an empty match on an earlier night does not count as a sit-out', () => {
   assert.deepEqual(p.bench, ['Tor']);
   assert.equal(p.benchRule, 'alphabetical');
 });
+
+test('players who went home are left out of the proposal', () => {
+  const p = propose(build([{ date: DATE, players: FIVE, left: ['Anne'] }]));
+  assert.deepEqual([...p.A, ...p.B].sort(), FOUR);
+  assert.deepEqual(p.bench, []);
+  assert.equal(propose(build([{ date: DATE, players: FIVE, left: ['Anne', 'Tor'] }])), null, 'three left: no proposal');
+});
