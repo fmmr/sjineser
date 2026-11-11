@@ -36,7 +36,7 @@ const C = EMAIL_COLORS;
 
 const FONT = 'system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
 const WIDTH = 600;
-const PAD = '24px';
+const PAD = '20px';
 
 const NUM = { 'text-align': 'right', 'font-variant-numeric': 'tabular-nums', 'white-space': 'nowrap' };
 const MUTED = { color: C.textMuted };
@@ -73,7 +73,7 @@ const ratingText = (row) => t.ratingLabel(formatValue(row.rating, 'rating'), row
 const formChips = (form) => form.map((outcome) => el('span', {
   title: t.statsColumnTitles[outcome],
   style: {
-    display: 'inline-block', width: '16px', height: '16px', 'line-height': '16px', margin: '0 2px 0 0',
+    display: 'inline-block', width: '16px', height: '16px', 'line-height': '16px', margin: '1px 2px 1px 0',
     'border-radius': '4px', background: FORM_COLORS[outcome], color: '#ffffff', 'font-size': '10px',
     'font-weight': 700, 'text-align': 'center',
   },
@@ -143,7 +143,8 @@ function nightLeaderboard(rows) {
   return dataTable(columns('rank', 'player', 'rating', 'change', 'games', 'form'), rows.map((row) => [
     row.rank, playerCell(row.player), ratingText(row),
     ...(row.games > 0
-      ? [signed(row.change), row.games, el('span', { style: { 'white-space': 'nowrap' } }, formChips(row.form))]
+      // The chips may wrap: on a phone a 10-game strip would make the table wider than the screen.
+      ? [signed(row.change), row.games, formChips(row.form)]
       : [{ colspan: 3, content: t.nightEmail.satOutLabel }]),
   ]), new Set([0, 2, 3, 4]));
 }
@@ -211,6 +212,6 @@ export function renderNightEmail(data) {
   section(button(data.links.night, e.nightLinkLabel, true), button(data.links.stats, e.statsLinkLabel, false)));
 
   const page = table({ background: C.bg },
-    el('tr', {}, el('td', { align: 'center', bgcolor: C.bg, style: { padding: '24px 12px', background: C.bg } }, card)));
+    el('tr', {}, el('td', { align: 'center', bgcolor: C.bg, style: { padding: '16px 8px', background: C.bg } }, card)));
   return htmlDocument(data.subject, page, { background: C.bg, color: C.text, 'font-family': FONT });
 }
