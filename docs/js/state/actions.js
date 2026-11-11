@@ -170,7 +170,8 @@ export function createActions({
      * @param {string} date
      * @param {{ subject: string, text: string, html: string }} mail the HTML body and its plain-text fallback
      * @param {{ testPlayer?: string }} [options]
-     * @returns {Promise<{ ok: true, recipients: number } | { ok: false, error: string }>}
+     * @returns {Promise<{ ok: true, recipients: number } | { ok: false, error: string, detail?: string }>}
+     *   `detail` is the server's own message when no t.errors key explains the failure
      */
     async sendNightSummary(date, { subject, text, html }, { testPlayer } = {}) {
       if (!view().nights.some((n) => n.date === date)) return { ok: false, error: 'invalid' };
@@ -188,7 +189,9 @@ export function createActions({
         if (!testPlayer) store.refresh();
         return { ok: true, recipients: response.data?.recipients ?? 0 };
       }
-      return { ok: false, error: mailError(response) };
+      const error = mailError(response);
+      const detail = error === 'sendFailed' && typeof response.message === 'string' && response.message.trim();
+      return detail ? { ok: false, error, detail: detail.slice(0, MAX_DETAIL) } : { ok: false, error };
     },
   };
 }
@@ -199,6 +202,7 @@ function mailError({ error, message }) {
   if (error === 'conflict' && message === ALREADY_SENT) return 'summaryAlreadySent';
   if (error === 'quota' && message === DAILY_LIMIT) return 'summaryDailyLimit';
   if (error === 'quota') return 'mailQuota';
+  if (error === 'server' && /permission/i.test(message ?? '')) return 'mailPermission';
   if (error === 'invalid' && message === NO_RECIPIENTS) return 'noRecipients';
   if (error === 'invalid' && message === NO_TEST_RECIPIENT) return 'noTestRecipient';
   return 'sendFailed';
@@ -210,3 +214,5 @@ const NO_TEST_RECIPIENT = 'Test player has no email';
 /** …a night whose summary already went out (Nights.summarySent), and the daily cap of real sends. */
 const ALREADY_SENT = 'Summary already sent';
 const DAILY_LIMIT = 'Daily send limit reached';
+/** Longest server message shown in the failure toast. */
+const MAX_DETAIL = 160;

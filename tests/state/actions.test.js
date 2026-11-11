@@ -350,13 +350,24 @@ test('sendNightSummary maps server errors to t.errors keys', async () => {
     [{ ok: false, error: 'invalid', message: 'Test player has no email' }, 'noTestRecipient'],
     [{ ok: false, error: 'conflict', message: 'Summary already sent' }, 'summaryAlreadySent'],
     [{ ok: false, error: 'quota', message: 'Daily send limit reached' }, 'summaryDailyLimit'],
-    [{ ok: false, error: 'invalid', message: 'Unknown night' }, 'sendFailed'],
     [{ ok: false, error: 'busy' }, 'sendFailed'],
-    [{ ok: false, error: 'server', message: 'boom' }, 'sendFailed'],
+    [{ ok: false, error: 'server', message: 'You do not have permission to call MailApp.sendEmail.' }, 'mailPermission'],
   ];
   for (const [reply, error] of cases) {
     const { actions } = mailSetup([reply]);
     assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: false, error }, JSON.stringify(reply));
+  }
+});
+
+test('sendNightSummary passes on the server message (shortened) when no t.errors key explains it', async () => {
+  const cases = [
+    [{ ok: false, error: 'invalid', message: 'Unknown night' }, 'Unknown night'],
+    [{ ok: false, error: 'server', message: 'boom' }, 'boom'],
+    [{ ok: false, error: 'server', message: 'x'.repeat(500) }, 'x'.repeat(160)],
+  ];
+  for (const [reply, detail] of cases) {
+    const { actions } = mailSetup([reply]);
+    assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: false, error: 'sendFailed', detail }, JSON.stringify(reply));
   }
 });
 

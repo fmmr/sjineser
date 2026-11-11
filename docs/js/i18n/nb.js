@@ -94,6 +94,8 @@ export const t = {
     mailQuota: 'Dagens kvote for e-post er brukt opp. Prøv igjen i morgen.',
     noTestRecipient: 'Testmottakeren har ingen e-postadresse i regnearket',
     sendFailed: 'E-posten ble ikke sendt',
+    sendFailedBecause: (detail) => `E-posten ble ikke sendt: ${detail}`,
+    mailPermission: 'Skriptet har ikke lov til å sende e-post. Kjør authorize i Apps Script-editoren.',
     summaryAlreadySent: 'Oppsummeringen for denne kvelden er allerede sendt',
     summaryDailyLimit: 'Dagens grense for oppsummeringer er nådd. Prøv igjen i morgen.',
   },

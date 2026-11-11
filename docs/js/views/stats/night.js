@@ -122,7 +122,7 @@ function summaryButton({ actions, sandbox = false }, date, summarySent, buildMai
     const result = await actions.sendNightSummary(date, mail, test ? { testPlayer: SUMMARY_TEST_PLAYER } : {});
     button.disabled = false;
     button.textContent = t.nightEmail.button;
-    if (!result.ok) showToast(t.errors[result.error]);
+    if (!result.ok) showToast(result.detail ? t.errors.sendFailedBecause(result.detail) : t.errors[result.error]);
     else showToast(test ? t.nightEmail.sentTest(SUMMARY_TEST_PLAYER) : t.nightEmail.sent(result.recipients));
   }
 
