@@ -43,7 +43,14 @@ const outbox = createOutbox({
   onPinRequired: () => askForPin({ storage, outbox }),
 });
 store = createStore({ storage, outbox, api });
-const actions = createActions({ store, outbox, clock });
+const actions = createActions({
+  store,
+  outbox,
+  clock,
+  api,
+  pin: () => storage.get('pin', ''),
+  askPin: () => askForPin({ storage, outbox }),
+});
 
 updateBadge = mountShell({ outbox, storage });
 if (sandbox) {

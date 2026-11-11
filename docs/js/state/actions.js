@@ -9,9 +9,17 @@ import {
  * User intents. Each validates against the current view, enqueues ops and
  * returns { ok: true } or { ok: false, error } where error is a key of t.errors.
  * Play writes only into the active night (domain activeNight: until noon the next day).
- * @param {{ store: object, outbox: object, clock?: { today(): string, hour(): number }, now?: () => string }} options
+ * sendNightSummary is the one exception: a one-shot request straight to the api, never queued.
+ * @param {{ store: object, outbox: object, clock?: { today(): string, hour(): number }, now?: () => string,
+ *   api?: { post(action: string, payload: object, pin: string): Promise<object> }, pin?: () => string,
+ *   online?: () => boolean, askPin?: () => Promise<void> }} options
+ *   api, pin, online, askPin: for sendNightSummary (the stored PIN; whether the browser is online;
+ *   asks for the PIN and stores it)
  */
-export function createActions({ store, outbox, clock = createClock(), now = () => new Date().toISOString() }) {
+export function createActions({
+  store, outbox, clock = createClock(), now = () => new Date().toISOString(),
+  api = null, pin = () => '', online = () => globalThis.navigator?.onLine !== false, askPin = async () => {},
+}) {
   const view = () => store.get();
   const night = () => activeNight(view(), clock.today(), clock.hour());
 
@@ -154,5 +162,42 @@ export function createActions({ store, outbox, clock = createClock(), now = () =
       else removeMatch(match.matchId);
       return { ok: true };
     },
+
+    /**
+     * Emails a night's summary (built by the caller) to the active players with an address, or
+     * with `testPlayer` only to that player. Sent at once, never queued: offline it fails and the
+     * user tries again. A wrong PIN asks for it once and retries. Any night, also after it is over.
+     * @param {string} date
+     * @param {{ subject: string, text: string }} mail
+     * @param {{ testPlayer?: string }} [options]
+     * @returns {Promise<{ ok: true, recipients: number } | { ok: false, error: string }>}
+     */
+    async sendNightSummary(date, { subject, text }, { testPlayer } = {}) {
+      if (!view().nights.some((n) => n.date === date)) return { ok: false, error: 'invalid' };
+      if (!online()) return { ok: false, error: 'offline' };
+      const payload = { date, subject, text, ...(testPlayer ? { testPlayer } : {}) };
+      const send = () => api.post('sendNightSummary', payload, pin());
+      let response = await send();
+      if (!response.ok && response.error === 'pin') {
+        const before = pin();
+        await askPin();
+        if (pin() !== before) response = await send();
+      }
+      if (response.ok) return { ok: true, recipients: response.data?.recipients ?? 0 };
+      return { ok: false, error: mailError(response) };
+    },
   };
 }
+
+/** The t.errors key for a failed sendNightSummary reply. */
+function mailError({ error, message }) {
+  if (error === 'pin' || error === 'network') return error;
+  if (error === 'quota') return 'mailQuota';
+  if (error === 'invalid' && message === NO_RECIPIENTS) return 'noRecipients';
+  if (error === 'invalid' && message === NO_TEST_RECIPIENT) return 'noTestRecipient';
+  return 'sendFailed';
+}
+
+/** The server's messages for a summary nobody would receive, and a test player without an address (apps-script/Code.js). */
+const NO_RECIPIENTS = 'No recipients';
+const NO_TEST_RECIPIENT = 'Test player has no email';

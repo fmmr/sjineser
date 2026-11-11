@@ -11,10 +11,18 @@
  * Nights layout: date, players (everyone who was there, comma-joined), left (those of them who
  * have gone home, comma-joined, may be blank). setup() adds the `left` header to an older sheet;
  * existing rows keep a blank cell, which reads as nobody left.
+ *
+ * Players layout: name, active, email. `email` is PRIVATE: it is only read by sendNightSummary
+ * and never leaves the script (doGet is public; PARSERS.Players returns only { name, active }).
+ * setup() adds the `email` header to an older sheet; addresses are typed into the sheet by hand.
+ *
+ * sendNightSummary uses MailApp, which needs the "Send email as you" scope (script.send_mail):
+ * the owner authorises it once by running a function from the editor after deploying. Mail goes
+ * against the account's daily recipient quota (MailApp.getRemainingDailyQuota()).
  */
 
 const TABS = {
-  Players: ['name', 'active'],
+  Players: ['name', 'active', 'email'],
   Nights: ['date', 'players', 'left'],
   Matches: ['matchId', 'date', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3'],
   Games: ['matchId', 'gameNo', 'result', 'timestamp'],
@@ -29,6 +37,12 @@ const RESULTS = ['A', 'B', 'D'];
 const MATCH_ID = /^\d{4}-\d{2}-\d{2}#\d+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const LOCK_TIMEOUT_MS = 10000;
+/** Caps for the night summary email (the client builds the text; this only bounds it). */
+const MAX_SUBJECT = 200;
+const MAX_TEXT = 20000;
+const TEST_SUBJECT_PREFIX = '[TEST] ';
+/** A plain address check: something@domain.tld, no spaces or list separators. */
+const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const STATUS_FORMULA =
   '=ARRAYFORMULA(IF(ROW(A:A)=1,"status",IF(A:A="",,' +
   'LET(a,COUNTIFS(Games!A:A,A:A,Games!C:C,"A"),b,COUNTIFS(Games!A:A,A:A,Games!C:C,"B"),' +
@@ -224,11 +238,59 @@ const HANDLERS = {
     tab('Matches').deleteRow(existing.row);
     return done('applied');
   },
+
+  /**
+   * Emails a night summary (subject and plain text built by the app) in ONE message: to the
+   * script owner, every active player with an address in BCC. With `testPlayer` (a name) only
+   * that player gets it, as `to`, with "[TEST] " before the subject. Changes no data and is not
+   * idempotent (a retry sends again); the reply holds the count only, never addresses.
+   */
+  sendNightSummary({ date, subject, text, testPlayer }) {
+    if (!readTab('Nights').some((r) => r.value.date === date)) return fail('invalid', 'Unknown night');
+    if (typeof subject !== 'string' || !subject.trim() || typeof text !== 'string' || !text.trim()) {
+      return fail('invalid', 'Empty email');
+    }
+    const test = typeof testPlayer === 'string' && testPlayer.trim() !== '';
+    const recipients = summaryRecipients(readPlayersWithEmail(), test ? testPlayer : undefined);
+    if (recipients.length === 0) return fail('invalid', test ? 'Test player has no email' : 'No recipients');
+    const message = test
+      ? { to: recipients[0], subject: TEST_SUBJECT_PREFIX + subject }
+      : { to: Session.getEffectiveUser().getEmail(), bcc: recipients.join(','), subject };
+    // The owner (`to`) counts against the quota as well.
+    if (MailApp.getRemainingDailyQuota() < (test ? 1 : recipients.length + 1)) return fail('quota', 'Daily email quota used up');
+    message.subject = message.subject.slice(0, MAX_SUBJECT);
+    message.body = text.slice(0, MAX_TEXT);
+    MailApp.sendEmail(message);
+    return done('applied', { recipients: recipients.length });
+  },
 };
+
+/**
+ * Who gets the night summary: the valid addresses (trimmed, no duplicates in any casing) of the
+ * ACTIVE players — an inactive player never does, address or not. With `testPlayer`, only that
+ * player's address (name matched case-insensitively, active or not). Pure, so it can be tested.
+ * @param {{ name: string, active: boolean, email: string }[]} players
+ * @param {string} [testPlayer]
+ * @returns {string[]} empty when nobody qualifies
+ */
+function summaryRecipients(players, testPlayer) {
+  const chosen = testPlayer === undefined
+    ? players.filter((p) => p.active === true)
+    : players.filter((p) => p.name.toLowerCase() === String(testPlayer).trim().toLowerCase());
+  const seen = new Set();
+  return chosen.map((p) => String(p.email == null ? '' : p.email).trim()).filter((email) => {
+    const key = email.toLowerCase();
+    if (!EMAIL.test(email) || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 // ---------- Sheet access ----------
 
 const PARSERS = {
+  // PRIVACY: never add `email` (column C) here. doGet returns these objects to anyone; addresses
+  // are read only by readPlayersWithEmail() for sendNightSummary (tests/apps-script/code.test.js checks doGet).
   Players: ([name, active]) => ({ name: String(name).trim(), active: active === true || String(active).toUpperCase() === 'TRUE' }),
   Nights: ([date, players, left]) => ({ date: isoDate(date), players: splitNames(players), left: splitNames(left) }),
   Matches: ([matchId, date, ...seats]) => {
@@ -263,15 +325,21 @@ function dataRowCount(sheet) {
   return last;
 }
 
-/** Rows of a tab as { row, value }, skipping rows with an empty first column. */
-function readTab(name) {
+/** Rows of a tab as { row, value }, skipping rows with an empty first column. `parse` defaults to the tab's parser. */
+function readTab(name, parse = PARSERS[name]) {
   const sheet = tab(name);
   const count = dataRowCount(sheet);
   if (count === 0) return [];
   return sheet.getRange(2, 1, count, TABS[name].length).getValues()
     .map((cells, i) => ({ row: i + 2, cells }))
     .filter((r) => r.cells[0] !== '')
-    .map((r) => ({ row: r.row, value: PARSERS[name](r.cells) }));
+    .map((r) => ({ row: r.row, value: parse(r.cells) }));
+}
+
+/** Players with their (private) email column, for sendNightSummary only. Never return these to a client. */
+function readPlayersWithEmail() {
+  return readTab('Players', (cells) => ({ ...PARSERS.Players(cells), email: String(cells[2] == null ? '' : cells[2]).trim() }))
+    .map((r) => r.value);
 }
 
 function readAll() {

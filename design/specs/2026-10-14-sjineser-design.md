@@ -53,11 +53,17 @@ find-and-replace).
 
 **Players**
 
-| name | active |
-|---|---|
-| Hans | TRUE |
+| name | active | email |
+|---|---|---|
+| Hans | TRUE | hans@example.com |
 
 `active = FALSE` hides a player from pickers but keeps their history.
+
+`email` (column C; added 2026-11-11) is **private**: an optional address, typed into the sheet
+by hand, used only by `sendNightSummary` (§4). The server **never returns it**: the GET parser
+keeps giving players as `{ name, active }` (guarded by `tests/apps-script/code.test.js`), so the
+app never sees an address. `setup()` adds the header to an existing sheet (idempotent); a blank
+cell means no email.
 
 **Managing players** (Mer → Spillere, §6; ops in §4):
 - **Rename** (`renamePlayer`) changes the Players row, every Nights roster (and `left`) containing the old
@@ -177,6 +183,27 @@ Historical data from the old sheet is imported once by `scripts/import-history.m
 - All writes run under `LockService.getScriptLock()` with `waitLock` and a timeout;
   failure to acquire returns `busy`.
 - Every write is idempotent, keyed on its natural key, so the outbox can retry freely.
+  The one exception is `sendNightSummary` below, which changes no data and is never queued.
+
+**`sendNightSummary`** (POST; added 2026-11-11) — payload `{ date, subject, text, testPlayer? }`.
+PIN-protected and run under the lock like the writes, but not an outbox op: the app calls the
+API directly once (`actions.sendNightSummary`) and reports the outcome in a toast; offline it is
+refused at once ("prøv igjen når du har nett"), never queued; a wrong PIN prompts for the PIN and
+retries once. The subject and plain text are built in the app (`views/stats/night-summary.js`,
+texts in `nb.js`); the server only caps them (200 / 20 000 characters).
+- `invalid` unless the night exists and subject and text are non-empty strings.
+- Recipients = the valid addresses (simple `x@y.z` check, trimmed, no duplicates) of all
+  **active** players — an inactive player never gets it (`summaryRecipients`, a pure helper
+  with tests). None → `invalid` "No recipients".
+- One email via `MailApp.sendEmail({ to, bcc, subject, body })`: `to` = the script owner
+  (`Session.getEffectiveUser().getEmail()`), every recipient in `bcc`, plain text only.
+- `testPlayer` (a name, case-insensitive; the app sends `SUMMARY_TEST_PLAYER` from `config.js`):
+  only that player's address, as `to`, no BCC, the active flag ignored, subject prefixed
+  `[TEST] `; no address → `invalid` "Test player has no email".
+- Too little daily MailApp quota left (recipients + the owner) → `quota`.
+- Reply `{ ok: true, result: 'applied', data: { recipients: n } }`: the count, never addresses.
+- MailApp needs the "Send email as you" scope, authorised once by the owner in the editor after
+  deploying. Sandbox mode (§17) answers `recipients: 0` without sending.
 
 **Response envelope.** Apps Script cannot set HTTP status codes (every reply is 200),
 so outcome is carried in the body. GET and POST use the same envelope:
@@ -549,6 +576,20 @@ night (§3) the page polls `store.refresh()` every `POLL_MS` when visible, like 
 re-renders on store changes. Reached from the Kvelder table (a row's date links to it: a `night`
 subject is a link target only, not a stat subject type), the home cards (ongoing and "Forrige kveld")
 and the match screen ("Se kveldens statistikk"). An unknown or invalid date shows the not-found text.
+
+**Kveldens oppsummering på e-post** (added 2026-11-11): under the sections the night page always
+has a button "Send kveldens oppsummering på e-post" (also after the night; it can be sent again).
+A tap builds the email from the page's facts (`nightSummary(facts, date, { ongoing })` in
+`views/stats/night-summary.js`, pure and tested; every text in `t.nightEmail`) and opens a confirm
+sheet with the subject and a scrollable preview of the text, and the actions **Send**, **Send test
+til Fredrik** (`SUMMARY_TEST_PLAYER` in `config.js`) and **Avbryt**. Sending goes through
+`actions.sendNightSummary` (§4); a toast says "Sendt til N spillere" / "Test sendt til Fredrik" or
+the error. Subject "Sjineser — kveld 10. nov. 2026"; plain text body: the night and who was there,
+the night's winner with the gain, Kveldens rangering (rank, name, change, games; sitting out "sto
+over"), every set ("Sett 2: A og B 3–1 C og D, 1 uavgjort", unfinished marked like on the page), the
+records longest set, longest win streak and clean sweeps when present, and the link
+`SITE_URL#/stats/night/<date>`. In sandbox mode the sheet says nothing is sent, and the fake
+backend answers 0 recipients.
 
 **Avgjørende spill** (added 2026-10-16): a game is *deciding* when, before it, a team in the set
 stands at 2 wins (2–0, 0–2, 2–1, 1–2, 2–2; draws do not change the state), so it can end the set

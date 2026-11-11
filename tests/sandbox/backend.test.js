@@ -140,3 +140,12 @@ test('player management uses the same rules: rename everywhere, retry is a noop,
   assert.equal((await api.post('deletePlayer', { name: 'Annette' }, 'any')).error, 'invalid');
   assert.equal((await api.post('renamePlayer', { from: 'Annette', to: 'bjørn' }, 'any')).error, 'conflict');
 });
+
+test('sendNightSummary pretends to send: success with 0 recipients, the data unchanged', async () => {
+  const api = createSandboxApi({ storage: freshStorage() });
+  const before = await api.getAll();
+  const payload = { date: generated.dataset.nights[0].date, subject: 'S', text: 'T' };
+  assert.deepEqual(await api.post('sendNightSummary', payload, 'any'), { ok: true, result: 'applied', data: { recipients: 0 } });
+  assert.deepEqual(await api.post('sendNightSummary', { ...payload, testPlayer: 'Anne' }, 'any'), { ok: true, result: 'applied', data: { recipients: 0 } });
+  assert.deepEqual(await api.getAll(), before);
+});

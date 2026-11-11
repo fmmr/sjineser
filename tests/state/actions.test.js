@@ -276,3 +276,87 @@ test('deletePlayer refuses players with history and removes the others', () => {
   assert.deepEqual(queued(outbox), ['deletePlayer Kari']);
   assert.equal(store.get().players.length, 4);
 });
+
+/** A store on nightWithMatch plus a scripted api for the one-shot sendNightSummary: replies in order, calls recorded. */
+function mailSetup(replies, { online = true, pin = '1234', newPin = null } = {}) {
+  const storage = createStorage(memoryBackend());
+  storage.set('dataset', nightWithMatch());
+  storage.set('pin', pin);
+  const outbox = fakeOutbox();
+  const store = createStore({ storage, outbox, api: { getAll: async () => ({ ok: false }) } });
+  const calls = [];
+  const api = {
+    post: async (action, payload, sentPin) => {
+      calls.push({ action, payload, pin: sentPin });
+      return replies.shift();
+    },
+  };
+  const asked = [];
+  const actions = createActions({
+    store, outbox, clock: NEXT_NOON, api,
+    pin: () => storage.get('pin', ''),
+    online: () => online,
+    askPin: async () => {
+      asked.push(true);
+      if (newPin) storage.set('pin', newPin);
+    },
+  });
+  return { actions, calls, asked, outbox };
+}
+const MAIL = { subject: 'S', text: 'T' };
+const SENT = (recipients) => ({ ok: true, result: 'applied', data: { recipients } });
+
+test('sendNightSummary posts once, straight to the api (not the outbox), and reports the recipient count', async () => {
+  const { actions, calls, outbox } = mailSetup([SENT(5)]);
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 5 });
+  assert.deepEqual(calls, [{ action: 'sendNightSummary', payload: { date: DATE, subject: 'S', text: 'T' }, pin: '1234' }]);
+  assert.deepEqual(outbox.queue, []);
+});
+
+test('sendNightSummary with a test player sends the name along (the server mails only them)', async () => {
+  const { actions, calls } = mailSetup([SENT(1)]);
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL, { testPlayer: 'Fredrik' }), { ok: true, recipients: 1 });
+  assert.deepEqual(calls[0].payload, { date: DATE, subject: 'S', text: 'T', testPlayer: 'Fredrik' });
+});
+
+test('sendNightSummary works after the night is over, but needs a known night', async () => {
+  const { actions, calls } = mailSetup([]);
+  assert.deepEqual(await actions.sendNightSummary('2026-10-13', MAIL), { ok: false, error: 'invalid' });
+  assert.deepEqual(calls, []);
+});
+
+test('sendNightSummary offline: nothing sent or queued, the user tries again later', async () => {
+  const { actions, calls, outbox } = mailSetup([], { online: false });
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: false, error: 'offline' });
+  assert.deepEqual(calls, []);
+  assert.deepEqual(outbox.queue, []);
+});
+
+test('sendNightSummary maps server errors to t.errors keys', async () => {
+  const cases = [
+    [{ ok: false, error: 'network' }, 'network'],
+    [{ ok: false, error: 'invalid', message: 'No recipients' }, 'noRecipients'],
+    [{ ok: false, error: 'quota', message: 'Daily email quota used up' }, 'mailQuota'],
+    [{ ok: false, error: 'invalid', message: 'Test player has no email' }, 'noTestRecipient'],
+    [{ ok: false, error: 'invalid', message: 'Unknown night' }, 'sendFailed'],
+    [{ ok: false, error: 'busy' }, 'sendFailed'],
+    [{ ok: false, error: 'server', message: 'boom' }, 'sendFailed'],
+  ];
+  for (const [reply, error] of cases) {
+    const { actions } = mailSetup([reply]);
+    assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: false, error }, JSON.stringify(reply));
+  }
+});
+
+test('sendNightSummary with a wrong PIN asks for it and retries once with the new one', async () => {
+  const { actions, calls, asked } = mailSetup([{ ok: false, error: 'pin' }, SENT(3)], { newPin: '9999' });
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 3 });
+  assert.equal(asked.length, 1);
+  assert.deepEqual(calls.map((c) => c.pin), ['1234', '9999']);
+});
+
+test('sendNightSummary: a cancelled PIN prompt sends nothing more', async () => {
+  const { actions, calls } = mailSetup([{ ok: false, error: 'pin' }]);
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: false, error: 'pin' });
+  assert.equal(calls.length, 1);
+});
