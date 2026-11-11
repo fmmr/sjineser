@@ -82,8 +82,8 @@ export const t = {
     mostSitOutsSeason: { title: 'Flest ganger på benken', description: 'Ved likhet spiller de som har stått over flest sett denne sesongen.', benchReason: 'har stått over færrest ganger denne sesongen' },
     longestSinceLastPlayed: { title: 'Lengst siden sist', description: 'Ved likhet spiller de som har ventet lengst siden forrige sett i kveld.', benchReason: 'spilte sist' },
     alphabetical: { title: 'Alfabetisk', description: 'Til slutt avgjøres det alfabetisk, så forslaget alltid blir det samme.', benchReason: 'avgjort alfabetisk' },
-    newPartners: { title: 'Nye makkere', description: 'Oppsett der noen allerede har vært på lag sammen i kveld, unngås. Slik spiller alle med alle. På et lag med tre er alle tre makkere.' },
-    newOpponents: { title: 'Nye motstandere', description: 'Oppsett der noen allerede har møtt hverandre i kveld, unngås. Slik spiller alle mot alle.' },
+    newPartners: { title: 'Nye makkere', description: 'Oppsett der noen allerede har vært på lag sammen i kveld, unngås. Slik spiller alle med alle. Et par som har vært sammen flere ganger, teller ekstra mye. På et lag med tre er alle tre makkere.' },
+    newOpponents: { title: 'Nye motstandere', description: 'Oppsett der noen allerede har møtt hverandre i kveld, unngås. Slik spiller alle mot alle. Et par som har møttes flere ganger, teller ekstra mye.' },
     seasonVariety: { title: 'Variasjon', description: 'Makkere som sjelden har vært på lag sammen denne sesongen, foretrekkes.' },
     balance: {
       title: 'Jevne lag',

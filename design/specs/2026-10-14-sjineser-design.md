@@ -308,19 +308,22 @@ name-sorted combinations, and with equal sizes the first name is always on team 
 images are not repeated); lowest wins. A split's teammate pairs are all pairs within each team
 (one for a team of two, three for a team of three); its opponent pairs are all pairs with one
 player from each team. Everyone with and against everyone during a night comes first:
-1. `newPartners` — times the split's teammate pairs have already been together tonight (sum).
-2. `newOpponents` — times the split's opponent pairs have already faced each other tonight (sum).
+1. `newPartners` — times each of the split's teammate pairs has already been together tonight,
+   squared and summed.
+2. `newOpponents` — times each of the split's opponent pairs has already faced each other tonight,
+   squared and summed.
 3. `seasonVariety` — times the split's teammate pairs have been together this season (sum).
 4. `balance` — absolute difference between the team ratings (means, §8), in tolerance buckets.
 
 With 4 players over 3 matches, each split occurs once, so every pair partners once and meets as
 opponents twice; the order of the three is decided by season variety, then Elo (most balanced
-first). When everyone present has played every match tonight (up to 7 present, nobody arriving
-late), a split's opponent repeats equal its teammate repeats plus a constant (each pair that
-shared a match was either together or opposed), so `newOpponents` only separates splits when two
-of the players sat out or missed the same earlier match (8+ present, or a late arrival); it then
-avoids rematching pairs of regulars. (Changed 2026-11-11: opponents added, season variety moved
-ahead of balance; previously new partners → balance → variety.)
+first). Squaring spreads repeats: one pair together a third time (9) weighs more than two pairs together
+a second time (4 + 4), so with 5 players nobody partners the same player three times in a row
+while an evener split exists (the night of 2026-11-10, set 3). Summed counts would not separate
+`newOpponents` from `newPartners` when everyone present has played every match tonight (each pair
+that shared a match was either together or opposed, so the opponent sum is the teammate sum plus a
+constant); squared, the two differ. (Changed 2026-11-11: opponents added, repeats squared, season
+variety moved ahead of balance; previously summed new partners → balance → variety.)
 
 Details:
 - Rules are compared lexicographically (rule 1 first; later rules only break ties).

@@ -118,9 +118,10 @@ test('five players (3 against 2): opponent pairs are spread, never repeated whil
   const proposals = followProposals(FIVE, 6);
   proposals.forEach((p, i) => {
     const { partners, opponents } = pairCounts(proposals.slice(0, i));
+    // Tonight's repeats count squared.
     const score = (split) => [
-      split.pairs.reduce((total, [x, y]) => total + (partners.get([x, y].sort().join('+')) ?? 0), 0),
-      split.opponents.reduce((total, [x, y]) => total + (opponents.get([x, y].sort().join('+')) ?? 0), 0),
+      split.pairs.reduce((total, [x, y]) => total + (partners.get([x, y].sort().join('+')) ?? 0) ** 2, 0),
+      split.opponents.reduce((total, [x, y]) => total + (opponents.get([x, y].sort().join('+')) ?? 0) ** 2, 0),
     ];
     const splits = splitsOf(FIVE, [3, 2]).map(score);
     const [chosenPartners, chosenOpponents] = score(splitsOf(FIVE, [3, 2]).find((s) => s.A.join() === p.A.join()));
@@ -132,6 +133,21 @@ test('five players (3 against 2): opponent pairs are spread, never repeated whil
   // After four sets every pair has faced each other at least once, and nobody more than three times.
   const { opponents } = pairCounts(proposals.slice(0, 4));
   for (const pair of allPairs(FIVE)) assert.ok(opponents.get(pair) >= 1 && opponents.get(pair) <= 3, `${pair}: ${opponents.get(pair)}`);
+});
+
+test('repeats count squared: no pair together a third time while an evener split exists', () => {
+  // The night of 2026-11-10 after two sets: Fredrik and Jacob were together in both. Summed,
+  // Fredrik+Jacob+Sole vs HP+Tom (one pair twice: 2) tied with splits that repeat two pairs once
+  // (1 + 1) and was proposed; squared it weighs 4 against 2. The ratings make it the most even split.
+  const players = ['Fredrik', 'HP', 'Jacob', 'Sole', 'Tom'];
+  const p = proposeTeams(build([night(players)], [
+    played(match(1, ['Fredrik', 'HP', 'Jacob'], ['Sole', 'Tom'])),
+    played(match(2, ['Fredrik', 'Jacob', 'Tom'], ['HP', 'Sole'])),
+  ]), withRatings({ Fredrik: 1000, Jacob: 1000, Sole: 1150, HP: 1050, Tom: 1050 }));
+  const together = (x, y) => [p.A, p.B].some((team) => team.includes(x) && team.includes(y));
+  assert.ok(!together('Fredrik', 'Jacob'), `${p.A} vs ${p.B}`);
+  const { partners } = pairCounts([{ A: ['Fredrik', 'HP', 'Jacob'], B: ['Sole', 'Tom'] }, { A: ['Fredrik', 'Jacob', 'Tom'], B: ['HP', 'Sole'] }, p]);
+  assert.ok(Math.max(...partners.values()) <= 2);
 });
 
 test('new opponents breaks a tie that new partners leaves', () => {

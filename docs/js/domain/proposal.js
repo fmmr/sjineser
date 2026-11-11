@@ -33,11 +33,13 @@ export const BENCH_RULES = [
  * How the players are split into teams. Lower keys win, compared rule by rule. A split's
  * `pairs` are all teammate pairs within each team (one for a team of two, three for a team of three);
  * its `opponents` are all pairs with one player from each team. Everyone with and against
- * everyone during a night comes first; season variety and balance only break ties.
+ * everyone during a night comes first; season variety and balance only break ties. Tonight's
+ * repeats count squared, so one pair together three times (9) weighs more than two pairs
+ * together twice (4 + 4): repeats are spread instead of piling up on one pair.
  */
 export const SPLIT_RULES = [
-  { id: 'newPartners', key: (split, ctx) => sum(split.pairs.map(ctx.partneredTonight)) },
-  { id: 'newOpponents', key: (split, ctx) => sum(split.opponents.map(ctx.opposedTonight)) },
+  { id: 'newPartners', key: (split, ctx) => sum(split.pairs.map((pair) => ctx.partneredTonight(pair) ** 2)) },
+  { id: 'newOpponents', key: (split, ctx) => sum(split.opponents.map((pair) => ctx.opposedTonight(pair) ** 2)) },
   { id: 'seasonVariety', key: (split, ctx) => sum(split.pairs.map(ctx.partneredThisSeason)) },
   { id: 'balance', key: (split, ctx) => Math.floor(Math.abs(ctx.teamRating(split.A) - ctx.teamRating(split.B)) / BALANCE_TOLERANCE) },
 ];
