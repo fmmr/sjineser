@@ -1,4 +1,4 @@
-import { ELO, expectedScore } from '../elo.js';
+import { ELO, expectedScore, gameEntries } from '../elo.js';
 import { byName } from '../players.js';
 import { MIN_GAMES_TOGETHER, RANKING_SIZE } from './constants.js';
 import { pairRows, playerRows } from './subjects.js';
@@ -101,7 +101,7 @@ export function gamesUpToLastInScope(facts) {
   const lastGame = new Map(facts.rows.map((r) => [r.player, gameKey(r)]));
   const counts = new Map();
   const result = new Map();
-  for (const { game, before } of facts.rated.timeline) {
+  for (const { game, before } of gameEntries(facts.rated)) {
     const key = gameKey(game);
     for (const name of before.keys()) {
       counts.set(name, (counts.get(name) ?? 0) + 1);
@@ -123,7 +123,7 @@ export const isProvisionalAfter = (games) => games < ELO.PROVISIONAL_GAMES;
 export function allTimeGameNumbers(facts) {
   const counts = new Map();
   const numbers = new Map();
-  for (const { game, before } of facts.rated.timeline) {
+  for (const { game, before } of gameEntries(facts.rated)) {
     for (const name of before.keys()) {
       counts.set(name, (counts.get(name) ?? 0) + 1);
       numbers.set(`${name}|${gameKey(game)}`, counts.get(name));

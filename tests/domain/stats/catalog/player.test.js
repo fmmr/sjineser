@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compareSubject, pairSubject, playerSubject } from '../../../../docs/js/domain/stats/subjects.js';
+import { ELO } from '../../../../docs/js/domain/elo.js';
 import { HF_TP, HP_FT, HT_FP, compute, factsOf } from './fixtures.js';
 
 const N1 = '2026-09-02';
@@ -20,7 +21,8 @@ test('rating: the current rating whatever the period, provisional marker below 1
   assert.deepEqual(compute('rating', factsOf([{ date: N1, matches: [[HF_TP, 'A']] }]), HANS),
     { value: 1012, format: 'rating', marker: 'provisional' });
   const hans = MAIN.rows.filter((r) => r.player === 'Hans');
-  assert.deepEqual(compute('rating', MAIN, HANS), { value: hans.at(-1).ratingAfter, format: 'rating' });
+  // Hans missed N3 (no-show penalty after his last game).
+  assert.deepEqual(compute('rating', MAIN, HANS), { value: hans.at(-1).ratingAfter - ELO.NO_SHOW_PENALTY, format: 'rating' });
   const spring = factsOf([{ date: '2026-03-04', matches: [[HF_TP, 'A']] }, { date: N1, matches: [[HF_TP, 'A']] }],
     { kind: 'season', year: 2026, half: 1 });
   assert.notEqual(compute('rating', spring, HANS).value, 1012, 'not the rating at the end of spring');

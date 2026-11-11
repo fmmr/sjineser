@@ -82,7 +82,7 @@ export const notFound = (path, ctx) => [
  * Shared frame of the stats views: loading placeholder, filter from ?s (without it: all
  * seasons) unless the view brings its own, memoized facts, and re-rendering on store changes.
  * @param {HTMLElement} root
- * @param {{ store: object, clock: { today(): string }, query: Record<string, string> }} ctx
+ * @param {{ store: object, clock: { today(): string, hour(): number }, query: Record<string, string> }} ctx
  * @param {(page: HTMLElement, data: { dataset: object, facts: object, filter: object, today: string })
  *   => ({ destroy?(): void } | void)} render
  * @param {{ filter?: import('../../domain/stats/filter.js').Filter }} [options] filter: fixed (e.g. a night), ?s is ignored
@@ -104,7 +104,8 @@ export function mountStatsView(root, ctx, render, { filter: fixed } = {}) {
     const dataset = store.get();
     const today = clock.today();
     const filter = fixed ?? (query.s ? parseFilter(query.s, today) : { kind: 'all' });
-    cleanup = render(page, { dataset, facts: factsFor(dataset, filter), filter, today })?.destroy ?? null;
+    const facts = factsFor(dataset, filter, { today, hour: clock.hour() });
+    cleanup = render(page, { dataset, facts, filter, today })?.destroy ?? null;
   }
 
   update();

@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ELO, expectedScore, isProvisional, rateGames, ratingOf } from '../../docs/js/domain/elo.js';
+import {
+  ELO, expectedScore, gameEntries, isPenalty, isProvisional, penaltyEntries, rateGames, ratingOf,
+} from '../../docs/js/domain/elo.js';
 import { DATE, dataset, game } from '../helpers.js';
 
 const M1 = `${DATE}#1`;
@@ -115,4 +117,94 @@ test('3 vs 2: expected score from the team means; every team member gets the sam
   close(ratingOf(rated, 'Frode'), up - delta);
   close(ratingOf(rated, 'Per'), down - delta);
   assert.ok(delta < -ELO.K / 2, 'the favourite loses more than K/2');
+});
+
+// ---------- no-show penalty ----------
+
+const N1 = '2026-09-02';
+const N2 = '2026-09-16';
+const N3 = '2026-09-30';
+const ALL5 = ['Hans', 'Frode', 'Tor', 'Per', 'Ola'];
+const FOUR = ['Hans', 'Frode', 'Tor', 'Per'];
+const WITH_OLA = ['Hans', 'Frode', 'Tor', 'Ola'];
+
+/**
+ * Nights of at most one match each: [date, roster, seats (A1 A2 B1 B2, or []), results]. Every
+ * name in ALL5 is a player, active unless listed in `inactive`.
+ */
+function nights(list, inactive = []) {
+  const ds = dataset({ players: ALL5.map((name) => ({ name, active: !inactive.includes(name) })) });
+  for (const [date, roster, [A1, A2, B1, B2], results] of list) {
+    const matchId = `${date}#1`;
+    ds.nights.push({ date, players: roster });
+    if (A1) ds.matches.push({ matchId, date, A1, A2, B1, B2 });
+    [...results].forEach((result, i) => ds.games.push(game(matchId, i + 1, result)));
+  }
+  return ds;
+}
+const penalties = (rated) => penaltyEntries(rated).map(({ date, player, change }) => [date, player, change]);
+const MISSED = -ELO.NO_SHOW_PENALTY;
+
+test('no-show: an active player who has played and misses a played night loses NO_SHOW_PENALTY', () => {
+  const rated = rateGames(nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D']]));
+  assert.deepEqual(penalties(rated), [[N2, 'Per', MISSED]]);
+  close(ratingOf(rated, 'Per'), ELO.START + MISSED);
+  close(ratingOf(rated, 'Hans'), ELO.START);
+});
+
+test('no-show: nobody is penalised before their first night', () => {
+  const rated = rateGames(nights([[N1, FOUR, FOUR, 'D'], [N2, FOUR, FOUR, 'D'], [N3, WITH_OLA, WITH_OLA, 'D']]));
+  // Ola had never played before N3 (so no penalty on N1 or N2); Per missed N3.
+  assert.deepEqual(penalties(rated), [[N3, 'Per', MISSED]]);
+  close(ratingOf(rated, 'Ola'), ELO.START);
+});
+
+test('no-show: inactive players are exempt', () => {
+  const rated = rateGames(nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D']], ['Per']));
+  assert.deepEqual(penalties(rated), []);
+});
+
+test('no-show: on the roster but sitting out (or gone home) counts as there', () => {
+  const rated = rateGames(nights([[N1, FOUR, FOUR, 'D'], [N2, ALL5, WITH_OLA, 'D']]));
+  assert.deepEqual(penalties(rated), []);
+});
+
+test('no-show: nights without games are ignored', () => {
+  const rated = rateGames(nights([[N1, FOUR, FOUR, 'D'], [N2, ['Hans'], [], ''], [N3, WITH_OLA, WITH_OLA, '']]));
+  assert.deepEqual(penalties(rated), []);
+});
+
+test('no-show: missed nights accumulate', () => {
+  const rated = rateGames(nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D'], [N3, WITH_OLA, WITH_OLA, 'D']]));
+  assert.deepEqual(penalties(rated), [[N2, 'Per', MISSED], [N3, 'Per', MISSED]]);
+  close(ratingOf(rated, 'Per'), ELO.START + 2 * MISSED);
+});
+
+test('no-show: penalties follow the night\'s games in the timeline and feed later expected scores', () => {
+  const rated = rateGames(nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D'], [N3, FOUR, FOUR, 'A']]));
+  const order = rated.timeline.map((entry) => (isPenalty(entry) ? `p:${entry.date}` : `g:${entry.game.matchId}`));
+  assert.deepEqual(order, [`g:${N1}#1`, `g:${N2}#1`, `p:${N2}`, `g:${N3}#1`, `p:${N3}`]); // Per misses N2, Ola N3
+  assert.equal(gameEntries(rated).length, 3);
+  const last = gameEntries(rated).at(-1);
+  close(last.before.get('Per'), ELO.START + MISSED);
+  // Hans & Frode (START) beat Tor & Per (mean START − penalty / 2): less than K/2.
+  const delta = ELO.K * (1 - expectedScore(ELO.START, ELO.START + MISSED / 2));
+  close(last.changes.get('Hans'), delta);
+  assert.ok(delta < ELO.K / 2);
+});
+
+test('no-show: no penalty while the night is still ongoing (clock given); without a clock every night counts', () => {
+  const ds = nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D']]);
+  assert.deepEqual(penalties(rateGames(ds, { today: N2, hour: 21 })), []);
+  assert.deepEqual(penalties(rateGames(ds, { today: '2026-09-17', hour: 11 })), [], 'next day before noon');
+  assert.deepEqual(penalties(rateGames(ds)), [[N2, 'Per', MISSED]]);
+});
+
+test('no-show: the penalty applies once the night is over (the next day from noon)', () => {
+  const ds = nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D']]);
+  assert.deepEqual(penalties(rateGames(ds, { today: '2026-09-17', hour: 12 })), [[N2, 'Per', MISSED]]);
+  close(ratingOf(rateGames(ds, { today: '2026-09-17', hour: 12 }), 'Per'), ELO.START + MISSED);
+  // Earlier nights are over, so only the ongoing one is spared.
+  const three = nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D'], [N3, WITH_OLA, WITH_OLA, 'D']]);
+  assert.deepEqual(penalties(rateGames(three, { today: N3, hour: 20 })), [[N2, 'Per', MISSED]]);
 });

@@ -123,13 +123,15 @@ export function mountNewMatch(root, { store, actions, navigate, clock }) {
 
   function update() {
     const ds = store.get();
-    const night = activeNight(ds, clock.today(), clock.hour());
+    const today = clock.today();
+    const hour = clock.hour();
+    const night = activeNight(ds, today, hour);
     if (!night) {
       root.replaceChildren(h('p', { class: 'muted' }, t.errors.noNight));
       return;
     }
     const here = availablePlayers(night);
-    const rated = rateGames(ds);
+    const rated = rateGames(ds, { today, hour });
     const proposal = proposeTeams(ds, rated);
     if (!touched) applyProposal(proposal);
     // A player who went home meanwhile leaves their team.

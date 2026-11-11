@@ -374,6 +374,22 @@ Details:
 - Games are processed in the canonical game order (§3).
 - One continuous rating, never reset. Season views show rating at season end and
   the change during the season.
+- **No-show penalty** (added 2026-11-11): `ELO.NO_SHOW_PENALTY` = **10**. For every played night (a night
+  with ≥ 1 game), every player who is `active` in Players, has played a game on an earlier night and is
+  not on that night's roster (Nights.players — sitting out or going home early counts as there) loses
+  NO_SHOW_PENALTY points, applied after the night's last game and before the next night.
+  A night that is still ongoing (§3, `isNightOngoing`) gets no penalty yet — players may still arrive:
+  `rateGames(dataset, { today, hour })` takes the clock as values (views pass `clock.today()` /
+  `clock.hour()` through `factsFor` / `buildFacts` and the new-match screen); without it every played
+  night counts (tests, sandbox generation). It is part of the replay
+  (`rateGames`), so later expected scores use the penalised ratings and `ratings` includes it. The
+  timeline holds penalty entries `{ kind: 'penalty', date, player, change }` after the night's game
+  entries (game entries keep their shape; `gameEntries` / `penaltyEntries` / `isPenalty` in `elo.js`).
+  Facts build rows from game entries only and list the period's penalties in `facts.penalties`.
+  Stats: the leaderboard's `change` and Sesongens spiller's change add the period's penalties (only
+  players with games in a season can win it); the rating chart has a point per night attended (a
+  penalty shows in the next point); peak/low rating use game ratings only; the night leaderboard lists
+  those who were there, who have no penalty that night. Shown on the "Slik fungerer rating" page.
 
 ## 9. Statistics
 
@@ -472,7 +488,7 @@ the current tab), not a radio group; it fits across 375 px. The current tab come
 (`statsTab`): a list page is its own tab; `/stats/player*` and `/stats/compare/*` → Spillere,
 `/stats/pair/*` → Par, `/stats/night/*` → Kvelder. Tab links keep `s` when the current query has it
 (the night page has none, so its tabs carry none).
-- **List pages** (one per tab): Oversikt (leaderboard, summary, trends, records, attendance); Spillere
+- **List pages** (one per tab): Oversikt (leaderboard, league table, summary, trends, records, attendance); Spillere
   (`PAGES.players`: the leaderboard of everyone who has played; a row opens the player page);
   Par (the pairs table); Kvelder (`PAGES.nights`: the `nightsList` table; a row opens the night
   page). Their heading is for screen readers only (the tab names the page); the season pill sits
@@ -557,6 +573,13 @@ tooltip); each cell is the row player's win share (W / games) as a whole percent
 subtly with the accent when the row player won more of their games than they lost and the danger colour when they
 lost more (draws are neutral, so with many draws a share under 50 % can still be green; stronger with a larger
 margin |W − L| / (W + L)), and links to compare row vs column; empty where they never met. Scrolls sideways on narrow screens with the names sticky on the left.
+
+**Ligatabell** (added 2026-11-11): `leagueTable` (overall, `table`) — per player who was at ≥ 1 played
+night in the period: `nights` (played nights on the roster, sitting out counts), `setsWon` (finished sets
+won) and `points` = `LEAGUE_POINTS_NIGHT` (1) × nights + `LEAGUE_POINTS_SET_WON` (2) × sets won (constants in
+`domain/stats/constants.js`, in the description via the description params); by points, then sets won,
+then name; columns rank, player, nights, setsWon, points; a row links to the player. Placement: an
+overview section "Ligatabell" directly after the player list (Spillere); overview only.
 
 **Layout**: mobile first — headline numbers and one chart, details one tap deeper;
 wide screens add columns (tiles in an auto-fit grid, tables full width). Charts use

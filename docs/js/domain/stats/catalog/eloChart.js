@@ -1,6 +1,10 @@
 import { playerRows } from '../subjects.js';
 
-/** One point per night played in scope: the rating after the player's last game that night. @type {import('../registry.js').Stat} */
+/**
+ * One point per night played in scope: the rating after the player's last game that night. Nights
+ * the player missed get no point; their no-show penalties (spec §8) show in the next point.
+ * @type {import('../registry.js').Stat}
+ */
 export const eloChart = {
   id: 'eloChart',
   subjects: ['player'],

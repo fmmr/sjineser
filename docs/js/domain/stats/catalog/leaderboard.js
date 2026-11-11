@@ -13,20 +13,25 @@ export const LEADERBOARD_COLUMNS = [
 
 /**
  * Leaderboard rows for the given players, unranked: current rating, and change, games and form
- * within the period (without games in the period: change null, games 0, form []).
+ * within the period. Change = game deltas + no-show penalties in the period (spec §8); without
+ * games or penalties in the period it is null; without games, games is 0 and form [].
  * @param {import('../facts.js').Facts} facts
  * @param {string[]} players
  */
 export function leaderboardRows(facts, players) {
   const { rated } = facts;
   const inPeriod = new Map();
+  const entryOf = (player) => {
+    if (!inPeriod.has(player)) inPeriod.set(player, { change: 0, games: 0, rows: [] });
+    return inPeriod.get(player);
+  };
   for (const row of facts.rows) {
-    const entry = inPeriod.get(row.player) ?? { change: 0, games: 0, rows: [] };
+    const entry = entryOf(row.player);
     entry.change += row.delta;
     entry.games += 1;
     entry.rows.push(row);
-    inPeriod.set(row.player, entry);
   }
+  for (const { player, change } of facts.penalties) entryOf(player).change += change;
   return players.map((player) => {
     const period = inPeriod.get(player);
     return {
@@ -46,7 +51,7 @@ export const ranked = (rows) => rows.map((row, i) => ({ rank: i + 1, ...row }));
 
 /**
  * Elo leaderboard. A rating belongs to a moment, not to a season, so `rating` is everyone's
- * current rating whatever the period; `change` (sum of rating changes) and `games` are within
+ * current rating whatever the period; `change` (sum of rating changes, no-show penalties included) and `games` are within
  * the period, and so is `form` (the last FORM_GAMES outcomes, oldest first). Everyone who has
  * ever played is listed; without games in the period, games is 0, change is null and form is [].
  * `attendance` is oppmøte in the period ({ count, share }). Provisional reflects all games played so far.
