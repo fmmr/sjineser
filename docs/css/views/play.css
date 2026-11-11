@@ -267,7 +267,21 @@
   font-size: var(--text-base);
 }
 
-/* "Se kveldens statistikk": a full tap target, quiet next to the buttons. */
+/* Home: who went home, quieter than the players who are still here. */
+.night-left {
+  margin-top: calc(-1 * var(--space-2));
+  font-size: var(--text-sm);
+}
+
+/* "Spillere i kveld" and "Se kveldens statistikk" side by side under the button. */
+.night-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: var(--space-4);
+}
+
+/* "Se kveldens statistikk" / "Spillere i kveld": a full tap target, quiet next to the buttons. */
 .night-stats-link {
   display: inline-flex;
   align-items: center;

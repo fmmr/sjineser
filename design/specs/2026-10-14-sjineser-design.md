@@ -60,7 +60,7 @@ find-and-replace).
 `active = FALSE` hides a player from pickers but keeps their history.
 
 **Managing players** (Mer → Spillere, §6; ops in §4):
-- **Rename** (`renamePlayer`) changes the Players row, every Nights roster containing the old
+- **Rename** (`renamePlayer`) changes the Players row, every Nights roster (and `left`) containing the old
   name and every Matches seat (A1–B3) equal to it, in one locked server request (Players first,
   so the seat validation accepts the new name). The new name follows the name rules below and
   must not belong to another player; another casing of the same player is allowed.
@@ -71,9 +71,19 @@ find-and-replace).
 
 **Nights**
 
-| date | players |
-|---|---|
-| 2026-10-14 | Frode, Hans, Tor, Per |
+| date | players | left |
+|---|---|---|
+| 2026-10-14 | Frode, Hans, Tor, Per, Kari | Per |
+
+- `players` = everyone who was there that night (attendance, comma-joined). It only grows
+  during the night: a late arrival is appended (`joinNight`), nobody is ever removed.
+- `left` = those of them who have gone home (comma-joined, may be blank; a blank cell, or a
+  sheet from before the column existed, means nobody). Someone who comes back is removed from
+  `left` again (`joinNight`).
+- **Available** = `players` − `left` (`availablePlayers(night)` in `domain/match.js`). Team
+  proposals and the New match picker use only available players; stats keep using `players`
+  (who was there).
+- `setup()` adds the `left` header to an existing sheet (idempotent); old rows keep a blank cell.
 
 **Matches**
 
@@ -138,8 +148,9 @@ and are unique case-insensitively. Enforced in both UI and `addPlayer` / `rename
 `setup()` in the Apps Script creates tabs, headers, formats, the status formula and
 data validation. It is idempotent and is run once per sheet.
 
-A night's roster is fixed once started. A late arrival requires editing the sheet;
-roster editing in the app is out of scope.
+A night's roster changes only while the night is active (the UI offers it only then; the
+ops themselves do not check the clock): *Spillere i kveld* (§6) adds late arrivals and marks
+who went home (`joinNight` / `leaveNight`, §4).
 
 Historical data from the old sheet is imported once by `scripts/import-history.mjs` (§18).
 
@@ -149,10 +160,12 @@ Historical data from the old sheet is imported once by `scripts/import-history.m
 |---|---|---|---|
 | GET | — | — | Returns the envelope with `data: { players, nights, matches, games }`. |
 | POST | `addPlayer` | `{ name }` | `noop` if exists (case-insensitive); `invalid` if name breaks the rules. `data.name` returns the canonical stored name. (Accepted limitation: if two phones add the same name with different casing at the same moment, the second phone's roster keeps its own casing until corrected in the sheet.) |
-| POST | `renamePlayer` | `{ from, to }` | Renames in Players, every Nights roster and every Matches seat. `noop` if `from` is absent but `to` exists (a retry after success) or if the stored name already is `to`; `conflict` if `to` belongs to another player (case-insensitive); `invalid` if `to` breaks the name rules or neither name exists. |
+| POST | `renamePlayer` | `{ from, to }` | Renames in Players, every Nights roster (`players` and `left`) and every Matches seat. `noop` if `from` is absent but `to` exists (a retry after success) or if the stored name already is `to`; `conflict` if `to` belongs to another player (case-insensitive); `invalid` if `to` breaks the name rules or neither name exists. |
 | POST | `setPlayerActive` | `{ name, active }` | Sets `active`; `noop` if it already has that value; `invalid` if the player is unknown or `active` is not a boolean. |
 | POST | `deletePlayer` | `{ name }` | Deletes the Players row; `noop` if absent; `invalid` if the player is on any night roster or in any match seat. |
-| POST | `startNight` | `{ date, players }` | `noop` if identical night exists; `conflict` if date exists with a different roster. |
+| POST | `startNight` | `{ date, players }` | `noop` if identical night exists; `conflict` if date exists with a different roster. Writes a blank `left`. |
+| POST | `joinNight` | `{ date, name }` | `name` must be an existing player (case-insensitive; the stored spelling is written). On the roster and in `left` → removed from `left` (came back); on the roster and not in `left` → `noop`; otherwise appended to `players`. `invalid` if the night or the player does not exist. |
+| POST | `leaveNight` | `{ date, name }` | Adds the player (resolved case-insensitively) to `left`; `noop` if already there; `invalid` if the night does not exist or the player is not on its roster. Allowed even for someone seated in the match in progress (the UI warns). |
 | POST | `startMatch` | `{ matchId, date, A1, A2, A3?, B1, B2, B3? }` | `noop` if identical (a missing third seat equals a blank one); `conflict` if `matchId` exists with different players; `invalid` unless each team has 2–3 distinct players and nobody is on both teams. |
 | POST | `addGame` | `{ matchId, gameNo, result, timestamp }` | `noop` if `(matchId, gameNo)` exists with the same result; `conflict` if different result; `invalid` if the match does not exist. |
 | POST | `deleteGame` | `{ matchId, gameNo }` | Deletes the row; `noop` if absent. |
@@ -215,7 +228,7 @@ docs/                   the published site (GitHub Pages: branch main, folder /d
       proposal.js       team proposal rules (as data) + engine
       stats/            one module per area: overall, records, player, pairs, compare
     views/              rendering only; read from store, call domain, dispatch actions
-      play/             home, start-night, new-match, match
+      play/             home, start-night, new-match, match, roster (Spillere i kveld)
       stats/            overall, players, player, pairs, pair, compare
       more/             Mer: players, settings, explanations and about, as grouped lists; players (Spillere)
       about/            about (links, data, code stats, version), how-teams-are-proposed, how-ratings-work
@@ -244,7 +257,9 @@ sync badge. Links inside screens are contextual only (e.g. "Slik foreslås lag" 
 proposal); the stats section adds its own sub-navigation (§9 Navigation).
 
 1. **Play home** — three states, by the active night (§3):
-   - *A night is ongoing:* its card ("Kveld 14. okt.", the players, *Fortsett kvelden*);
+   - *A night is ongoing:* its card ("Kveld 14. okt.", the available players, a muted
+     "Gått hjem: …" line if anyone left, *Fortsett kvelden*, and the links *Spillere i kveld*
+     and *Se kveldens statistikk*);
      *Ny kveld* is disabled with the hint "Kvelden er i gang." (also after midnight).
    - *The latest night is over:* a quiet history card ("Forrige kveld 13. okt." and the
      players, no button); *Ny kveld* is the primary button.
@@ -256,7 +271,18 @@ proposal); the stats section adds its own sub-navigation (§9 Navigation).
 3. **New match** — the app proposes teams (and sit-outs) with a one-line reason per
    decision; the user may override by tapping players between teams/bench (bench → A → B →
    bench, skipping a team that already has 3). Start is enabled when both teams have 2–3 players.
-   If a match is still incomplete, the app asks to abandon it first.
+   If a match is still incomplete, the app asks to abandon it first. Only available players
+   (§3) are listed; a *Spillere i kveld* link below the list opens the roster.
+3b. **Spillere i kveld** (`#/play/roster`, from the home card and New match; Spill tab) — only
+   for the active night (otherwise "Start en kveld først"). A grouped list "Her nå (N)" of
+   everyone on tonight's roster, sorted by name, each with a switch: on = here, off = gått hjem
+   (row subtitle "Gått hjem"). Turning off someone seated in the match in progress asks first
+   (the match keeps its teams). Below it, *Legg til spiller*: a chip per active player not on
+   the roster (tap = `joinNight`) and a "Ny spiller" field (same rules as `addPlayer`; creates
+   the player and joins them). With fewer than 4 available a note says a match needs 4.
+   *Ferdig* returns to New match when opened from there (`?from=new-match`), else to Spill.
+   A page rather than a bottom sheet: the list updates live as switches flip, and the field
+   and chips need room on a small phone.
 4. **Match** — two large team panels, large score (e.g. **2 – 1**), the game sequence
    (D A D B …; team names read "Anne, Bjørn og Cato" and wrap inside the panel), three large buttons: *Lag A vant* / *Uavgjort* / *Lag B vant*, and
    *Angre* (undo). At 3 wins: a prominent winner banner and a *Neste kamp* button
@@ -535,7 +561,8 @@ Chart.js (§11), loaded only when a chart is shown.
 - **Cascade on drop:** when an op is dropped (`conflict` / `invalid`), every later
   queued op that depends on it is dropped too: dropping any op on a `matchId`
   (`startMatch`, `addGame`, `deleteGame`, `deleteMatch`) drops all later ops on that
-  `matchId`; dropping a night op drops all later ops for that night date. Player ops
+  `matchId`; dropping a `startNight` drops all later ops for that night date, including its
+  `joinNight` / `leaveNight` (night ops; dropping one of those drops only itself). Player ops
   (`addPlayer`, `renamePlayer`, `setPlayerActive`, `deletePlayer`) belong to no night or
   match: dropping one drops only itself.
   Example: phone 1 started match #2 offline and logged games, but phone 2 had

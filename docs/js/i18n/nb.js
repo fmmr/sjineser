@@ -22,6 +22,23 @@ export const t = {
   startNight: 'Start kvelden',
   minPlayers: (n, min) => `Velg minst ${min} spillere (${n} valgt)`,
 
+  roster: {
+    title: 'Spillere i kveld',
+    hereHeading: (n) => `Her nå (${n})`,
+    left: 'Gått hjem',
+    leftList: (names) => `Gått hjem: ${names}`,
+    hereLabel: (name) => `${name} er her`,
+    addHeading: 'Legg til spiller',
+    addChip: (name) => `+ ${name}`,
+    noneToAdd: 'Alle aktive spillere er med i kveld.',
+    tooFew: (n, min) => `${n} her nå – et sett trenger minst ${min}.`,
+    done: 'Ferdig',
+    leaveTitle: (name) => `${name} spiller i settet`,
+    leaveMessage: 'Settet som er i gang, fortsetter med de samme lagene. Gått hjem likevel?',
+    leaveConfirm: 'Gått hjem',
+    joined: (name) => `${name} er med i kveld`,
+  },
+
   newMatch: 'Nytt sett',
   pickTeams: (min, max) => `Trykk på en spiller for å flytte: benk → Lag A → Lag B. ${min}–${max} spillere per lag.`,
   sides: { bench: 'Benk', A: 'Lag A', B: 'Lag B' },

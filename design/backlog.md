@@ -2,7 +2,6 @@
 
 Ideas not yet planned (phases 1–4 of the spec and the history import are done).
 
-- **Late arrivals** — add a player to the ongoing night's roster (roster is fixed today; edit the sheet).
 - **Comments on sets/games** — a short text per set (or game), shown on the night page.
 - **Backup / export** — download all data as CSV/JSON from Mer.
 - **Lighter polling** — the match screen asks "anything changed?" (a version number) and fetches the full sheet only when needed.

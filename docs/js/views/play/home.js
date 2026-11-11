@@ -1,7 +1,7 @@
 import { h } from '../components/dom.js';
 import { nightCardSkeleton } from '../components/skeleton.js';
 import { formatDate, t } from '../../i18n/nb.js';
-import { activeNight, currentNight } from '../../domain/match.js';
+import { activeNight, availablePlayers, currentNight, leftOf } from '../../domain/match.js';
 import { nightSubject } from '../../domain/stats/subjects.js';
 import { subjectPath } from '../stats/links.js';
 import { buildHash } from '../../routing.js';
@@ -9,6 +9,10 @@ import { buildHash } from '../../routing.js';
 /** "Se kveldens statistikk": the night page of a night. */
 export const nightStatsLink = (date) =>
   h('a', { class: 'link night-stats-link', href: buildHash(subjectPath(nightSubject(date))) }, t.nightStatsLink);
+
+/** "Spillere i kveld": who is here tonight (views/play/roster.js); `from` is where "Ferdig" returns to. */
+export const rosterLink = (from = null) =>
+  h('a', { class: 'link night-stats-link', href: buildHash('/play/roster', from ? { from } : {}) }, t.roster.title);
 
 /**
  * Three states: a night is ongoing (continue it; no new night), the latest night is over
@@ -18,9 +22,10 @@ export function mountHome(root, { store, navigate, clock }) {
   const ongoingCard = (night) =>
     h('div', { class: 'card stack' },
       h('p', { class: 'eyebrow' }, t.nightOf(formatDate(night.date))),
-      h('p', { class: 'night-players' }, night.players.join(', ')),
+      h('p', { class: 'night-players' }, availablePlayers(night).join(', ')),
+      leftOf(night).length > 0 && h('p', { class: 'muted night-left' }, t.roster.leftList(leftOf(night).join(', '))),
       h('button', { class: 'btn btn-primary', type: 'button', onclick: () => navigate('/play/match') }, t.continueNight),
-      nightStatsLink(night.date));
+      h('div', { class: 'night-links' }, rosterLink(), nightStatsLink(night.date)));
 
   const endedCard = (night) =>
     h('div', { class: 'card stack night-ended' },

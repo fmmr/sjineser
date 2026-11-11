@@ -2,6 +2,7 @@ import { mountHome } from './play/home.js';
 import { mountStartNight } from './play/start-night.js';
 import { mountNewMatch } from './play/new-match.js';
 import { mountMatch } from './play/match.js';
+import { mountRoster } from './play/roster.js';
 import { mountStatsOverview } from './stats/overview.js';
 import { mountStatsPlayer } from './stats/player.js';
 import { mountStatsPlayers } from './stats/players.js';
@@ -23,6 +24,7 @@ export const routes = [
   ['/play/night', mountStartNight],
   ['/play/new-match', mountNewMatch],
   ['/play/match', mountMatch],
+  ['/play/roster', mountRoster],
   ['/stats', mountStatsOverview],
   ['/stats/players', mountStatsPlayers],
   ['/stats/player', mountStatsPlayer],

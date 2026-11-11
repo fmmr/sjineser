@@ -4,10 +4,11 @@ import { confirmSheet } from '../components/sheet.js';
 import { t } from '../../i18n/nb.js';
 import { byName } from '../../domain/players.js';
 import {
-  MAX_TEAM_SIZE, MIN_TEAM_SIZE, activeNight, currentMatch, gamesOf, score, seatsOf,
+  MAX_TEAM_SIZE, MIN_TEAM_SIZE, activeNight, availablePlayers, currentMatch, gamesOf, score, seatsOf,
 } from '../../domain/match.js';
 import { isProvisional, rateGames, ratingOf } from '../../domain/elo.js';
 import { proposeTeams } from '../../domain/proposal.js';
+import { rosterLink } from './home.js';
 
 const NEXT_SIDE = { bench: 'A', A: 'B', B: 'bench' };
 
@@ -127,9 +128,12 @@ export function mountNewMatch(root, { store, actions, navigate, clock }) {
       root.replaceChildren(h('p', { class: 'muted' }, t.errors.noNight));
       return;
     }
+    const here = availablePlayers(night);
     const rated = rateGames(ds);
     const proposal = proposeTeams(ds, rated);
     if (!touched) applyProposal(proposal);
+    // A player who went home meanwhile leaves their team.
+    for (const name of sides.keys()) if (!here.includes(name)) sides.delete(name);
     const ready = canStart({ A: count('A'), B: count('B') });
 
     root.replaceChildren(
@@ -138,7 +142,8 @@ export function mountNewMatch(root, { store, actions, navigate, clock }) {
         proposal && !touched && h('ul', { class: 'proposal-reasons' }, reasons(proposal).map((text) => h('li', {}, text))),
         touched && proposal && h('button', { class: 'btn btn-ghost', type: 'button', onclick: useProposal }, t.proposal.useProposal),
         h('p', { class: 'muted' }, t.pickTeams(MIN_TEAM_SIZE, MAX_TEAM_SIZE)),
-        h('ul', { class: 'assign-list' }, night.players.map((name) => playerRow(name, rated))),
+        h('ul', { class: 'assign-list' }, here.map((name) => playerRow(name, rated))),
+        rosterLink('new-match'),
         h('button', { class: 'btn btn-primary', type: 'button', disabled: !ready || starting, onclick: start }, t.startMatch),
         h('a', { class: 'link center', href: '#/about/teams' }, t.about.teamsLink)),
     );
