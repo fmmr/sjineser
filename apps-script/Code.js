@@ -436,6 +436,19 @@ function ensureHeaders() {
 
 // ---------- Setup (run once per sheet from the editor) ----------
 
+/**
+ * Run once from the editor after a change that uses a new Google service: it touches every
+ * service the web app needs, so Google asks the owner to approve them all. Sends nothing and
+ * changes nothing; logs the results.
+ */
+function authorize() {
+  console.log('Spreadsheet:', spreadsheet().getName());
+  console.log('Owner:', Session.getEffectiveUser().getEmail());
+  console.log('Time zone:', Session.getScriptTimeZone());
+  console.log('Mail quota left today:', MailApp.getRemainingDailyQuota());
+  console.log('Send count:', PropertiesService.getScriptProperties().getProperty(SENDS_PROPERTY));
+}
+
 function setup() {
   const ss = spreadsheet();
   Object.keys(TABS).forEach((name) => {
