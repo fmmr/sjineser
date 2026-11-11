@@ -60,7 +60,7 @@ test('joinNight and leaveNight change the stored roster like the server', async 
   assert.deepEqual(await api.post('leaveNight', { date: DATE, name: 'Anne' }), { ok: true, result: 'noop' });
   assert.deepEqual(await api.post('leaveNight', { date: DATE, name: 'Ukjent' }), { ok: false, error: 'invalid', message: 'invalid' });
   const { data } = await createSandboxApi({ storage }).getAll();
-  assert.deepEqual(data.nights.find((n) => n.date === DATE), { date: DATE, players: ['Anne', 'Bjørn', 'Cato', 'Dag', 'Gro'], left: ['Anne'] });
+  assert.deepEqual(data.nights.find((n) => n.date === DATE), { date: DATE, players: ['Anne', 'Bjørn', 'Cato', 'Dag', 'Gro'], left: ['Anne'], summarySent: '' });
 });
 
 test('duplicate ops are noops; conflicting and invalid ops fail with an envelope', async () => {
@@ -141,11 +141,22 @@ test('player management uses the same rules: rename everywhere, retry is a noop,
   assert.equal((await api.post('renamePlayer', { from: 'Annette', to: 'bjørn' }, 'any')).error, 'conflict');
 });
 
-test('sendNightSummary pretends to send: success with 0 recipients, the data unchanged', async () => {
+test('sendNightSummary pretends to send: success with 0 recipients; a test send changes nothing', async () => {
   const api = createSandboxApi({ storage: freshStorage() });
   const before = await api.getAll();
-  const payload = { date: generated.dataset.nights[0].date, subject: 'S', text: 'T' };
-  assert.deepEqual(await api.post('sendNightSummary', payload, 'any'), { ok: true, result: 'applied', data: { recipients: 0 } });
+  const payload = { date: generated.dataset.nights[0].date, subject: 'S', text: 'T', html: '<p>T</p>' };
   assert.deepEqual(await api.post('sendNightSummary', { ...payload, testPlayer: 'Anne' }, 'any'), { ok: true, result: 'applied', data: { recipients: 0 } });
   assert.deepEqual(await api.getAll(), before);
+  assert.deepEqual(await api.post('sendNightSummary', payload, 'any'), { ok: true, result: 'applied', data: { recipients: 0 } });
+});
+
+test('sendNightSummary like the server: a real send stamps the night once, a second is a conflict', async () => {
+  const api = createSandboxApi({ storage: freshStorage() });
+  const { date } = generated.dataset.nights[0];
+  const payload = { date, subject: 'S', text: 'T', html: '<p>T</p>' };
+  assert.equal((await api.post('sendNightSummary', payload, 'any')).ok, true);
+  const night = (await api.getAll()).data.nights.find((n) => n.date === date);
+  assert.match(night.summarySent, /^\d{4}-\d{2}-\d{2}T/);
+  assert.deepEqual(await api.post('sendNightSummary', payload, 'any'), { ok: false, error: 'conflict', message: 'Summary already sent' });
+  assert.equal((await api.post('sendNightSummary', { ...payload, testPlayer: 'Anne' }, 'any')).ok, true, 'test sends still work');
 });

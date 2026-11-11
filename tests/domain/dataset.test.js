@@ -20,6 +20,7 @@ test('addPlayer trims, dedupes case-insensitively and rejects bad names', () => 
 test('startNight: applied, noop for same roster in any order, conflict for another roster', () => {
   const { dataset: ds } = applyOp(dataset(), op('startNight', { date: DATE, players: FOUR }));
   assert.equal(ds.nights.length, 1);
+  assert.equal(ds.nights[0].summarySent, '', 'a new night has no summary sent');
   assert.equal(outcome(ds, 'startNight', { date: DATE, players: [...FOUR].reverse() }), 'noop');
   assert.equal(outcome(ds, 'startNight', { date: DATE, players: [...FOUR, 'Kari'] }), 'conflict');
   assert.equal(outcome(dataset(), 'startNight', { date: DATE, players: FOUR.slice(0, 3) }), 'invalid');
@@ -238,9 +239,9 @@ test('player ops with a missing payload do not throw', () => {
 
 const nightOf = (ds) => ds.nights.find((n) => n.date === DATE);
 
-test('startNight stores an empty left list', () => {
+test('startNight stores an empty left list and no summary sent', () => {
   const { dataset: ds } = applyOp(dataset(), op('startNight', { date: DATE, players: FOUR }));
-  assert.deepEqual(nightOf(ds), { date: DATE, players: FOUR, left: [] });
+  assert.deepEqual(nightOf(ds), { date: DATE, players: FOUR, left: [], summarySent: '' });
 });
 
 test('joinNight appends an existing player to the roster under the stored name', () => {

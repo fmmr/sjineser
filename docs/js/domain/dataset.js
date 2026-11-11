@@ -85,7 +85,7 @@ const HANDLERS = {
     if (!isISODate(date) || players.length < 4 || new Set(players).size !== players.length) {
       return unchanged(ds, 'invalid');
     }
-    return changed(ds, { nights: [...ds.nights, { date, players: [...players], left: [] }] });
+    return changed(ds, { nights: [...ds.nights, { date, players: [...players], left: [], summarySent: '' }] });
   },
 
   /**

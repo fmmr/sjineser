@@ -94,6 +94,8 @@ export const t = {
     mailQuota: 'Dagens kvote for e-post er brukt opp. Prøv igjen i morgen.',
     noTestRecipient: 'Testmottakeren har ingen e-postadresse i regnearket',
     sendFailed: 'E-posten ble ikke sendt',
+    summaryAlreadySent: 'Oppsummeringen for denne kvelden er allerede sendt',
+    summaryDailyLimit: 'Dagens grense for oppsummeringer er nådd. Prøv igjen i morgen.',
   },
 
   /** The night summary email (built here, sent as plain text) and its button and sheet on the night page. */
@@ -146,6 +148,10 @@ export const t = {
     sending: 'Sender …',
     sent: (n) => `Sendt til ${n} ${n === 1 ? 'spiller' : 'spillere'}`,
     sentTest: (name) => `Test sendt til ${name}`,
+    /** The night's real summary already went out (Nights.summarySent). */
+    sentAt: (date, time) => `Oppsummering sendt ${date} kl. ${time}`,
+    sentAtUnknown: (text) => `Oppsummering sendt (${text})`,
+    resendHint: 'Tøm summarySent i regnearket for å sende på nytt',
   },
 
   proposal: {
@@ -437,6 +443,11 @@ function localDate(iso) {
 
 /** "2026-10-14" → "14. okt." */
 export const formatDate = (iso) => dateFormat.format(localDate(iso));
+
+const timeFormat = new Intl.DateTimeFormat('nb-NO', { hour: '2-digit', minute: '2-digit' });
+
+/** A moment's local clock time: "21:03". @param {Date} date */
+export const formatTime = (date) => timeFormat.format(date);
 
 /** "2025-10-14" → "14. okt. 2025" */
 export const formatDateLong = (iso) => longDateFormat.format(localDate(iso));

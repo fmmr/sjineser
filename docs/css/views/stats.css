@@ -448,6 +448,12 @@
   margin-top: var(--space-5);
 }
 
+.stats-night-email-sent {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
 .email-subject {
   margin: 0;
   font-weight: 600;

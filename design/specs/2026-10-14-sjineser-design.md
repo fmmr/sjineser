@@ -77,9 +77,9 @@ cell means no email.
 
 **Nights**
 
-| date | players | left |
-|---|---|---|
-| 2026-10-14 | Frode, Hans, Tor, Per, Kari | Per |
+| date | players | left | summarySent |
+|---|---|---|---|
+| 2026-10-14 | Frode, Hans, Tor, Per, Kari | Per | 2026-10-14T21:03:12.000Z |
 
 - `players` = everyone who was there that night (attendance, comma-joined). It only grows
   during the night: a late arrival is appended (`joinNight`), nobody is ever removed.
@@ -89,7 +89,13 @@ cell means no email.
 - **Available** = `players` − `left` (`availablePlayers(night)` in `domain/match.js`). Team
   proposals and the New match picker use only available players; stats keep using `players`
   (who was there).
-- `setup()` adds the `left` header to an existing sheet (idempotent); old rows keep a blank cell.
+- `summarySent` (column D, plain text; added 2026-11-11) = when the night's summary email went
+  out for real (ISO timestamp, written by the server after `sendNightSummary`, §4); blank = not
+  sent. Not sensitive: GET returns it as `night.summarySent` (`''` when blank; `startNight` and
+  `applyOp` store `''`). The owner clears the cell by hand to allow another send.
+- The server adds missing headers (`left`, `summarySent`, …) by itself: `ensureHeaders()` runs at
+  the start of every GET and POST (one read of row 1 per tab, writes only blank header cells), so
+  a new column needs no `setup()` run; `setup()` still writes all headers. Old rows keep blank cells.
 
 **Matches**
 
@@ -185,25 +191,37 @@ Historical data from the old sheet is imported once by `scripts/import-history.m
 - Every write is idempotent, keyed on its natural key, so the outbox can retry freely.
   The one exception is `sendNightSummary` below, which changes no data and is never queued.
 
-**`sendNightSummary`** (POST; added 2026-11-11) — payload `{ date, subject, text, testPlayer? }`.
+**`sendNightSummary`** (POST; added 2026-11-11) — payload `{ date, subject, text, html, testPlayer? }`.
 PIN-protected and run under the lock like the writes, but not an outbox op: the app calls the
 API directly once (`actions.sendNightSummary`) and reports the outcome in a toast; offline it is
 refused at once ("prøv igjen når du har nett"), never queued; a wrong PIN prompts for the PIN and
-retries once. The subject and plain text are built in the app (`views/stats/night-summary.js`,
-texts in `nb.js`); the server only caps them (200 / 20 000 characters).
-- `invalid` unless the night exists and subject and text are non-empty strings.
+retries once. The subject, the HTML body and its plain-text fallback are built in the app
+(`views/stats/night-summary.js` and `views/email/night-email.js`, texts in `nb.js`); the server
+only caps them (subject 200, text 20 000, HTML 100 000 characters).
+- `invalid` unless the night exists and subject, text and html are non-empty strings.
 - Recipients = the valid addresses (simple `x@y.z` check, trimmed, no duplicates) of all
   **active** players — an inactive player never gets it (`summaryRecipients`, a pure helper
   with tests). None → `invalid` "No recipients".
-- One email via `MailApp.sendEmail({ to, bcc, subject, body })`: `to` = the script owner
-  (`Session.getEffectiveUser().getEmail()`), every recipient in `bcc`, plain text only.
+- One email via `MailApp.sendEmail({ to, cc, subject, body, htmlBody })`: `to` = the script owner
+  (`Session.getEffectiveUser().getEmail()`), every recipient in `cc` (the players see who got
+  it), `htmlBody` = `html`, `body` = `text` as the fallback for clients without HTML.
 - `testPlayer` (a name, case-insensitive; the app sends `SUMMARY_TEST_PLAYER` from `config.js`):
-  only that player's address, as `to`, no BCC, the active flag ignored, subject prefixed
+  only that player's address, as `to`, no CC, the active flag ignored, subject prefixed
   `[TEST] `; no address → `invalid` "Test player has no email".
+- **Anti-spam** (real sends only; test sends skip both rules and stamp nothing):
+  - once per night: a night whose `summarySent` (§3) is non-empty → `conflict` "Summary already
+    sent", nothing sent; after a successful send the server writes the timestamp there.
+  - at most 3 real sends a day (script time zone) across all nights, counted in the Script
+    Property `SUMMARY_SENDS` = `YYYY-MM-DD:n` (another day starts at 0) → `quota` "Daily send
+    limit reached".
+  - The app maps these to "Oppsummeringen for denne kvelden er allerede sendt" and "Dagens grense
+    for oppsummeringer er nådd …" (`t.errors.summaryAlreadySent` / `summaryDailyLimit`), and
+    refreshes the store after a real send so the night page shows `summarySent` at once.
 - Too little daily MailApp quota left (recipients + the owner) → `quota`.
 - Reply `{ ok: true, result: 'applied', data: { recipients: n } }`: the count, never addresses.
 - MailApp needs the "Send email as you" scope, authorised once by the owner in the editor after
-  deploying. Sandbox mode (§17) answers `recipients: 0` without sending.
+  deploying. Sandbox mode (§17) answers `recipients: 0` without sending; like the server, a real
+  sandbox send stamps the night's `summarySent` and a second one is a `conflict`.
 
 **Response envelope.** Apps Script cannot set HTTP status codes (every reply is 200),
 so outcome is carried in the body. GET and POST use the same envelope:
@@ -582,17 +600,44 @@ and the match screen ("Se kveldens statistikk"). An unknown or invalid date show
 
 **Kveldens oppsummering på e-post** (added 2026-11-11): under the sections the night page always
 has a button "Send kveldens oppsummering på e-post" (also after the night; it can be sent again).
-A tap builds the email from the page's facts (`nightSummary(facts, date, { ongoing })` in
-`views/stats/night-summary.js`, pure and tested; every text in `t.nightEmail`) and opens a confirm
-sheet with the subject and a scrollable preview of the text, and the actions **Send**, **Send test
-til Fredrik** (`SUMMARY_TEST_PLAYER` in `config.js`) and **Avbryt**. Sending goes through
-`actions.sendNightSummary` (§4); a toast says "Sendt til N spillere" / "Test sendt til Fredrik" or
-the error. Subject "Sjineser — kveld 10. nov. 2026"; plain text body: the night and who was there,
-the night's winner with the gain, Kveldens rangering (rank, name, change, games; sitting out "sto
-over"), every set ("Sett 2: A og B 3–1 C og D, 1 uavgjort", unfinished marked like on the page), the
-records longest set, longest win streak and clean sweeps when present, and the link
-`SITE_URL#/stats/night/<date>`. In sandbox mode the sheet says nothing is sent, and the fake
-backend answers 0 recipients.
+A tap builds the email (`nightSummary(facts, seasonFacts, date, { ongoing })` in
+`views/stats/night-summary.js`, pure and tested; every text in `t.nightEmail`): the page's night
+facts plus facts for the night's season (`seasonFilterOf(date)`, built at the tap). The content is
+computed once (`nightSummaryData`) and rendered twice: an HTML body
+(`views/email/night-email.js`) and a plain-text fallback with the same content and order. The
+confirm sheet shows the subject and a preview of the HTML in a sandboxed `<iframe srcdoc
+sandbox="">` (fixed height, scrolls; the email's inline styles cannot reach the app), and the
+actions **Send**, **Send test til Fredrik** (`SUMMARY_TEST_PLAYER` in `config.js`) and **Avbryt**.
+Sending goes through `actions.sendNightSummary` (§4); a toast says "Sendt til N spillere" / "Test
+sendt til Fredrik" or the error. Once the night's `summarySent` is set (§3) the page says
+"Oppsummering sendt 10. nov. kl. 21:03" under the button and in the sheet, **Send** is disabled
+with the hint "Tøm summarySent i regnearket for å sende på nytt"; the test send stays available.
+
+Subject "Sjineser — kveld 10. nov. 2026". Content, in order:
+1. Header: "Kveld 10. nov. 2026", who was there; "Kveldens vinner: Sole (+87)" and one talking
+   point: a win streak of 3 or more ("Sole vant 5 spill på rad."), else a comeback ("… snudde
+   0–2 til 3–2."), else the longest set ("Sett 3 varte i 9 spill."). (A clean 3–0 sweep is always
+   a streak of 3.)
+2. Every set as a small scoreboard (team names, the winners bold, score, draws, unfinished
+   marked like on the page); a night without games says "Ingen spill denne kvelden."
+3. Kveldens rangering: rank, name, rating (current), change tonight (+ accent / − danger), games,
+   form as S/U/T chips; sitting out "sto over".
+4. Avgjørende spill (`decisiveTable`, night filter), when non-null.
+5. Kveldens par (`pairsTable`, night filter, with kjemi), when non-null.
+6. Every non-null night record: longest set, most draws in a set, longest win streak, longest
+   draw streak, clean sweeps, comebacks, biggest upset.
+7. "<Sesong> så langt": Ligatabell (`leagueTable`, the night's season) and "Rating og endring i
+   sesongen" (`leaderboard` on the season: current ratings, change and games this season; only
+   players with games or penalties in the season).
+8. Links: the night page `SITE_URL#/stats/night/<date>` and the season's overview
+   `SITE_URL#/stats?s=<season>`.
+
+The HTML is light and restrained like the app (§11): system font, near-black text, hairline
+borders, team colours, the light theme values of `css/tokens.css` (a test keeps them in step),
+at most 600 px wide, table-based for Gmail/Outlook, no external images, CSS or fonts; every name
+and text is escaped (`views/email/email-html.js`). **Inline styles are allowed only in
+`views/email/`** (mail clients ignore stylesheets); nowhere else in the app. In sandbox mode the
+sheet says nothing is sent, and the fake backend answers 0 recipients.
 
 **Avgjørende spill** (added 2026-10-16): a game is *deciding* when, before it, a team in the set
 stands at 2 wins (2–0, 0–2, 2–1, 1–2, 2–2; draws do not change the state), so it can end the set
