@@ -336,10 +336,14 @@ Details:
 - Games are processed in the canonical game order (§3).
 - One continuous rating, never reset. Season views show rating at season end and
   the change during the season.
-- **No-show penalty** (added 2026-11-11): `ELO.NO_SHOW_PENALTY` = **5**. For every played night (a night
+- **No-show penalty** (added 2026-11-11): `ELO.NO_SHOW_PENALTY` = **10**. For every played night (a night
   with ≥ 1 game), every player who is `active` in Players, has played a game on an earlier night and is
   not on that night's roster (Nights.players — sitting out or going home early counts as there) loses
-  5 points, applied after the night's last game and before the next night. It is part of the replay
+  NO_SHOW_PENALTY points, applied after the night's last game and before the next night.
+  A night that is still ongoing (§3, `isNightOngoing`) gets no penalty yet — players may still arrive:
+  `rateGames(dataset, { today, hour })` takes the clock as values (views pass `clock.today()` /
+  `clock.hour()` through `factsFor` / `buildFacts` and the new-match screen); without it every played
+  night counts (tests, sandbox generation). It is part of the replay
   (`rateGames`), so later expected scores use the penalised ratings and `ratings` includes it. The
   timeline holds penalty entries `{ kind: 'penalty', date, player, change }` after the night's game
   entries (game entries keep their shape; `gameEntries` / `penaltyEntries` / `isPenalty` in `elo.js`).

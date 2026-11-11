@@ -34,10 +34,11 @@ const outcomeFor = (result, side) => (result === 'D' ? 'D' : result === side ? '
  * Teams have 2 or 3 players (spec §18): every team member gets a row for every game.
  * @param {import('../match.js').Dataset} dataset
  * @param {import('./filter.js').Filter} filter
+ * @param {{ today?: string, hour?: number }} [clock] passed to rateGames: no no-show penalty for an ongoing night
  * @returns {Facts}
  */
-export function buildFacts(dataset, filter) {
-  const rated = rateGames(dataset);
+export function buildFacts(dataset, filter, clock = {}) {
+  const rated = rateGames(dataset, clock);
   const matchById = new Map(dataset.matches.map((m) => [m.matchId, m]));
   const rows = [];
   const games = [];

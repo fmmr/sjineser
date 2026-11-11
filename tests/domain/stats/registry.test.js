@@ -8,6 +8,7 @@ import {
   SUBJECT_TYPES, compareSubject, overallSubject, pairSubject, playerRows, playerSubject,
 } from '../../../docs/js/domain/stats/subjects.js';
 import { generateHistory } from '../../../docs/js/sandbox/generate.js';
+import { seasonWinners } from '../../../docs/js/domain/stats/catalog/seasonPlayers.js';
 import { t } from '../../../docs/js/i18n/nb.js';
 
 // Contract for every stat plugin: it runs over the whole catalog, so a new stat is checked
@@ -17,11 +18,15 @@ const { dataset, nextDate } = generateHistory();
 const FILTERS = [{ kind: 'all' }, seasonsIn(dataset, nextDate)[0]];
 const FACTS = FILTERS.map((filter) => buildFacts(dataset, filter));
 
-/** Representative subjects from all-time ratings: top player, their most frequent pair (2-player team), top vs bottom. */
+/**
+ * Representative subjects: the newest season's winner (so season titles have data), their most
+ * frequent pair (2-player team), and them vs the lowest-rated player.
+ */
 function representativeSubjects() {
   const { rated } = FACTS[0];
   const ranked = [...rated.ratings].sort((x, y) => y[1] - x[1]).map(([name]) => name);
-  const [top, bottom] = [ranked[0], ranked.at(-1)];
+  const top = seasonWinners(FACTS[0])[0].player;
+  const bottom = ranked.at(-1) === top ? ranked[0] : ranked.at(-1);
   const partnerGames = new Map();
   for (const { partners } of playerRows(FACTS[0], top)) {
     if (partners.length === 1) partnerGames.set(partners[0], (partnerGames.get(partners[0]) ?? 0) + 1);

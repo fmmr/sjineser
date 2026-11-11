@@ -122,12 +122,14 @@ export function mountNewMatch(root, { store, actions, navigate, clock }) {
 
   function update() {
     const ds = store.get();
-    const night = activeNight(ds, clock.today(), clock.hour());
+    const today = clock.today();
+    const hour = clock.hour();
+    const night = activeNight(ds, today, hour);
     if (!night) {
       root.replaceChildren(h('p', { class: 'muted' }, t.errors.noNight));
       return;
     }
-    const rated = rateGames(ds);
+    const rated = rateGames(ds, { today, hour });
     const proposal = proposeTeams(ds, rated);
     if (!touched) applyProposal(proposal);
     const ready = canStart({ A: count('A'), B: count('B') });

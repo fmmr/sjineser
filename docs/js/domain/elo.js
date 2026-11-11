@@ -1,10 +1,10 @@
-import { compareGames, teamOf } from './match.js';
+import { compareGames, isNightOngoing, teamOf } from './match.js';
 
 /**
  * Rating constants. The "how ratings work" page shows these, so change them only here.
  * NO_SHOW_PENALTY: points an active player loses for each played night they miss (after their first night).
  */
-export const ELO = Object.freeze({ START: 1000, K: 24, SCALE: 400, PROVISIONAL_GAMES: 10, NO_SHOW_PENALTY: 5 });
+export const ELO = Object.freeze({ START: 1000, K: 24, SCALE: 400, PROVISIONAL_GAMES: 10, NO_SHOW_PENALTY: 10 });
 
 const ACTUAL_SCORE = { A: 1, D: 0.5, B: 0 };
 
@@ -41,10 +41,13 @@ export const penaltyEntries = (rated) => rated.timeline.filter(isPenalty);
  * player who is active, played a game on an earlier night and is not on that night's roster
  * (sitting out counts as there) loses NO_SHOW_PENALTY. Penalty entries follow the night's game
  * entries in the timeline, so later games' expected scores use the penalised ratings.
+ * With a clock, a night that is still ongoing (isNightOngoing) gets no penalties yet: players may
+ * still arrive. Without one every played night counts (deterministic for tests and the sandbox).
  * @param {import('./match.js').Dataset} dataset
+ * @param {{ today?: string, hour?: number }} [clock] today YYYY-MM-DD and the local hour (0–23)
  * @returns {Rated}
  */
-export function rateGames(dataset) {
+export function rateGames(dataset, { today, hour } = {}) {
   const matches = new Map(dataset.matches.map((m) => [m.matchId, m]));
   const rosters = new Map(dataset.nights.map((n) => [n.date, n.players]));
   const active = dataset.players.filter((p) => p.active).map((p) => p.name);
@@ -59,7 +62,7 @@ export function rateGames(dataset) {
   /** Penalties for `date`; `veterans` played before that night. */
   const penalise = (date, veterans) => {
     const roster = rosters.get(date);
-    if (!roster) return;
+    if (!roster || (today !== undefined && isNightOngoing(date, today, hour))) return;
     for (const player of active) {
       if (!veterans.has(player) || roster.includes(player)) continue;
       ratings.set(player, rating(player) - ELO.NO_SHOW_PENALTY);

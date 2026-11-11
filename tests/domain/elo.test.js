@@ -192,3 +192,19 @@ test('no-show: penalties follow the night\'s games in the timeline and feed late
   close(last.changes.get('Hans'), delta);
   assert.ok(delta < ELO.K / 2);
 });
+
+test('no-show: no penalty while the night is still ongoing (clock given); without a clock every night counts', () => {
+  const ds = nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D']]);
+  assert.deepEqual(penalties(rateGames(ds, { today: N2, hour: 21 })), []);
+  assert.deepEqual(penalties(rateGames(ds, { today: '2026-09-17', hour: 11 })), [], 'next day before noon');
+  assert.deepEqual(penalties(rateGames(ds)), [[N2, 'Per', MISSED]]);
+});
+
+test('no-show: the penalty applies once the night is over (the next day from noon)', () => {
+  const ds = nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D']]);
+  assert.deepEqual(penalties(rateGames(ds, { today: '2026-09-17', hour: 12 })), [[N2, 'Per', MISSED]]);
+  close(ratingOf(rateGames(ds, { today: '2026-09-17', hour: 12 }), 'Per'), ELO.START + MISSED);
+  // Earlier nights are over, so only the ongoing one is spared.
+  const three = nights([[N1, FOUR, FOUR, 'D'], [N2, WITH_OLA, WITH_OLA, 'D'], [N3, WITH_OLA, WITH_OLA, 'D']]);
+  assert.deepEqual(penalties(rateGames(three, { today: N3, hour: 20 })), [[N2, 'Per', MISSED]]);
+});
