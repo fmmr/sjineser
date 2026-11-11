@@ -1,11 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatFilter, inFilter, nightFilter, parseFilter, seasonsIn } from '../../../docs/js/domain/stats/filter.js';
+import { formatFilter, inFilter, nightFilter, parseFilter, seasonFilterOf, seasonsIn } from '../../../docs/js/domain/stats/filter.js';
 import { generateHistory } from '../../../docs/js/sandbox/generate.js';
 import { dataset } from '../../helpers.js';
 
 const TODAY = '2026-10-14';
 const night = (date) => ({ date, players: ['Frode', 'Hans', 'Per', 'Tor'] });
+
+test('seasonFilterOf: the season filter a date falls in', () => {
+  assert.deepEqual(seasonFilterOf('2026-11-10'), { kind: 'season', year: 2026, half: 2 });
+  assert.deepEqual(seasonFilterOf('2026-03-02'), { kind: 'season', year: 2026, half: 1 });
+});
 
 test('parseFilter reads all and year-half', () => {
   assert.deepEqual(parseFilter('all', TODAY), { kind: 'all' });

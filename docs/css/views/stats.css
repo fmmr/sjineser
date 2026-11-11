@@ -454,18 +454,14 @@
   overflow-wrap: anywhere;
 }
 
+/* The email's own HTML in a sandboxed iframe: a fixed height, the email scrolls inside it. */
 .email-preview {
-  max-height: 40dvh;
+  display: block;
+  width: 100%;
+  height: 45dvh;
   margin: 0;
-  padding: var(--space-3);
-  overflow: auto;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  background: var(--bg);
-  font-size: var(--text-sm);
-  line-height: 1.45;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 
 .stats-filter {

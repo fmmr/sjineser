@@ -168,14 +168,14 @@ export function createActions({
      * with `testPlayer` only to that player. Sent at once, never queued: offline it fails and the
      * user tries again. A wrong PIN asks for it once and retries. Any night, also after it is over.
      * @param {string} date
-     * @param {{ subject: string, text: string }} mail
+     * @param {{ subject: string, text: string, html: string }} mail the HTML body and its plain-text fallback
      * @param {{ testPlayer?: string }} [options]
      * @returns {Promise<{ ok: true, recipients: number } | { ok: false, error: string }>}
      */
-    async sendNightSummary(date, { subject, text }, { testPlayer } = {}) {
+    async sendNightSummary(date, { subject, text, html }, { testPlayer } = {}) {
       if (!view().nights.some((n) => n.date === date)) return { ok: false, error: 'invalid' };
       if (!online()) return { ok: false, error: 'offline' };
-      const payload = { date, subject, text, ...(testPlayer ? { testPlayer } : {}) };
+      const payload = { date, subject, text, html, ...(testPlayer ? { testPlayer } : {}) };
       const send = () => api.post('sendNightSummary', payload, pin());
       let response = await send();
       if (!response.ok && response.error === 'pin') {

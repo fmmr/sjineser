@@ -5,7 +5,8 @@ import { formatDateLong, t } from '../../i18n/nb.js';
 import { POLL_MS, SUMMARY_TEST_PLAYER } from '../../config.js';
 import { isISODate } from '../../domain/dates.js';
 import { activeNight } from '../../domain/match.js';
-import { nightFilter } from '../../domain/stats/filter.js';
+import { buildFacts } from '../../domain/stats/facts.js';
+import { nightFilter, seasonFilterOf } from '../../domain/stats/filter.js';
 import { nightSubject, overallSubject } from '../../domain/stats/subjects.js';
 import { nightPlayers } from '../../domain/stats/catalog/nightsList.js';
 import { PAGES } from './pages.js';
@@ -42,7 +43,9 @@ export function mountStatsNight(root, ctx) {
       extra: [h('p', { class: 'stats-night-players' }, t.names(nightPlayers(night)))],
     }, ctx, data));
     const rendered = renderPage(page, PAGES.night, data.facts, overallSubject(), { ...ctx, ongoing });
-    page.append(summaryButton(ctx, date, () => nightSummary(data.facts, date, { ongoing })));
+    // The season's facts only when the button is tapped (the email's "season so far").
+    const seasonFacts = () => buildFacts(data.dataset, seasonFilterOf(date), { today: data.today, hour: clock.hour() });
+    page.append(summaryButton(ctx, date, () => nightSummary(data.facts, seasonFacts(), date, { ongoing })));
     return rendered;
   }, { filter: nightFilter(isISODate(date) ? date : '') });
 
@@ -51,11 +54,12 @@ export function mountStatsNight(root, ctx) {
 }
 
 /**
- * "Send kveldens oppsummering på e-post": shows the email in a confirm sheet, then sends it to
- * everyone (or as a test to SUMMARY_TEST_PLAYER) and says how it went. Can be sent again.
+ * "Send kveldens oppsummering på e-post": shows the email in a confirm sheet (the HTML in a
+ * sandboxed iframe, so its inline styles stay out of the app), then sends it to everyone (or as
+ * a test to SUMMARY_TEST_PLAYER) and says how it went. Can be sent again.
  * @param {{ actions: object, sandbox?: boolean }} ctx
  * @param {string} date
- * @param {() => { subject: string, text: string }} buildMail the summary as of the tap
+ * @param {() => { subject: string, text: string, html: string }} buildMail the summary as of the tap
  */
 function summaryButton({ actions, sandbox = false }, date, buildMail) {
   const button = h('button', { class: 'btn btn-ghost stats-night-email', type: 'button', onclick: send }, t.nightEmail.button);
@@ -68,7 +72,7 @@ function summaryButton({ actions, sandbox = false }, date, buildMail) {
       body: [
         sandbox && h('p', { class: 'sheet-message' }, t.nightEmail.sandboxNote),
         h('p', { class: 'email-subject' }, h('span', { class: 'muted' }, `${t.nightEmail.subjectLabel}: `), mail.subject),
-        h('pre', { class: 'email-preview', tabindex: '0', 'aria-label': t.nightEmail.previewLabel }, mail.text),
+        h('iframe', { class: 'email-preview', sandbox: '', srcdoc: mail.html, title: t.nightEmail.previewLabel }),
       ],
       actions: [
         { label: t.nightEmail.send, value: 'all', variant: 'primary' },

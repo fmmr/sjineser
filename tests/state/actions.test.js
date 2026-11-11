@@ -303,20 +303,20 @@ function mailSetup(replies, { online = true, pin = '1234', newPin = null } = {})
   });
   return { actions, calls, asked, outbox };
 }
-const MAIL = { subject: 'S', text: 'T' };
+const MAIL = { subject: 'S', text: 'T', html: '<p>T</p>' };
 const SENT = (recipients) => ({ ok: true, result: 'applied', data: { recipients } });
 
 test('sendNightSummary posts once, straight to the api (not the outbox), and reports the recipient count', async () => {
   const { actions, calls, outbox } = mailSetup([SENT(5)]);
   assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 5 });
-  assert.deepEqual(calls, [{ action: 'sendNightSummary', payload: { date: DATE, subject: 'S', text: 'T' }, pin: '1234' }]);
+  assert.deepEqual(calls, [{ action: 'sendNightSummary', payload: { date: DATE, subject: 'S', text: 'T', html: '<p>T</p>' }, pin: '1234' }]);
   assert.deepEqual(outbox.queue, []);
 });
 
 test('sendNightSummary with a test player sends the name along (the server mails only them)', async () => {
   const { actions, calls } = mailSetup([SENT(1)]);
   assert.deepEqual(await actions.sendNightSummary(DATE, MAIL, { testPlayer: 'Fredrik' }), { ok: true, recipients: 1 });
-  assert.deepEqual(calls[0].payload, { date: DATE, subject: 'S', text: 'T', testPlayer: 'Fredrik' });
+  assert.deepEqual(calls[0].payload, { date: DATE, subject: 'S', text: 'T', html: '<p>T</p>', testPlayer: 'Fredrik' });
 });
 
 test('sendNightSummary works after the night is over, but needs a known night', async () => {
