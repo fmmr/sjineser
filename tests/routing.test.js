@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { activeTab, buildHash, matchRoute, parseHash, sandboxUrl, scrollsToTop } from '../docs/js/routing.js';
+import { activeTab, buildHash, matchRoute, parseHash, sandboxUrl, scrollsToTop, usesViewTransitions } from '../docs/js/routing.js';
 import { routes } from '../docs/js/views/routes.js';
 import { mountStatsPlayer } from '../docs/js/views/stats/player.js';
 import { mountStatsCompare } from '../docs/js/views/stats/compare.js';
@@ -106,4 +106,13 @@ test('a new page starts at the top; the same page with another query keeps its s
   assert.equal(scrollsToTop('/stats', '/stats/player/Anne'), true);
   assert.equal(scrollsToTop('/stats/player/Anne', '/stats/player/Bjørn'), true);
   assert.equal(scrollsToTop('/stats', '/stats'), false, 'season change on the same page');
+});
+
+test('view transitions: off for reduced motion, missing API and iOS (fixed bars can lose their position there)', () => {
+  const env = (over = {}) => ({ hasApi: true, reducedMotion: false, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/150', maxTouchPoints: 0, ...over });
+  assert.equal(usesViewTransitions(env()), true);
+  assert.equal(usesViewTransitions(env({ reducedMotion: true })), false);
+  assert.equal(usesViewTransitions(env({ hasApi: false })), false);
+  assert.equal(usesViewTransitions(env({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15' })), false);
+  assert.equal(usesViewTransitions(env({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605', maxTouchPoints: 5 })), false, 'iPad reports as Mac');
 });

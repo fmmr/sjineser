@@ -100,3 +100,14 @@ export function sandboxUrl({ pathname, hash }, enable) {
  * @param {string} nextPath
  */
 export const scrollsToTop = (previousPath, nextPath) => previousPath !== nextPath;
+
+/**
+ * Whether route changes may cross-fade with view transitions: not with reduced motion, not
+ * without the API, and not on iOS/iPadOS (WebKit there can leave the fixed tab bar scrolling with
+ * the page after a transition). iPads report a Mac user agent, hence the touch check.
+ * @param {{ hasApi: boolean, reducedMotion: boolean, userAgent: string, maxTouchPoints: number }} env
+ */
+export function usesViewTransitions({ hasApi, reducedMotion, userAgent, maxTouchPoints }) {
+  const ios = /iP(hone|ad|od)/.test(userAgent) || (/Macintosh/.test(userAgent) && maxTouchPoints > 1);
+  return hasApi && !reducedMotion && !ios;
+}

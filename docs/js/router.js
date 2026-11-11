@@ -1,4 +1,4 @@
-import { matchRoute, parseHash, scrollsToTop } from './routing.js';
+import { matchRoute, parseHash, scrollsToTop, usesViewTransitions } from './routing.js';
 
 /**
  * Hash router. A view is mount(root, ctx) → { update?(), destroy?() }, where ctx also
@@ -21,10 +21,15 @@ export function createRouter({ root, routes, ctx, onRoute = () => {} }) {
     onRoute(path);
   }
 
-  /** Route changes cross-fade where view transitions exist and motion is welcome (base.css; header and tab bar stay put). */
+  /** Route changes cross-fade where view transitions are safe and motion is welcome (usesViewTransitions; base.css keeps header and tab bar put). */
   function navigateTo() {
-    const reduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (!document.startViewTransition || reduce) {
+    const transitions = usesViewTransitions({
+      hasApi: Boolean(document.startViewTransition),
+      reducedMotion: Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
+      userAgent: navigator.userAgent,
+      maxTouchPoints: navigator.maxTouchPoints ?? 0,
+    });
+    if (!transitions) {
       render();
       return;
     }
