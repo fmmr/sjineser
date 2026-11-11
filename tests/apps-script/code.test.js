@@ -56,7 +56,9 @@ function load({ quota = 100 } = {}) {
   return { ...api, post, sent };
 }
 
-const MAIL = { date: NIGHT, subject: 'Sjineser — kveld 10. nov. 2026', text: 'Kveld 10. nov. 2026' };
+const MAIL = {
+  date: NIGHT, subject: 'Sjineser — kveld 10. nov. 2026', text: 'Kveld 10. nov. 2026', html: '<p>Kveld 10. nov. 2026</p>',
+};
 
 test('doGet never returns email addresses: players are only { name, active }', () => {
   const { doGet } = load();
@@ -92,20 +94,22 @@ test('summaryRecipients with a test player: only that player (any casing, active
   assert.deepEqual([...summaryRecipients(players, 'Nobody')], []);
 });
 
-test('sendNightSummary: one plain-text email to the owner, every active address in BCC, the count back', () => {
+test('sendNightSummary: one HTML email with a text fallback to the owner, every active address in CC, the count back', () => {
   const { post, sent } = load();
   assert.deepEqual({ ...post(MAIL) }, { ok: true, result: 'applied', data: { recipients: 3 } });
   assert.equal(sent.length, 1);
   assert.deepEqual({ ...sent[0] }, {
-    to: OWNER, bcc: 'fredrik@example.com,anne@example.com,Eva@Example.com', subject: MAIL.subject, body: MAIL.text,
+    to: OWNER, cc: 'fredrik@example.com,anne@example.com,Eva@Example.com', subject: MAIL.subject, body: MAIL.text, htmlBody: MAIL.html,
   });
-  assert.ok(!sent[0].bcc.includes('bjorn'), 'an inactive player never gets the summary');
+  assert.ok(!('bcc' in sent[0]), 'the players see each other: CC, not BCC');
+  assert.ok(!sent[0].cc.includes('bjorn'), 'an inactive player never gets the summary');
+  assert.ok(!sent[0].cc.toLowerCase().includes('cato') && !sent[0].cc.includes('not-an-address'), 'only valid addresses');
 });
 
-test('sendNightSummary with testPlayer: only that player, no BCC, subject marked [TEST]', () => {
+test('sendNightSummary with testPlayer: only that player, no CC, subject marked [TEST]', () => {
   const { post, sent } = load();
   assert.deepEqual({ ...post({ ...MAIL, testPlayer: 'fredrik' }) }, { ok: true, result: 'applied', data: { recipients: 1 } });
-  assert.deepEqual({ ...sent[0] }, { to: 'fredrik@example.com', subject: `[TEST] ${MAIL.subject}`, body: MAIL.text });
+  assert.deepEqual({ ...sent[0] }, { to: 'fredrik@example.com', subject: `[TEST] ${MAIL.subject}`, body: MAIL.text, htmlBody: MAIL.html });
   assert.equal(post({ ...MAIL, testPlayer: 'Cato' }).message, 'Test player has no email');
   assert.equal(sent.length, 1);
 });
@@ -116,13 +120,16 @@ test('sendNightSummary refuses a wrong PIN, an unknown night, an empty mail and 
   assert.equal(post({ ...MAIL, date: '2026-11-11' }).error, 'invalid');
   assert.equal(post({ ...MAIL, text: ' ' }).error, 'invalid');
   assert.equal(post({ ...MAIL, subject: 7 }).error, 'invalid');
+  assert.equal(post({ ...MAIL, html: 7 }).error, 'invalid');
+  assert.equal(post({ date: NIGHT, subject: MAIL.subject, text: MAIL.text }).error, 'invalid');
   assert.equal(load({ quota: 2 }).post(MAIL).error, 'quota');
   assert.equal(sent.length, 0);
 });
 
-test('sendNightSummary caps the subject at 200 and the text at 20000 characters', () => {
+test('sendNightSummary caps the subject at 200, the text at 20000 and the HTML at 100000 characters', () => {
   const { post, sent } = load();
-  post({ ...MAIL, subject: 's'.repeat(300), text: 't'.repeat(30000) });
+  post({ ...MAIL, subject: 's'.repeat(300), text: 't'.repeat(30000), html: 'h'.repeat(150000) });
   assert.equal(sent[0].subject.length, 200);
   assert.equal(sent[0].body.length, 20000);
+  assert.equal(sent[0].htmlBody.length, 100000);
 });

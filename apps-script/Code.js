@@ -37,9 +37,10 @@ const RESULTS = ['A', 'B', 'D'];
 const MATCH_ID = /^\d{4}-\d{2}-\d{2}#\d+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const LOCK_TIMEOUT_MS = 10000;
-/** Caps for the night summary email (the client builds the text; this only bounds it). */
+/** Caps for the night summary email (the client builds the text and HTML; this only bounds them). */
 const MAX_SUBJECT = 200;
 const MAX_TEXT = 20000;
+const MAX_HTML = 100000;
 const TEST_SUBJECT_PREFIX = '[TEST] ';
 /** A plain address check: something@domain.tld, no spaces or list separators. */
 const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
@@ -240,14 +241,16 @@ const HANDLERS = {
   },
 
   /**
-   * Emails a night summary (subject and plain text built by the app) in ONE message: to the
-   * script owner, every active player with an address in BCC. With `testPlayer` (a name) only
-   * that player gets it, as `to`, with "[TEST] " before the subject. Changes no data and is not
-   * idempotent (a retry sends again); the reply holds the count only, never addresses.
+   * Emails a night summary (subject, HTML body and plain-text fallback, all built by the app) in
+   * ONE message: to the script owner, every active player with an address in CC (the players see
+   * who got it). With `testPlayer` (a name) only that player gets it, as `to`, with "[TEST] "
+   * before the subject. Changes no data and is not idempotent (a retry sends again); the reply
+   * holds the count only, never addresses.
    */
-  sendNightSummary({ date, subject, text, testPlayer }) {
+  sendNightSummary({ date, subject, text, html, testPlayer }) {
     if (!readTab('Nights').some((r) => r.value.date === date)) return fail('invalid', 'Unknown night');
-    if (typeof subject !== 'string' || !subject.trim() || typeof text !== 'string' || !text.trim()) {
+    if (typeof subject !== 'string' || !subject.trim() || typeof text !== 'string' || !text.trim()
+      || typeof html !== 'string' || !html.trim()) {
       return fail('invalid', 'Empty email');
     }
     const test = typeof testPlayer === 'string' && testPlayer.trim() !== '';
@@ -255,11 +258,12 @@ const HANDLERS = {
     if (recipients.length === 0) return fail('invalid', test ? 'Test player has no email' : 'No recipients');
     const message = test
       ? { to: recipients[0], subject: TEST_SUBJECT_PREFIX + subject }
-      : { to: Session.getEffectiveUser().getEmail(), bcc: recipients.join(','), subject };
+      : { to: Session.getEffectiveUser().getEmail(), cc: recipients.join(','), subject };
     // The owner (`to`) counts against the quota as well.
     if (MailApp.getRemainingDailyQuota() < (test ? 1 : recipients.length + 1)) return fail('quota', 'Daily email quota used up');
     message.subject = message.subject.slice(0, MAX_SUBJECT);
     message.body = text.slice(0, MAX_TEXT);
+    message.htmlBody = html.slice(0, MAX_HTML);
     MailApp.sendEmail(message);
     return done('applied', { recipients: recipients.length });
   },
