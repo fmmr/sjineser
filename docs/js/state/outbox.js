@@ -1,7 +1,8 @@
 import { parseMatchId } from '../domain/match.js';
 
 const DROP_ERRORS = new Set(['conflict', 'invalid']);
-const RETRY_DELAYS_MS = [1000, 2000, 5000, 10000, 30000];
+/** Backoff after each failed attempt; capped at 10 s so a dropped connection recovers quickly. */
+const RETRY_DELAYS_MS = [1000, 2000, 5000, 10000];
 
 const isObject = (value) => typeof value === 'object' && value !== null;
 /** Unique op id. crypto.randomUUID only exists in secure contexts (https/localhost) and newer Safari. */
@@ -37,6 +38,7 @@ export function dependsOn(later, dropped) {
  * - conflict/invalid → dropped with all dependent ops, onDrop(op, response, dropped)
  * - pin → queue held until resume(), onPinRequired()
  * - anything else → kept, retried with backoff
+ * A flush (enqueue, online, visibilitychange) while a retry is pending sends at once and cancels the timer.
  */
 export function createOutbox({
   storage,
@@ -46,6 +48,7 @@ export function createOutbox({
   onDrop = () => {},
   onPinRequired = () => {},
   schedule = (fn, ms) => setTimeout(fn, ms),
+  clear = (timer) => clearTimeout(timer),
   newId = randomId,
 }) {
   const saved = storage.get('outbox', []);
@@ -126,9 +129,17 @@ export function createOutbox({
     }
   }
 
-  /** Starts sending if idle; returns the active drain so callers can await it. */
+  /**
+   * Starts sending if idle; returns the active drain so callers can await it.
+   * Sends now even while a backoff retry is pending: the timer is cancelled, and a failure schedules a new one.
+   */
   function flush() {
-    running ??= drain().finally(() => {
+    if (running) return running;
+    if (retryTimer !== null) {
+      clear(retryTimer);
+      retryTimer = null;
+    }
+    running = drain().finally(() => {
       running = null;
     });
     return running;

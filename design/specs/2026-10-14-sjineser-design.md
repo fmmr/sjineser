@@ -596,6 +596,11 @@ Chart.js (§11), loaded only when a chart is shown.
   Requests time out after 15 s and count as network errors (retried).
   Triggers: enqueue, `online`, `visibilitychange`, and backoff timer. An unsynced
   badge shows the queue length.
+- **Retry backoff:** after a failed attempt the op is retried after 1 s, 2 s, 5 s, then
+  every 10 s (capped there so a dropped connection recovers within seconds, not half a
+  minute); a success resets it. Any trigger other than the timer (a new op, `online`,
+  `visibilitychange`) sends at once even while a retry is pending: the pending timer is
+  cancelled, and if that attempt fails too a new one is scheduled at the next delay.
 - **Cascade on drop:** when an op is dropped (`conflict` / `invalid`), every later
   queued op that depends on it is dropped too: dropping any op on a `matchId`
   (`startMatch`, `addGame`, `deleteGame`, `deleteMatch`) drops all later ops on that

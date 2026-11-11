@@ -8,7 +8,7 @@ const OK = { ok: true, result: 'applied' };
 
 function setup({ responses = [], storage = createStorage(memoryBackend()), onSent = () => {} } = {}) {
   const pendingResponses = [...responses];
-  const log = { sent: [], committed: [], dropped: [], pinRequests: 0, retries: [], maxConcurrent: 0 };
+  const log = { sent: [], committed: [], dropped: [], pinRequests: 0, retries: [], cleared: [], maxConcurrent: 0 };
   let active = 0;
   let id = 0;
   const outbox = createOutbox({
@@ -25,6 +25,7 @@ function setup({ responses = [], storage = createStorage(memoryBackend()), onSen
     onDrop: (op, response, dropped) => log.dropped.push(dropped.map((o) => o.action)),
     onPinRequired: () => { log.pinRequests += 1; },
     schedule: (fn, ms) => { log.retries.push({ fn, ms }); return log.retries.length; },
+    clear: (timer) => { log.cleared.push(timer); },
     newId: () => `op${++id}`,
   });
   return { outbox, log, storage };
@@ -118,6 +119,55 @@ test('busy and network errors keep the op and schedule a backoff retry', async (
   log.retries[0].fn();
   await outbox.flush();
   assert.equal(log.retries[1].ms, 2000);
+  log.retries[1].fn();
+  await outbox.flush();
+  assert.deepEqual(outbox.pending(), []);
+});
+
+test('the backoff grows 1 s, 2 s, 5 s and then stays at 10 s', async () => {
+  const busy = { ok: false, error: 'busy' };
+  const { outbox, log } = setup({ responses: [busy, busy, busy, busy, busy] });
+  outbox.enqueue('addPlayer', { name: 'Kari' });
+  await outbox.flush();
+  for (let i = 0; i < 4; i += 1) {
+    log.retries[i].fn();
+    await outbox.flush();
+  }
+  assert.deepEqual(log.retries.map((r) => r.ms), [1000, 2000, 5000, 10000, 10000]);
+});
+
+test('a new op sends at once while a retry is pending, cancelling the backoff timer', async () => {
+  const { outbox, log } = setup({ responses: [{ ok: false, error: 'network' }] });
+  outbox.enqueue('addGame', game(`${DATE}#1`, 1));
+  await outbox.flush();
+  assert.equal(log.retries.length, 1);
+  outbox.enqueue('addGame', game(`${DATE}#1`, 2));
+  await outbox.flush();
+  assert.deepEqual(log.cleared, [1]);
+  assert.deepEqual(log.sent, ['addGame', 'addGame', 'addGame']);
+  assert.deepEqual(outbox.pending(), []);
+  assert.equal(log.retries.length, 1);
+});
+
+test('flush (online / visibilitychange) sends at once while a retry is pending', async () => {
+  const { outbox, log } = setup({ responses: [{ ok: false, error: 'network' }] });
+  outbox.enqueue('addPlayer', { name: 'Kari' });
+  await outbox.flush();
+  assert.equal(log.sent.length, 1);
+  await outbox.flush();
+  assert.deepEqual(log.cleared, [1]);
+  assert.equal(log.sent.length, 2);
+  assert.deepEqual(outbox.pending(), []);
+});
+
+test('a failed early send schedules a fresh retry after cancelling the old one', async () => {
+  const fail = { ok: false, error: 'network' };
+  const { outbox, log } = setup({ responses: [fail, fail] });
+  outbox.enqueue('addPlayer', { name: 'Kari' });
+  await outbox.flush();
+  await outbox.flush();
+  assert.deepEqual(log.cleared, [1]);
+  assert.deepEqual(log.retries.map((r) => r.ms), [1000, 2000]);
   log.retries[1].fn();
   await outbox.flush();
   assert.deepEqual(outbox.pending(), []);
