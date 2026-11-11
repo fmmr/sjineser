@@ -80,7 +80,16 @@ test('every registered stat is shown somewhere: on a page or in the derived comp
 });
 
 test('overview: leaderboard, summary, trends, records, … (the nights table lives on the Kvelder tab)', () => {
-  assert.deepEqual(PAGES.overview.sections.map((s) => s.id), ['leaderboard', 'summary', 'trends', 'records', 'seasonPlayers', 'decisive']);
+  assert.deepEqual(PAGES.overview.sections.map((s) => s.id),
+    ['leaderboard', 'league', 'summary', 'trends', 'records', 'seasonPlayers', 'decisive']);
+});
+
+test('ligatabell: an overview section right after the player list, overview only', () => {
+  assert.deepEqual(PAGES.overview.sections[1], { id: 'league', stats: ['leagueTable'] });
+  assert.equal(tileTitleHidden({ id: 'league', stats: ['leagueTable'] }), true);
+  for (const [name, page] of Object.entries(PAGES)) {
+    if (name !== 'overview') assert.ok(!page.sections.some((s) => s.stats.includes('leagueTable')), name);
+  }
 });
 
 test('list pages: Spillere is the leaderboard of everyone who has played and the head-to-head matrix, Kvelder the nights table', () => {

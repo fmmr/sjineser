@@ -446,7 +446,7 @@ the current tab), not a radio group; it fits across 375 px. The current tab come
 (`statsTab`): a list page is its own tab; `/stats/player*` and `/stats/compare/*` → Spillere,
 `/stats/pair/*` → Par, `/stats/night/*` → Kvelder. Tab links keep `s` when the current query has it
 (the night page has none, so its tabs carry none).
-- **List pages** (one per tab): Oversikt (leaderboard, summary, trends, records, attendance); Spillere
+- **List pages** (one per tab): Oversikt (leaderboard, league table, summary, trends, records, attendance); Spillere
   (`PAGES.players`: the leaderboard of everyone who has played; a row opens the player page);
   Par (the pairs table); Kvelder (`PAGES.nights`: the `nightsList` table; a row opens the night
   page). Their heading is for screen readers only (the tab names the page); the season pill sits
@@ -531,6 +531,13 @@ tooltip); each cell is the row player's win share (W / games) as a whole percent
 subtly with the accent when the row player won more of their games than they lost and the danger colour when they
 lost more (draws are neutral, so with many draws a share under 50 % can still be green; stronger with a larger
 margin |W − L| / (W + L)), and links to compare row vs column; empty where they never met. Scrolls sideways on narrow screens with the names sticky on the left.
+
+**Ligatabell** (added 2026-11-11): `leagueTable` (overall, `table`) — per player who was at ≥ 1 played
+night in the period: `nights` (played nights on the roster, sitting out counts), `setsWon` (finished sets
+won) and `points` = `LEAGUE_POINTS_NIGHT` (1) × nights + `LEAGUE_POINTS_SET_WON` (2) × sets won (constants in
+`domain/stats/constants.js`, in the description via the description params); by points, then sets won,
+then name; columns rank, player, nights, setsWon, points; a row links to the player. Placement: an
+overview section "Ligatabell" directly after the player list (Spillere); overview only.
 
 **Layout**: mobile first — headline numbers and one chart, details one tap deeper;
 wide screens add columns (tiles in an auto-fit grid, tables full width). Charts use

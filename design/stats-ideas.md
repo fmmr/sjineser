@@ -40,6 +40,7 @@ Mark ideas `[x]` when shipped.
 - [x] Snitt spill per sett / uavgjort-andel over tid: one point per played night, from 2 played nights (overview section Utvikling)
 - [x] Mot hverandre-matrise: player vs player grid of the row player's win share against the column player, tinted by more wins / more losses, a cell opens compare (Spillere tab)
 - [x] Fraværstrekk: active players lose 5 rating for each played night they miss, after their first night (Elo replay, spec §8; in leaderboard change and Sesongens spiller)
+- [x] Ligatabell: 1 point per night attended, 2 per set won; by points, then sets won (overview, after the player list)
 
 ## Ideas (ranked)
 1. **Kveldens MVP** — combination of rating gain and wins in deciding games tonight.

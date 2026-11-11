@@ -12,3 +12,9 @@ export const RANKING_SIZE = 3;
  * than MIN_GAMES_TOGETHER: a player gets only a few deciding games per night.
  */
 export const MIN_DECISIVE_GAMES = 5;
+
+/** Ligatabell points: per played night attended (sitting out counts) … */
+export const LEAGUE_POINTS_NIGHT = 1;
+
+/** … and per finished set won. */
+export const LEAGUE_POINTS_SET_WON = 2;

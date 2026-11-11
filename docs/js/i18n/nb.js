@@ -188,6 +188,10 @@ export const t = {
       title: 'Spillere',
       description: ({ formGames }) => `Rating er nåværende rating. Endring, spill, oppmøte (kvelder og andel av kveldene) og form (siste ${formGames} spill, nyeste til høyre) gjelder valgt periode. Endring tar med trekket for kvelder spilleren ikke var med.`,
     },
+    leagueTable: {
+      title: 'Ligatabell',
+      description: ({ leaguePointsNight, leaguePointsSetWon }) => `${leaguePointsNight} poeng per kveld, ${leaguePointsSetWon} per vunnet sett. Kvelder spilleren var med i perioden (også på benken); bare ferdige sett teller.`,
+    },
     nightsCount: { title: 'Kvelder' },
     matchesCount: { title: 'Sett' },
     gamesCount: { title: 'Spill' },
@@ -272,6 +276,7 @@ export const t = {
     W: 'S', D: 'U', L: 'T', winRate: 'Seier %',
     kind: 'Rekke', current: 'Nå', longest: 'Lengst',
     nights: 'Kvelder', share: 'Andel',
+    setsWon: 'Sett vunnet', points: 'Poeng',
     attendance: 'Oppmøte',
     chemistry: 'Kjemi',
     date: 'Dato', players: 'Spillere', sets: 'Sett', draws: 'Uavgjort', winner: 'Kveldens vinner', winnerGain: '+/−',
@@ -281,6 +286,7 @@ export const t = {
   /** Section headings on the stats pages. */
   statsSections: {
     leaderboard: 'Spillere',
+    league: 'Ligatabell',
     summary: 'Oppsummering',
     records: 'Rekorder',
     rating: 'Rating',

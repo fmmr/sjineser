@@ -18,6 +18,7 @@ import { headToHead } from './catalog/headToHead.js';
 import { headToHeadMatrix } from './catalog/headToHeadMatrix.js';
 import { highestRating } from './catalog/highestRating.js';
 import { leaderboard } from './catalog/leaderboard.js';
+import { leagueTable } from './catalog/leagueTable.js';
 import { longestDrawStreak } from './catalog/longestDrawStreak.js';
 import { longestMatch } from './catalog/longestMatch.js';
 import { longestNight } from './catalog/longestNight.js';
@@ -85,6 +86,7 @@ export const STATS = [
   headToHeadMatrix,
   highestRating,
   leaderboard,
+  leagueTable,
   longestDrawStreak,
   longestMatch,
   longestNight,
