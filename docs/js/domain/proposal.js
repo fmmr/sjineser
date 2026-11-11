@@ -31,12 +31,17 @@ export const BENCH_RULES = [
 
 /**
  * How the players are split into teams. Lower keys win, compared rule by rule. A split's
- * `pairs` are all teammate pairs within each team (one for a team of two, three for a team of three).
+ * `pairs` are all teammate pairs within each team (one for a team of two, three for a team of three);
+ * its `opponents` are all pairs with one player from each team. Everyone with and against
+ * everyone during a night comes first; season variety and balance only break ties. Tonight's
+ * repeats count squared, so one pair together three times (9) weighs more than two pairs
+ * together twice (4 + 4): repeats are spread instead of piling up on one pair.
  */
 export const SPLIT_RULES = [
-  { id: 'newPartners', key: (split, ctx) => sum(split.pairs.map(ctx.partneredTonight)) },
-  { id: 'balance', key: (split, ctx) => Math.floor(Math.abs(ctx.teamRating(split.A) - ctx.teamRating(split.B)) / BALANCE_TOLERANCE) },
+  { id: 'newPartners', key: (split, ctx) => sum(split.pairs.map((pair) => ctx.partneredTonight(pair) ** 2)) },
+  { id: 'newOpponents', key: (split, ctx) => sum(split.opponents.map((pair) => ctx.opposedTonight(pair) ** 2)) },
   { id: 'seasonVariety', key: (split, ctx) => sum(split.pairs.map(ctx.partneredThisSeason)) },
+  { id: 'balance', key: (split, ctx) => Math.floor(Math.abs(ctx.teamRating(split.A) - ctx.teamRating(split.B)) / BALANCE_TOLERANCE) },
 ];
 
 /**
@@ -111,6 +116,9 @@ function combinations(items, size) {
 /** All teammate pairs within a team. @param {string[]} team */
 const pairsWithin = (team) => team.flatMap((name, i) => team.slice(i + 1).map((other) => [name, other]));
 
+/** All opponent pairs: one player from each team. @param {string[]} A @param {string[]} B */
+const pairsAcross = (A, B) => A.flatMap((name) => B.map((other) => [name, other]));
+
 /**
  * Every way to split the players into team A of sizes[0] and team B of sizes[1], in a fixed
  * order: team A runs through the combinations of players in lexicographic order. With equal
@@ -118,14 +126,14 @@ const pairsWithin = (team) => team.flatMap((name, i) => team.slice(i + 1).map((o
  * (4 players: 3 splits, 5 players 3 + 2: 10, 6 players 3 + 3: 10).
  * @param {string[]} players sorted by name; teams keep this order
  * @param {[number, number]} sizes
- * @returns {{ A: string[], B: string[], pairs: [string, string][] }[]}
+ * @returns {{ A: string[], B: string[], pairs: [string, string][], opponents: [string, string][] }[]}
  */
 export function splitsOf(players, [sizeA, sizeB]) {
   return combinations(players, sizeA)
     .filter((A) => sizeA !== sizeB || A[0] === players[0])
     .map((A) => {
       const B = players.filter((name) => !A.includes(name));
-      return { A, B, pairs: [...pairsWithin(A), ...pairsWithin(B)] };
+      return { A, B, pairs: [...pairsWithin(A), ...pairsWithin(B)], opponents: pairsAcross(A, B) };
     });
 }
 
@@ -138,23 +146,27 @@ function withoutEmptyMatches(dataset) {
   return { ...dataset, matches: dataset.matches.filter((m) => withGames.has(m.matchId)) };
 }
 
-/** Times each teammate pair (any pair within a team of 2 or 3) played on the same team. */
-function countPairs(matches) {
+/** Times each pair occurs over the matches; `pairsOf` lists a match's pairs. */
+function countPairs(matches, pairsOf) {
   const counts = new Map();
   for (const match of matches) {
-    for (const pair of [...pairsWithin(teamOf(match, 'A')), ...pairsWithin(teamOf(match, 'B'))]) {
+    for (const pair of pairsOf(teamOf(match, 'A'), teamOf(match, 'B'))) {
       counts.set(pairKey(pair), (counts.get(pairKey(pair)) ?? 0) + 1);
     }
   }
   return counts;
 }
 
+/** Teammate pairs (any pair within a team of 2 or 3) of a match. */
+const teammatePairs = (A, B) => [...pairsWithin(A), ...pairsWithin(B)];
+
 function buildContext(dataset, night, rated) {
   const tonight = matchesOfNight(dataset, night.date);
   const season = seasonOf(night.date);
   const seasonNights = dataset.nights.filter((n) => inSeason(n.date, season));
-  const tonightPairs = countPairs(tonight);
-  const seasonPairs = countPairs(dataset.matches.filter((m) => inSeason(m.date, season)));
+  const tonightPairs = countPairs(tonight, teammatePairs);
+  const tonightOpponents = countPairs(tonight, pairsAcross);
+  const seasonPairs = countPairs(dataset.matches.filter((m) => inSeason(m.date, season)), teammatePairs);
   const roster = [...night.players].sort(byName);
 
   return {
@@ -165,6 +177,7 @@ function buildContext(dataset, night, rated) {
     lastPlayedTonight: (name) => tonight.findLastIndex((m) => seated(m).includes(name)),
     alphabeticalIndex: (name) => roster.indexOf(name),
     partneredTonight: (pair) => tonightPairs.get(pairKey(pair)) ?? 0,
+    opposedTonight: (pair) => tonightOpponents.get(pairKey(pair)) ?? 0,
     partneredThisSeason: (pair) => seasonPairs.get(pairKey(pair)) ?? 0,
     teamRating: (team) => sum(team.map((name) => ratingOf(rated, name))) / team.length,
   };

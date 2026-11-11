@@ -23,7 +23,7 @@ const pairKeys = (p) => [p.A.join('+'), p.B.join('+')];
 
 test('rule ids are unique and ordered as documented', () => {
   assert.deepEqual(BENCH_RULES.map((r) => r.id), ['fewestTonight', 'mostSitOutsSeason', 'longestSinceLastPlayed', 'alphabetical']);
-  assert.deepEqual(SPLIT_RULES.map((r) => r.id), ['newPartners', 'balance', 'seasonVariety']);
+  assert.deepEqual(SPLIT_RULES.map((r) => r.id), ['newPartners', 'newOpponents', 'seasonVariety', 'balance']);
 });
 
 test('no night or fewer than four players gives no proposal', () => {
@@ -71,11 +71,112 @@ test('balance rounds differences down to whole tolerance buckets', () => {
   const history = build([night(FOUR, '2026-09-01'), night(FOUR)], [played(match(1, ['Frode', 'Per'], ['Hans', 'Tor'], '2026-09-01'))]);
   const fallThrough = proposeTeams(history, sameBucket);
   assert.deepEqual(pairKeys(fallThrough), ['Frode+Tor', 'Hans+Per']);
-  assert.equal(fallThrough.splitRule, 'seasonVariety');
+  // Season variety now comes before balance: it rules out Frode+Per vs Hans+Tor (together on
+  // 2026-09-01), and the closest remaining competitor, Frode+Hans vs Per+Tor (difference 69),
+  // ties on every earlier rule, so balance is what separates the choice from it.
+  assert.equal(fallThrough.splitRule, 'balance');
   // Differences 11 and 9 fall in different buckets, so balance decides.
   const decided = proposeTeams(build([night(FOUR)]), withRatings({ Frode: 1000, Hans: 980, Per: 1052, Tor: 1050 }));
   assert.deepEqual(pairKeys(decided), ['Frode+Tor', 'Hans+Per']);
   assert.equal(decided.splitRule, 'balance');
+});
+
+/** Times each pair (sorted names joined by '+') has been teammates and opponents over the matches. */
+function pairCounts(matches) {
+  const partners = new Map();
+  const opponents = new Map();
+  const add = (map, x, y) => map.set([x, y].sort().join('+'), (map.get([x, y].sort().join('+')) ?? 0) + 1);
+  for (const { A, B } of matches) {
+    for (const team of [A, B]) team.forEach((x, i) => team.slice(i + 1).forEach((y) => add(partners, x, y)));
+    A.forEach((x) => B.forEach((y) => add(opponents, x, y)));
+  }
+  return { partners, opponents };
+}
+const allPairs = (players) => players.flatMap((x, i) => players.slice(i + 1).map((y) => [x, y].sort().join('+')));
+
+/** Follows the proposals for a night of `sets` matches; returns each proposal. */
+function followProposals(players, sets) {
+  const proposals = [];
+  let entries = [];
+  for (let n = 1; n <= sets; n += 1) {
+    const p = propose(build([night(players)], entries));
+    proposals.push(p);
+    entries = [...entries, played(match(n, p.A, p.B))];
+  }
+  return proposals;
+}
+
+test('four players over three sets: every pair partners once and meets as opponents exactly twice', () => {
+  const { partners, opponents } = pairCounts(followProposals(FOUR, 3));
+  for (const pair of allPairs(FOUR)) {
+    assert.equal(partners.get(pair), 1, `${pair} partners`);
+    assert.equal(opponents.get(pair), 2, `${pair} opponents`);
+  }
+});
+
+test('five players (3 against 2): opponent pairs are spread, never repeated while a fresher split exists', () => {
+  const proposals = followProposals(FIVE, 6);
+  proposals.forEach((p, i) => {
+    const { partners, opponents } = pairCounts(proposals.slice(0, i));
+    // Tonight's repeats count squared.
+    const score = (split) => [
+      split.pairs.reduce((total, [x, y]) => total + (partners.get([x, y].sort().join('+')) ?? 0) ** 2, 0),
+      split.opponents.reduce((total, [x, y]) => total + (opponents.get([x, y].sort().join('+')) ?? 0) ** 2, 0),
+    ];
+    const splits = splitsOf(FIVE, [3, 2]).map(score);
+    const [chosenPartners, chosenOpponents] = score(splitsOf(FIVE, [3, 2]).find((s) => s.A.join() === p.A.join()));
+    const bestPartners = Math.min(...splits.map(([pp]) => pp));
+    assert.equal(chosenPartners, bestPartners, `set ${i + 1}: new partners first`);
+    const bestOpponents = Math.min(...splits.filter(([pp]) => pp === bestPartners).map(([, o]) => o));
+    assert.equal(chosenOpponents, bestOpponents, `set ${i + 1}: fewest repeated opponents`);
+  });
+  // After four sets every pair has faced each other at least once, and nobody more than three times.
+  const { opponents } = pairCounts(proposals.slice(0, 4));
+  for (const pair of allPairs(FIVE)) assert.ok(opponents.get(pair) >= 1 && opponents.get(pair) <= 3, `${pair}: ${opponents.get(pair)}`);
+});
+
+test('repeats count squared: no pair together a third time while an evener split exists', () => {
+  // The night of 2026-11-10 after two sets: Fredrik and Jacob were together in both. Summed,
+  // Fredrik+Jacob+Sole vs HP+Tom (one pair twice: 2) tied with splits that repeat two pairs once
+  // (1 + 1) and was proposed; squared it weighs 4 against 2. The ratings make it the most even split.
+  const players = ['Fredrik', 'HP', 'Jacob', 'Sole', 'Tom'];
+  const p = proposeTeams(build([night(players)], [
+    played(match(1, ['Fredrik', 'HP', 'Jacob'], ['Sole', 'Tom'])),
+    played(match(2, ['Fredrik', 'Jacob', 'Tom'], ['HP', 'Sole'])),
+  ]), withRatings({ Fredrik: 1000, Jacob: 1000, Sole: 1150, HP: 1050, Tom: 1050 }));
+  const together = (x, y) => [p.A, p.B].some((team) => team.includes(x) && team.includes(y));
+  assert.ok(!together('Fredrik', 'Jacob'), `${p.A} vs ${p.B}`);
+  const { partners } = pairCounts([{ A: ['Fredrik', 'HP', 'Jacob'], B: ['Sole', 'Tom'] }, { A: ['Fredrik', 'Jacob', 'Tom'], B: ['HP', 'Sole'] }, p]);
+  assert.ok(Math.max(...partners.values()) <= 2);
+});
+
+test('new opponents breaks a tie that new partners leaves', () => {
+  // Eight present: Erik and Finn sit out set 2, Geir and Hege come in. Every split of the six
+  // repeats exactly one teammate pair from set 1 except Anne+Bjørn+Cato (three), so new partners
+  // ties nine splits; new opponents keeps the three that repeat only one opponent pair.
+  const flat = withRatings({});
+  const p = proposeTeams(build([night(EIGHT)], [played(match(1, ['Anne', 'Bjørn', 'Cato'], ['Dag', 'Erik', 'Finn']))]), flat);
+  assert.deepEqual(p.bench, ['Erik', 'Finn']);
+  assert.deepEqual([p.A, p.B], [['Anne', 'Bjørn', 'Dag'], ['Cato', 'Geir', 'Hege']]);
+  assert.equal(p.splitRule, 'newOpponents');
+});
+
+test('balance only decides when all earlier rules tie', () => {
+  // Fresh night, no history: only balance separates the splits.
+  const uneven = withRatings({ Frode: 1100, Tor: 900 });
+  const fresh = proposeTeams(build([night(FOUR)]), uneven);
+  assert.deepEqual(pairKeys(fresh), ['Frode+Tor', 'Hans+Per']);
+  assert.equal(fresh.splitRule, 'balance');
+  // Frode and Tor were together earlier this season: season variety beats the even split.
+  const season = proposeTeams(build([night(FOUR, '2026-09-01'), night(FOUR)], [played(match(1, ['Frode', 'Tor'], ['Hans', 'Per'], '2026-09-01'))]), uneven);
+  assert.notDeepEqual(pairKeys(season), ['Frode+Tor', 'Hans+Per']);
+  assert.equal(season.splitRule, 'seasonVariety');
+  // Eight present (see above): Anne+Bjørn+Geir vs Cato+Dag+Hege is perfectly even but repeats two
+  // opponent pairs, so balance only chooses among the three splits that repeat one.
+  const ratings = withRatings({ Anne: 1300, Geir: 700 });
+  const p = proposeTeams(build([night(EIGHT)], [played(match(1, ['Anne', 'Bjørn', 'Cato'], ['Dag', 'Erik', 'Finn']))]), ratings);
+  assert.deepEqual([p.A, p.B], [['Anne', 'Geir', 'Hege'], ['Bjørn', 'Cato', 'Dag']]);
+  assert.equal(p.splitRule, 'balance');
 });
 
 const SIX = ['Anne', 'Bjørn', 'Cato', 'Dag', 'Erik', 'Finn'];
@@ -99,8 +200,9 @@ test('splitsOf: every split once, in a fixed order', () => {
   assert.equal(six.length, 10, 'mirror images are the same split');
   assert.ok(six.every((s) => s.A.includes('a')));
   assert.equal(new Set(six.map((s) => `${s.A}|${s.B}`)).size, 10);
-  // Teammate pairs: all pairs within each team.
+  // Teammate pairs: all pairs within each team; opponent pairs: one player from each team.
   assert.deepEqual(splitsOf(['a', 'b', 'c', 'd', 'e'], [3, 2])[0].pairs, [['a', 'b'], ['a', 'c'], ['b', 'c'], ['d', 'e']]);
+  assert.deepEqual(splitsOf(['a', 'b', 'c', 'd', 'e'], [3, 2])[0].opponents, [['a', 'd'], ['a', 'e'], ['b', 'd'], ['b', 'e'], ['c', 'd'], ['c', 'e']]);
 });
 
 test('five fresh players: everyone plays, three against two', () => {

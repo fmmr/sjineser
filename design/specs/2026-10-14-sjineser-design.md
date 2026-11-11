@@ -332,17 +332,29 @@ page).
 splits, 5 as 3 + 2: 10, 6 as 3 + 3: 10; generated in a fixed order — team A runs through the
 name-sorted combinations, and with equal sizes the first name is always on team A so mirror
 images are not repeated); lowest wins. A split's teammate pairs are all pairs within each team
-(one for a team of two, three for a team of three):
-1. Teammate pairs already together tonight — heavy penalty (primary rule: everyone partners everyone).
-2. Absolute difference between the team ratings (means, §8) (balance).
-3. Times each teammate pair has been together this season — small penalty (variety).
+(one for a team of two, three for a team of three); its opponent pairs are all pairs with one
+player from each team. Everyone with and against everyone during a night comes first:
+1. `newPartners` — times each of the split's teammate pairs has already been together tonight,
+   squared and summed.
+2. `newOpponents` — times each of the split's opponent pairs has already faced each other tonight,
+   squared and summed.
+3. `seasonVariety` — times the split's teammate pairs have been together this season (sum).
+4. `balance` — absolute difference between the team ratings (means, §8), in tolerance buckets.
 
-With 4 players over 3 matches, each split occurs once; Elo decides order (most balanced first).
+With 4 players over 3 matches, each split occurs once, so every pair partners once and meets as
+opponents twice; the order of the three is decided by season variety, then Elo (most balanced
+first). Squaring spreads repeats: one pair together a third time (9) weighs more than two pairs together
+a second time (4 + 4), so with 5 players nobody partners the same player three times in a row
+while an evener split exists (the night of 2026-11-10, set 3). Summed counts would not separate
+`newOpponents` from `newPartners` when everyone present has played every match tonight (each pair
+that shared a match was either together or opposed, so the opponent sum is the teammate sum plus a
+constant); squared, the two differ. (Changed 2026-11-11: opponents added, repeats squared, season
+variety moved ahead of balance; previously summed new partners → balance → variety.)
 
 Details:
 - Rules are compared lexicographically (rule 1 first; later rules only break ties).
 - "Balance" rounds team-rating differences down to the nearest `BALANCE_TOLERANCE` (10)
-  points, so near-equal splits fall through to the variety rule.
+  points, so near-equal splits count as equal and keep the generation order.
 - The reason shown is the rule on which the chosen option first differs from its closest
   competitor (the next-ranked option that is not a full tie; for the bench: last player in
   vs the benched players in rank order); if all options are equal, the screen says so.
@@ -708,7 +720,8 @@ so all three get the game in their stats and the same Elo change.
 - **Elo:** team rating = mean of its players (2 or 3); every team member gets K × (S − E).
   A 3-player team gets no extra advantage.
 - **Team sizes for proposals:** 4 → 2+2, 5 → 3+2, 6 → 3+3, 7+ → 3+3 with the bench rules
-  choosing six. Split rules (new partners → balance → variety) compare every valid split.
+  choosing six. Split rules (new partners → new opponents → season variety → balance, §7) compare
+  every valid split.
 - **Stats:** facts rows carry `partners` (1–2 names) and `opponents` (2–3). Partner tables
   count every teammate. "Pairs" (pairs table, pair page, best partner) mean a 2-player team;
   3-player teams count only per individual. Compare "Sammen" = same team, any size.

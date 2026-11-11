@@ -6,7 +6,7 @@ import { byName } from '../domain/players.js';
 import { proposeTeams } from '../domain/proposal.js';
 import { createRandom } from './random.js';
 
-export const SANDBOX_SEED = 1;
+export const SANDBOX_SEED = 2;
 export const SANDBOX_PLAYERS = ['Anne', 'Bjørn', 'Cato', 'Dag', 'Erik', 'Frida'];
 
 /** Hidden skill per player as an offset from ELO.START. Never stored; only drives results. */
