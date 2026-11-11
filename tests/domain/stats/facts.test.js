@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildFacts } from '../../../docs/js/domain/stats/facts.js';
-import { rateGames } from '../../../docs/js/domain/elo.js';
+import { gameEntries, rateGames } from '../../../docs/js/domain/elo.js';
 import { compareGames } from '../../../docs/js/domain/match.js';
 import { generateHistory } from '../../../docs/js/sandbox/generate.js';
 import { DATE, FOUR, MATCH_1, dataset, game, nightWithMatch } from '../../helpers.js';
@@ -181,12 +181,15 @@ test('generated history: facts agree with the Elo replay', () => {
   const { dataset: ds } = generateHistory();
   const facts = buildFacts(ds, ALL);
   const rated = rateGames(ds);
-  assert.equal(facts.games.length, rated.timeline.length);
+  assert.equal(facts.games.length, gameEntries(rated).length);
   // One row per player per game: 4–6 per game, as teams have 2 or 3 players.
   const seated = facts.games.reduce((total, g) => total + g.A.length + g.B.length, 0);
   assert.equal(facts.rows.length, seated);
   for (const name of facts.players) {
-    close(facts.rows.filter((r) => r.player === name).at(-1).ratingAfter, rated.ratings.get(name));
+    const last = facts.rows.filter((r) => r.player === name).at(-1);
+    const penaltiesAfter = facts.penalties.filter((p) => p.player === name && p.date > last.date)
+      .reduce((sum, p) => sum + p.change, 0);
+    close(last.ratingAfter + penaltiesAfter, rated.ratings.get(name));
   }
   const matchIds = new Set(ds.games.map((g) => g.matchId));
   assert.equal(facts.matches.length, matchIds.size);

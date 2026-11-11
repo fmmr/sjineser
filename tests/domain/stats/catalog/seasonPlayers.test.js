@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { nightFilter } from '../../../../docs/js/domain/stats/filter.js';
 import { overallSubject, playerSubject } from '../../../../docs/js/domain/stats/subjects.js';
 import { seasonWinners } from '../../../../docs/js/domain/stats/catalog/seasonPlayers.js';
+import { ELO } from '../../../../docs/js/domain/elo.js';
 import { HF_TP, compute, factsOf } from './fixtures.js';
 
 const OVERALL = overallSubject();
@@ -59,4 +60,30 @@ test('seasonTitles: how many seasons the player won, and which (newest first)', 
     { value: 1, format: 'int', holders: [], seasons: [{ year: 2026, half: 2 }] });
   assert.equal(compute('seasonTitles', FACTS, playerSubject('Tor')), null, 'no season won');
   assert.equal(compute('seasonTitles', factsOf(NIGHTS, { kind: 'season', year: 2026, half: 1 }), playerSubject('Hans')), null);
+});
+
+test('seasonWinners: no-show penalties count in the season\'s change; only players with games can win', () => {
+  // Spring: Hans & Frode draw Tor & Per. Autumn: Per is not there (penalty); the others draw.
+  const facts = factsOf([
+    { date: SPRING, matches: [[HF_TP, 'D']] },
+    { date: AUTUMN, matches: [['Hans Frode - Tor Ola', 'D']] },
+  ]);
+  assert.deepEqual(facts.penalties, [{ date: AUTUMN, player: 'Per', change: -ELO.NO_SHOW_PENALTY }]);
+  const autumn = seasonWinners(facts)[0];
+  assert.equal(autumn.change, 0);
+  assert.notEqual(autumn.player, 'Per');
+});
+
+test('seasonWinners: a winner\'s change includes their penalties in the season', () => {
+  // Spring: Hans & Frode win. Autumn night 1: Hans is not there. Night 2: Hans & Ola win twice.
+  const later = '2026-09-16';
+  const facts = factsOf([
+    { date: SPRING, matches: [[HF_TP, 'A']] },
+    { date: AUTUMN, matches: [['Frode Tor - Per Ola', 'A']] },
+    { date: later, matches: [['Hans Ola - Tor Per', 'AA']] },
+  ]);
+  const gain = facts.rows.filter((r) => r.player === 'Hans' && r.date === later).reduce((sum, r) => sum + r.delta, 0);
+  const autumn = seasonWinners(facts)[0];
+  assert.equal(autumn.player, 'Hans');
+  assert.equal(autumn.change, gain - ELO.NO_SHOW_PENALTY);
 });

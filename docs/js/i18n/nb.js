@@ -104,12 +104,13 @@ export const t = {
     splitIntro: 'Alle mulige lagoppsett sammenlignes regel for regel, i denne rekkefølgen.',
     ratingLink: 'Slik fungerer rating',
     ratingTitle: 'Slik fungerer rating',
-    ratingParagraphs: ({ START, K, SCALE, PROVISIONAL_GAMES }) => [
+    ratingParagraphs: ({ START, K, SCALE, PROVISIONAL_GAMES, NO_SHOW_PENALTY }) => [
       `Alle starter på ${START} poeng. Ratingen oppdateres etter hvert spill, også i sett som ikke ble spilt ferdig.`,
       'Et lags rating er snittet av spillerne på laget, så et lag med tre får ingen ekstra fordel. Før hvert spill regnes det ut hvor sannsynlig det er at laget vinner, ut fra forskjellen i rating.',
       `Seier teller 1, uavgjort ½ og tap 0. Endringen er ${K} × (resultat − forventet), og alle på laget får samme endring. Uavgjort mot et sterkere lag gir derfor poeng.`,
       `Med ${SCALE} poeng i forskjell er det sterke laget forventet å vinne omtrent 10 av 11 spill.`,
       `De første ${PROVISIONAL_GAMES} spillene er ratingen foreløpig og merket «ny».`,
+      `Aktive spillere som ikke er med på en spillekveld, mister ${NO_SHOW_PENALTY} poeng etter kvelden. Det gjelder først etter spillerens første kveld, og å sitte over eller gå hjem tidlig teller som å være med.`,
     ],
     aboutLink: 'Om Sjineser',
     aboutTitle: 'Om Sjineser',
@@ -185,7 +186,7 @@ export const t = {
   stats: {
     leaderboard: {
       title: 'Spillere',
-      description: ({ formGames }) => `Rating er nåværende rating. Endring, spill, oppmøte (kvelder og andel av kveldene) og form (siste ${formGames} spill, nyeste til høyre) gjelder valgt periode.`,
+      description: ({ formGames }) => `Rating er nåværende rating. Endring, spill, oppmøte (kvelder og andel av kveldene) og form (siste ${formGames} spill, nyeste til høyre) gjelder valgt periode. Endring tar med trekket for kvelder spilleren ikke var med.`,
     },
     nightsCount: { title: 'Kvelder' },
     matchesCount: { title: 'Sett' },

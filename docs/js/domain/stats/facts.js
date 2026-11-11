@@ -1,4 +1,4 @@
-import { rateGames } from '../elo.js';
+import { gameEntries, penaltyEntries, rateGames } from '../elo.js';
 import { score, teamOf, winnerOf } from '../match.js';
 import { byName } from '../players.js';
 import { inFilter } from './filter.js';
@@ -16,8 +16,9 @@ import { inFilter } from './filter.js';
  * @typedef {{ matchId: string, date: string, A: string[], B: string[], games: GameFact[],
  *   score: { A: number, B: number, D: number }, winner: 'A' | 'B' | null, complete: boolean }} MatchFact
  * @typedef {{ date: string, players: string[], matches: MatchFact[] }} NightFact
+ * @typedef {{ date: string, player: string, change: number }} PenaltyFact a no-show penalty (spec §8)
  * @typedef {{ filter: import('./filter.js').Filter, rows: PlayerGameRow[], games: GameFact[], matches: MatchFact[],
- *   nights: NightFact[], players: string[], rated: import('../elo.js').Rated }} Facts
+ *   nights: NightFact[], penalties: PenaltyFact[], players: string[], rated: import('../elo.js').Rated }} Facts
  */
 
 const OTHER_SIDE = { A: 'B', B: 'A' };
@@ -29,6 +30,7 @@ const outcomeFor = (result, side) => (result === 'D' ? 'D' : result === side ? '
  * Everything stats need, computed once per dataset and filter (spec §9). Elo is replayed
  * over all games so ratings are continuous; the filter is applied afterwards.
  * Rows, games and matches are in canonical game order; matches without games are left out.
+ * Rows come from game entries only; no-show penalties in the period are listed in `penalties`.
  * Teams have 2 or 3 players (spec §18): every team member gets a row for every game.
  * @param {import('../match.js').Dataset} dataset
  * @param {import('./filter.js').Filter} filter
@@ -41,7 +43,7 @@ export function buildFacts(dataset, filter) {
   const games = [];
   const gamesByMatch = new Map();
 
-  for (const { game, before, changes } of rated.timeline) {
+  for (const { game, before, changes } of gameEntries(rated)) {
     const match = matchById.get(game.matchId);
     if (!inFilter(match.date, filter)) continue;
     const teams = { A: teamOf(match, 'A'), B: teamOf(match, 'B') };
@@ -79,7 +81,10 @@ export function buildFacts(dataset, filter) {
     .filter((n) => inFilter(n.date, filter))
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(({ date, players }) => ({ date, players: [...players], matches: matches.filter((m) => m.date === date) }));
+  const penalties = penaltyEntries(rated)
+    .filter((p) => inFilter(p.date, filter))
+    .map(({ date, player, change }) => ({ date, player, change }));
   const players = [...new Set(rows.map((r) => r.player))].sort(byName);
 
-  return { filter, rows, games, matches, nights, players, rated };
+  return { filter, rows, games, matches, nights, penalties, players, rated };
 }

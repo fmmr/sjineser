@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { overallSubject, pairSubject, playerSubject } from '../../../../docs/js/domain/stats/subjects.js';
 import { nightFilter } from '../../../../docs/js/domain/stats/filter.js';
-import { HF_TP, HT_FP, compute as computeStat, factsOf } from './fixtures.js';
+import { buildFacts } from '../../../../docs/js/domain/stats/facts.js';
+import { ELO } from '../../../../docs/js/domain/elo.js';
+import { HF_TP, HT_FP, compute as computeStat, factsOf, history } from './fixtures.js';
 
 const OVERALL = overallSubject();
 const N1 = '2026-09-02';
@@ -52,14 +54,32 @@ test('leaderboard: rating is the current rating whatever the period; change and 
   assert.equal(hans.games, 1);
 });
 
-test('leaderboard: everyone who has played is listed; no games in the period → games 0, change null', () => {
+test('leaderboard: everyone who has played is listed; no games in the period → games 0, change = penalties or null', () => {
   const nights = [{ date: SPRING, matches: [[HF_TP, 'A']] }, { date: N1, matches: [['Tor Per - Frode Ola', 'A']] }];
   const value = compute('leaderboard', factsOf(nights, AUTUMN));
   const hans = value.rows.find((r) => r.player === 'Hans');
-  assert.equal(hans.rating, 1012);
+  // Hans missed N1: the no-show penalty is in the period's change and in his rating.
+  assert.equal(hans.rating, 1012 - ELO.NO_SHOW_PENALTY);
   assert.equal(hans.games, 0);
-  assert.equal(hans.change, null);
+  assert.equal(hans.change, -ELO.NO_SHOW_PENALTY);
   assert.equal(value.rows.length, 5);
+  const ds = history(nights);
+  ds.players.find((p) => p.name === 'Hans').active = false;
+  const inactive = compute('leaderboard', buildFacts(ds, AUTUMN)).rows.find((r) => r.player === 'Hans');
+  assert.equal(inactive.rating, 1012);
+  assert.equal(inactive.change, null);
+});
+
+test('leaderboard: change in the period adds the period\'s no-show penalties to the game deltas', () => {
+  const nights = [
+    { date: N1, matches: [[HF_TP, 'A']] },
+    { date: N2, matches: [['Hans Tor - Frode Ola', 'D']] },
+  ];
+  const facts = factsOf(nights);
+  const per = compute('leaderboard', facts).rows.find((r) => r.player === 'Per');
+  close(per.change, -ELO.K / 2 - ELO.NO_SHOW_PENALTY);
+  close(per.rating, ELO.START - ELO.K / 2 - ELO.NO_SHOW_PENALTY);
+  assert.equal(per.games, 1);
 });
 
 test('leaderboard: form is the last 10 games in the period, oldest first; [] without games in the period', () => {

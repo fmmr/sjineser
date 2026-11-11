@@ -12,7 +12,7 @@ const seasonKey = (season) => formatFilter({ kind: 'season', ...season });
 
 /**
  * Sesongens spiller: per season (half-year) with games, the player with the largest total rating
- * change (sum of deltas) in it; tie → more games, then name. Newest season first; the current
+ * change in it (sum of deltas plus no-show penalties; only players with games in the season); tie → more games, then name. Newest season first; the current
  * season is simply the newest. Only over all seasons: with a season or night filter the facts do
  * not hold the other seasons, so the list is empty.
  * @param {import('../facts.js').Facts} facts
@@ -21,18 +21,22 @@ const seasonKey = (season) => formatFilter({ kind: 'season', ...season });
 export function seasonWinners(facts) {
   if (facts.filter.kind !== 'all') return [];
   const seasons = new Map();
-  for (const { date, player, delta } of facts.rows) {
+  const add = (date, player, change, games) => {
     const season = seasonOf(date);
     const key = seasonKey(season);
     if (!seasons.has(key)) seasons.set(key, { season, players: new Map() });
     const { players } = seasons.get(key);
     const entry = players.get(player) ?? { change: 0, games: 0 };
-    players.set(player, { change: entry.change + delta, games: entry.games + 1 });
-  }
+    players.set(player, { change: entry.change + change, games: entry.games + games });
+  };
+  for (const { date, player, delta } of facts.rows) add(date, player, delta, 1);
+  for (const { date, player, change } of facts.penalties) add(date, player, change, 0);
   return [...seasons]
+    .filter(([, { players }]) => [...players.values()].some(({ games }) => games > 0))
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([, { season, players }]) => {
       const [player, { change, games }] = [...players]
+        .filter(([, entry]) => entry.games > 0)
         .sort(([nameA, a], [nameB, b]) => b.change - a.change || b.games - a.games || byName(nameA, nameB))[0];
       return { season, player, change, games };
     });
