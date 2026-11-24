@@ -80,3 +80,21 @@ test('join: the main league needs no check', async () => {
   const leagues = createLeagues({ backend: memory(), mainName: 'Sjineser', check: async () => { throw new Error('not asked'); } });
   assert.deepEqual(await leagues.join('main'), { ok: true, id: 'main' });
 });
+
+test('forget drops a listed league (and makes main current if it was), keeps others, and never the main league', () => {
+  const leagues = createLeagues({ backend: memory(), mainName: 'Sjineser', check: found('x') });
+  leagues.remember('hp-k7x2', 'Familie');
+  leagues.remember('abc-123', 'Venner');
+  leagues.select('hp-k7x2');
+  let heard = 0;
+  leagues.subscribe(() => { heard += 1; });
+  assert.equal(leagues.forget('hp-k7x2'), true);
+  assert.equal(leagues.current(), 'main');
+  assert.deepEqual(leagues.list().map((l) => l.id), ['main', 'abc-123']);
+  assert.equal(heard, 1);
+  leagues.select('abc-123');
+  assert.equal(leagues.forget('zzz-000'), false, 'not listed: nothing happens');
+  assert.equal(leagues.forget('main'), false);
+  assert.equal(leagues.current(), 'abc-123');
+  assert.equal(heard, 1);
+});

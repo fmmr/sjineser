@@ -34,6 +34,13 @@ const leagues = createLeagues({
     return response.ok ? { ok: true, name: response.data?.league?.name } : { ok: false, error: response.error };
   },
 });
+// A message that has to survive the reload that follows it.
+const NOTICE_KEY = 'sjineser-notice';
+const notice = sessionStorage.getItem(NOTICE_KEY);
+if (notice) {
+  sessionStorage.removeItem(NOTICE_KEY);
+  showToast(notice);
+}
 const fromAddress = sandbox ? null : leagueFromSearch(location.search);
 const league = sandbox ? MAIN_LEAGUE : fromAddress ?? leagues.current();
 // A league from an address is only made the current one once the server has confirmed it exists (below).
@@ -42,7 +49,6 @@ if (!sandbox && !fromAddress && league !== MAIN_LEAGUE) history.replaceState(nul
 
 const storage = createStorage(localStorage, sandbox ? 'sjineser-sandbox:' : storagePrefix(league));
 const leagueApi = createApiClient({ url: API_URL, league });
-let warnedUnknown = false;
 const api = sandbox
   ? sandboxModules[0].createSandboxApi({ storage })
   : {
@@ -52,9 +58,12 @@ const api = sandbox
       if (response.ok) {
         leagues.remember(league, response.data?.league?.name);
         leagues.select(league);
-      } else if (response.error === 'invalid' && !warnedUnknown) {
-        warnedUnknown = true;
-        showToast(t.leagues.unknown);
+      } else if (response.error === 'invalid' && league !== MAIN_LEAGUE) {
+        // The server no longer knows this league (deleted, or a mistyped link): forget it here and go to the main league.
+        const name = leagues.nameOf(league);
+        const listed = leagues.forget(league);
+        sessionStorage.setItem(NOTICE_KEY, listed ? t.leagues.removed(name) : t.leagues.unknown);
+        location.replace(leagueUrl(location, MAIN_LEAGUE));
       }
       return response;
     },

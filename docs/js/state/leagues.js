@@ -64,6 +64,20 @@ export function createLeagues({ backend = globalThis.localStorage, mainName, che
       write({ ...state, leagues: [...state.leagues.filter((l) => l.id !== id), { id, name }] });
       notify();
     },
+    /**
+     * Drops a league from the list, e.g. when the server no longer knows it. The main league cannot
+     * be forgotten. If it was the current one, the main league is. The league's data stays in
+     * storage, so adding it again brings back what was there.
+     * @param {string} id
+     * @returns {boolean} whether it was listed
+     */
+    forget(id) {
+      const state = read();
+      if (id === MAIN_LEAGUE || !state.leagues.some((l) => l.id === id)) return false;
+      write({ ...state, current: state.current === id ? MAIN_LEAGUE : state.current, leagues: state.leagues.filter((l) => l.id !== id) });
+      notify();
+      return true;
+    },
     /** Calls `listener` whenever a name is added or changed. @param {() => void} listener */
     subscribe(listener) {
       listeners.add(listener);

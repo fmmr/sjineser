@@ -85,6 +85,7 @@ export const t = {
     addConfirm: 'Legg til',
     badCode: 'Det ser ikke ut som en ligakode',
     unknown: 'Fant ikke ligaen',
+    removed: (name) => `Fant ikke ${name} lenger. Den er fjernet fra listen.`,
     unsyncedTitle: 'Endringer som ikke er sendt',
     unsyncedMessage: (n, name) =>
       `${n} ${n === 1 ? 'endring' : 'endringer'} i ${name} er ikke lagret i regnearket ennå. De sendes neste gang du åpner ${name} med nett.`,
