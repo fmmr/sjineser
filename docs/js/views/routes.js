@@ -16,6 +16,7 @@ import { mountAboutRating } from './about/rating.js';
 import { mountAbout } from './about/about.js';
 import { mountMore } from './more/more.js';
 import { mountPlayers } from './more/players.js';
+import { mountLeagues } from './more/leagues.js';
 
 /** @type {import('../routing.js').Routes} */
 export const routes = [
@@ -36,6 +37,7 @@ export const routes = [
   ['/stats/night/:date', mountStatsNight],
   ['/more', mountMore],
   ['/more/players', mountPlayers],
+  ['/more/leagues', mountLeagues],
   ['/about', mountAbout],
   ['/about/teams', mountAboutTeams],
   ['/about/rating', mountAboutRating],

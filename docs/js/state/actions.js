@@ -10,7 +10,8 @@ import {
  * User intents. Each validates against the current view, enqueues ops and
  * returns { ok: true } or { ok: false, error } where error is a key of t.errors.
  * Play writes only into the active night (domain activeNight: until noon the next day).
- * sendNightSummary and renameLeague are the exceptions: one-shot requests straight to the api, never queued.
+ * sendNightSummary, renameLeague, exportBackup and restoreBackup are the exceptions: one-shot requests
+ * straight to the api, never queued.
  * @param {{ store: object, outbox: object, clock?: { today(): string, hour(): number }, now?: () => string,
  *   api?: { post(action: string, payload: object, pin: string): Promise<object> }, pin?: () => string,
  *   online?: () => boolean, askPin?: () => Promise<void> }} options
@@ -216,6 +217,40 @@ export function createActions({
       if (response.ok) return { ok: true, name: response.data?.name ?? clean };
       if (response.error === 'pin' || response.error === 'network') return { ok: false, error: response.error };
       return { ok: false, error: response.error === 'invalid' ? 'invalidLeagueName' : 'leagueRenameFailed' };
+    },
+
+    /**
+     * The whole league as the server's backup file (needs the PIN: it holds the private email
+     * addresses too). Straight to the api; offline it fails.
+     * @returns {Promise<{ ok: true, backup: object } | { ok: false, error: string }>}
+     */
+    async exportBackup() {
+      if (!online()) return { ok: false, error: 'offline' };
+      const response = await postWithPin('exportData', {});
+      if (response.ok && response.data) return { ok: true, backup: response.data };
+      return { ok: false, error: response.error === 'pin' || response.error === 'network' ? response.error : 'backupFailed' };
+    },
+
+    /**
+     * Fills an EMPTY league from a backup (the server refuses otherwise and checks every row).
+     * @param {object} backup
+     * @returns {Promise<{ ok: true, counts: { players: number, nights: number, matches: number, games: number } }
+     *   | { ok: false, error: string, detail?: string }>} `detail`: why the server found the backup invalid
+     */
+    async restoreBackup(backup) {
+      if (!online()) return { ok: false, error: 'offline' };
+      const response = await postWithPin('restoreData', { backup });
+      if (response.ok) {
+        store.refresh();
+        return { ok: true, counts: response.data };
+      }
+      if (response.error === 'pin' || response.error === 'network') return { ok: false, error: response.error };
+      if (response.error === 'conflict') return { ok: false, error: 'restoreNotEmpty' };
+      if (response.error === 'invalid') {
+        const detail = typeof response.message === 'string' ? response.message.slice(0, MAX_DETAIL) : '';
+        return detail ? { ok: false, error: 'restoreInvalid', detail } : { ok: false, error: 'restoreInvalid' };
+      }
+      return { ok: false, error: 'restoreFailed' };
     },
   };
 }

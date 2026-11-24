@@ -1,13 +1,10 @@
 import { h } from '../components/dom.js';
-import { chevronIcon, externalIcon } from '../components/icons.js';
-import { confirmSheet, textSheet } from '../components/sheet.js';
-import { showToast } from '../components/toast.js';
+import { externalIcon } from '../components/icons.js';
 import { linkRow, listGroup, rowText } from '../components/list.js';
 import { t } from '../../i18n/nb.js';
 import { REPO_URL, SHEET_URL } from '../../config.js';
 import { THEME_CHOICES, chooseTheme, themeChoice } from '../../theme.js';
 import { sandboxUrl } from '../../routing.js';
-import { leagueUrl } from '../../leagues.js';
 import { appVersion } from '../../pwa.js';
 
 /** A row that opens another site in a new tab. */
@@ -54,77 +51,6 @@ function sandboxRow(sandbox) {
     toggle);
 }
 
-/**
- * The leagues this phone knows, the open one marked, and "Legg til liga". Switching reloads the
- * app on the other league's address; changes not yet sent to the sheet stay on the phone,
- * under their own league, and go out the next time that league is open, so the user is told.
- * @param {{ league: object, leagues: object, unsynced: () => number, actions: object }} ctx
- */
-function leaguesGroup({ league, leagues, unsynced, actions }) {
-  async function switchTo(target) {
-    const pending = unsynced();
-    if (pending > 0) {
-      const go = await confirmSheet({
-        title: t.leagues.unsyncedTitle,
-        message: t.leagues.unsyncedMessage(pending, league.name),
-        confirmLabel: t.leagues.unsyncedConfirm,
-      });
-      if (!go) return;
-    }
-    location.assign(leagueUrl(location, target.id));
-  }
-
-  async function add() {
-    const input = await textSheet({
-      title: t.leagues.addTitle,
-      message: t.leagues.addMessage,
-      label: t.leagues.addLabel,
-      placeholder: t.leagues.addPlaceholder,
-      confirmLabel: t.leagues.addConfirm,
-    });
-    if (input === null) return;
-    const result = await leagues.join(input);
-    if (!result.ok) return showToast(result.error === 'network' ? t.errors.network : t.leagues[result.error]);
-    if (result.id === league.id) return;
-    await switchTo({ id: result.id });
-  }
-
-  async function rename() {
-    const input = await textSheet({
-      title: t.leagues.renameTitle,
-      message: t.leagues.renameMessage,
-      label: t.leagues.renameLabel,
-      value: league.name,
-      confirmLabel: t.leagues.renameConfirm,
-    });
-    if (input === null || input.trim() === league.name) return;
-    const result = await actions.renameLeague(input);
-    if (!result.ok) return showToast(t.errors[result.error]);
-    leagues.remember(league.id, result.name);
-    showToast(t.leagues.renamed(result.name));
-    // The row texts hold the old name: draw the page again.
-    window.dispatchEvent(new HashChangeEvent('hashchange'));
-  }
-
-  const rows = leagues.list().map((known) => {
-    const open = known.id === league.id;
-    return h('button', {
-      class: 'list-row',
-      type: 'button',
-      'aria-current': open ? 'true' : null,
-      'aria-label': open ? null : t.leagues.switchTo(known.name),
-      onclick: open ? null : () => switchTo(known),
-    },
-    rowText(known.name, open ? t.leagues.open : null),
-    open ? null : h('span', { class: 'list-trail' }, chevronIcon()));
-  });
-  rows.push(h('button', { class: 'list-row', type: 'button', onclick: rename },
-    rowText(t.leagues.rename, league.name), h('span', { class: 'list-trail' }, chevronIcon())));
-  rows.push(h('button', { class: 'list-row', type: 'button', onclick: add },
-    rowText(t.leagues.add, t.leagues.addNote), h('span', { class: 'list-trail' }, chevronIcon())));
-  return listGroup('more-leagues', t.leagues.heading, rows, h('p', { class: 'list-note muted' }, t.leagues.note));
-}
-
 /** #/more: players, settings, explanations and about, as grouped lists (spec §6). */
 export function mountMore(root, ctx) {
   const { sandbox, league } = ctx;
@@ -134,8 +60,10 @@ export function mountMore(root, ctx) {
   root.replaceChildren(
     h('section', { class: 'more' },
       h('h1', {}, t.more.title),
-      listGroup('more-game', t.more.gameHeading, [linkRow('#/more/players', t.more.players, t.more.playersNote)]),
-      !sandbox && leaguesGroup(ctx),
+      listGroup('more-game', t.more.gameHeading, [
+        linkRow('#/more/players', t.more.players, t.more.playersNote),
+        !sandbox && linkRow('#/more/leagues', t.leagues.title, t.leagues.moreNote(league.name)),
+      ].filter(Boolean)),
       listGroup('more-settings', t.more.settingsHeading, [themeRow(), sandboxRow(sandbox)]),
       listGroup('more-explain', t.more.explainHeading, [
         linkRow('#/about/teams', t.about.teamsLink),

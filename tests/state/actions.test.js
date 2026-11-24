@@ -419,3 +419,49 @@ test('renameLeague: a wrong PIN asks for it and retries once; server errors map 
     assert.deepEqual(await mailSetup([reply]).actions.renameLeague('Jaktlaget'), { ok: false, error }, JSON.stringify(reply));
   }
 });
+
+test('exportBackup posts exportData straight to the api and returns the backup; offline sends nothing', async () => {
+  const backup = { format: 'sjineser-backup', version: 1, players: [], nights: [], matches: [], games: [] };
+  const { actions, calls, outbox } = mailSetup([{ ok: true, result: 'noop', data: backup }]);
+  assert.deepEqual(await actions.exportBackup(), { ok: true, backup });
+  assert.deepEqual(calls, [{ action: 'exportData', payload: {}, pin: '1234' }]);
+  assert.deepEqual(outbox.queue, []);
+  const offline = mailSetup([], { online: false });
+  assert.deepEqual(await offline.actions.exportBackup(), { ok: false, error: 'offline' });
+  assert.deepEqual(offline.calls, []);
+});
+
+test('exportBackup: a wrong PIN asks once and retries; other failures are backupFailed', async () => {
+  const backup = { format: 'sjineser-backup', version: 1 };
+  const retry = mailSetup([{ ok: false, error: 'pin' }, { ok: true, result: 'noop', data: backup }], { newPin: '9999' });
+  assert.deepEqual(await retry.actions.exportBackup(), { ok: true, backup });
+  assert.deepEqual(retry.calls.map((c) => c.pin), ['1234', '9999']);
+  assert.deepEqual(await mailSetup([{ ok: false, error: 'network' }]).actions.exportBackup(), { ok: false, error: 'network' });
+  assert.deepEqual(await mailSetup([{ ok: false, error: 'server', message: 'x' }]).actions.exportBackup(), { ok: false, error: 'backupFailed' });
+  assert.deepEqual(await mailSetup([{ ok: true, result: 'noop' }]).actions.exportBackup(), { ok: false, error: 'backupFailed' }, 'no data in the reply');
+});
+
+test('restoreBackup sends the backup, refreshes the store and returns the counts', async () => {
+  const counts = { players: 5, nights: 2, matches: 7, games: 30 };
+  const backup = { format: 'sjineser-backup', version: 1, players: [], nights: [], matches: [], games: [] };
+  const { actions, calls, refreshes } = mailSetup([{ ok: true, result: 'applied', data: counts }]);
+  assert.deepEqual(await actions.restoreBackup(backup), { ok: true, counts });
+  assert.deepEqual(calls, [{ action: 'restoreData', payload: { backup }, pin: '1234' }]);
+  assert.equal(refreshes.length, 1);
+});
+
+test('restoreBackup maps server refusals: not empty, invalid (with the reason), pin, network, anything else', async () => {
+  for (const [reply, expected] of [
+    [{ ok: false, error: 'conflict', message: 'League is not empty' }, { ok: false, error: 'restoreNotEmpty' }],
+    [{ ok: false, error: 'invalid', message: 'Invalid game' }, { ok: false, error: 'restoreInvalid', detail: 'Invalid game' }],
+    [{ ok: false, error: 'invalid' }, { ok: false, error: 'restoreInvalid' }],
+    [{ ok: false, error: 'network' }, { ok: false, error: 'network' }],
+    [{ ok: false, error: 'server', message: 'boom' }, { ok: false, error: 'restoreFailed' }],
+  ]) {
+    const { actions, refreshes } = mailSetup([reply]);
+    assert.deepEqual(await actions.restoreBackup({}), expected, JSON.stringify(reply));
+    assert.equal(refreshes.length, 0, 'no refresh after a failure');
+  }
+  const offline = mailSetup([], { online: false });
+  assert.deepEqual(await offline.actions.restoreBackup({}), { ok: false, error: 'offline' });
+});
