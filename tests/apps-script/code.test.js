@@ -1311,9 +1311,9 @@ test('sendBackups: ONE email to the owner with one JSON attachment per league, m
   assert.equal(src.games.length, 3);
   assert.deepEqual(attachmentOf(message, 'main').backup.league, { id: 'main', name: 'Sjineser' });
   assert.deepEqual(attachmentOf(message, 'dest').backup.league, { id: 'dest', name: 'Min liga' });
-  assert.match(message.body, /Sjineser \(main\): 6 spillere, 1 kvelder, 0 kamper, 0 spill/);
-  assert.match(message.body, /Kilde \(src\): 4 spillere, 2 kvelder, 2 kamper, 3 spill/);
-  assert.match(message.body, /Min liga \(dest\): 0 spillere, 0 kvelder, 0 kamper, 0 spill/);
+  assert.match(message.body, /Sjineser \(main\): 6 spillere, 1 kvelder, 0 sett, 0 spill/);
+  assert.match(message.body, /Kilde \(src\): 4 spillere, 2 kvelder, 2 sett, 3 spill/);
+  assert.match(message.body, /Min liga \(dest\): 0 spillere, 0 kvelder, 0 sett, 0 spill/);
   assert.ok(message.body.indexOf('(main)') < message.body.indexOf('(src)'));
   assert.ok(!message.body.includes('@'), 'no addresses in the body');
   for (const secret of [PIN, 'pin-src', 'pin-dest', 'sheet-src', 'sheet-dest']) {
