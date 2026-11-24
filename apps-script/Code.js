@@ -20,8 +20,7 @@
  *
  * Schema/setup is lazy and versioned: every request reads SCHEMA_<id> (one property read); when it
  * differs from SCHEMA_VERSION the league's sheet is prepared once (missing tabs, headers, formats,
- * checkboxes, status formula, seat validation, and a default spreadsheet title renamed to
- * sjineser_league) inside the script lock, and the version is stored. A new column or tab is
+ * checkboxes, status formula, seat validation) inside the script lock, and the version is stored. A new column or tab is
  * therefore a SCHEMA_VERSION bump, not a per-request header check. setup() and prepareLeagues()
  * run the same preparation by hand from the editor.
  *
@@ -82,9 +81,6 @@ const LEAGUE_PREFIX = 'LEAGUE_';
 /** Bump when the sheet layout changes (new tab, column, format): every league is then prepared again, once. */
 const SCHEMA_VERSION = 1;
 const SCHEMA_PREFIX = 'SCHEMA_';
-/** Titles Google gives a brand-new spreadsheet (lowercase; '' = no title): only these get renamed. */
-const DEFAULT_TITLES = ['untitled spreadsheet', 'regneark uten tittel', ''];
-const SHEET_TITLE = 'sjineser_league';
 /** A plain address check: something@domain.tld, no spaces or list separators. */
 const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const STATUS_FORMULA =
@@ -573,7 +569,6 @@ function prepareLeague(force) {
  * formula and the seat validation. Data rows are never touched.
  */
 function prepareSpreadsheet(ss) {
-  renameIfUntitled(ss);
   Object.keys(TABS).forEach((name) => {
     const sheet = ss.getSheetByName(name) || ss.insertSheet(name);
     const header = sheet.getRange(1, 1, 1, TABS[name].length);
@@ -591,19 +586,6 @@ function prepareSpreadsheet(ss) {
   matches.getRange(SEAT_RANGE).setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInRange(players.getRange('A2:A'), true).setAllowInvalid(false).build(),
   );
-}
-
-/**
- * A spreadsheet still called what Google names a new one gets a recognisable title; any title
- * somebody chose is left alone. Cosmetic, so a failure (e.g. no edit permission) is only logged.
- */
-function renameIfUntitled(ss) {
-  try {
-    const title = String(ss.getName() || '').trim().toLowerCase();
-    if (DEFAULT_TITLES.includes(title)) ss.rename(SHEET_TITLE);
-  } catch (err) {
-    console.warn('Could not rename the spreadsheet:', err && err.message ? err.message : err);
-  }
 }
 
 // ---------- Editor functions (run by hand from the Apps Script editor) ----------

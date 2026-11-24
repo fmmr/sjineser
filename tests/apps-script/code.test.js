@@ -400,7 +400,7 @@ test('schema fast path: a matching version prepares nothing, takes no lock and w
 });
 
 test('schema mismatch: the first GET prepares the sheet under the lock and stamps the version, once', () => {
-  const { get, sheets, spreadsheets, lock, properties, writes } = load({ prepared: false });
+  const { get, sheets, lock, properties, writes } = load({ prepared: false });
   assert.equal(get().ok, true);
   assert.equal(properties.SCHEMA_main, '1');
   assert.deepEqual(writes, ['SCHEMA_main']);
@@ -411,7 +411,6 @@ test('schema mismatch: the first GET prepares the sheet under the lock and stamp
   assert.equal(get().ok, true);
   assert.equal(formatCalls(sheets).length, after, 'not prepared again');
   assert.equal(lock.tries, 1);
-  assert.equal(spreadsheets.sheet.log.filter((call) => call === 'getName').length, 1);
 });
 
 test('schema: a stale version (older than SCHEMA_VERSION) counts as behind', () => {
@@ -467,28 +466,6 @@ test('schema: a missing tab is created with its header, and an existing header i
   assert.ok(sheets.Matches.log.includes('setFormula') && sheets.Matches.log.includes('setDataValidation'));
 });
 
-test('schema: a default spreadsheet title is renamed to sjineser_league, any other title is kept', () => {
-  for (const title of ['Untitled spreadsheet', 'untitled SPREADSHEET', '  Regneark uten tittel ', 'Regneark uten tittel', '']) {
-    const { get, spreadsheets } = load({ prepared: false, mainTitle: title });
-    get();
-    assert.equal(spreadsheets.sheet.title, 'sjineser_league', JSON.stringify(title));
-  }
-  for (const title of ['Fotballkveld', 'Untitled spreadsheet 2', 'sjineser_league']) {
-    const { get, spreadsheets } = load({ prepared: false, mainTitle: title });
-    get();
-    assert.equal(spreadsheets.sheet.title, title);
-    assert.ok(!spreadsheets.sheet.log.includes('rename'));
-  }
-});
-
-test('schema: a failing rename cannot break the request or the preparation', () => {
-  const { get, properties, sheets } = load({ prepared: false, mainTitle: 'Untitled spreadsheet', renameFails: true });
-  const body = get();
-  assert.equal(body.ok, true);
-  assert.equal(properties.SCHEMA_main, '1');
-  assert.ok(formatCalls(sheets).length > 0);
-});
-
 // ---------- Editor functions ----------
 
 test('setup() prepares the main league only, even when it is already marked as prepared', () => {
@@ -515,12 +492,12 @@ test('prepareLeagues(): prepares main and every league, logs one line each, and 
   assert.doesNotThrow(() => prepareLeagues());
   const text = logs.join('\n');
   assert.match(text, /League main \| Sjineser \| Fotballkveld \| 6 players/);
-  assert.match(text, /League familie \| Familie \| sjineser_league \| 4 players/);
+  assert.match(text, /League familie \| Familie \| Untitled spreadsheet \| 4 players/);
   assert.match(text, /League venner \| Venner \| Liga \| 2 players/);
   assert.match(text, /League broken failed/);
   assert.match(text, /League gone failed/);
   assert.match(text, /League Typo failed/, 'a mistyped key is reported, not silently skipped');
-  assert.equal(spreadsheets['sheet-familie'].title, 'sjineser_league');
+  assert.equal(spreadsheets['sheet-familie'].title, 'Untitled spreadsheet', 'titles are never changed (needs full Drive access)');
   for (const id of ['main', 'familie', 'venner']) assert.equal(properties[`SCHEMA_${id}`], '1', id);
   for (const id of ['broken', 'gone', 'Typo']) assert.equal(properties[`SCHEMA_${id}`], undefined, id);
   assert.equal(text.includes('League main failed'), false, 'LEAGUE_main is ignored');
