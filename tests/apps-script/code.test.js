@@ -90,14 +90,15 @@ const LEAGUE_PLAYERS = [
 /** Settings rows, padded with blank rows like a real sheet (which has 1000), so a read is a real range read. */
 const settingsRows = (settings) => [['key', 'value'], ...settings.map((r) => [...r]), ...Array.from({ length: 20 }, () => [])];
 
-function standardSheets({ players = MAIN_PLAYERS, nights, nightsHeader = ['date', 'players', 'left', 'summarySent'], settings = [] } = {}) {
+function standardSheets({ players = MAIN_PLAYERS, nights, nightsHeader = ['date', 'players', 'left', 'summarySent'], settings = [],
+  matches = [], games = [] } = {}) {
   const roster = players.map((p) => p[0]).join(', ');
   return {
     Settings: fakeSheet(settingsRows(settings)),
     Players: fakeSheet([['name', 'active', 'email'], ...players.map((p) => [...p])]),
     Nights: fakeSheet([nightsHeader, ...(nights ?? [[NIGHT, roster, '', '']])]),
-    Matches: fakeSheet([['matchId', 'date', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3']]),
-    Games: fakeSheet([['matchId', 'gameNo', 'result', 'timestamp']]),
+    Matches: fakeSheet([['matchId', 'date', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3'], ...matches.map((m) => [...m])]),
+    Games: fakeSheet([['matchId', 'gameNo', 'result', 'timestamp'], ...games.map((g) => [...g])]),
   };
 }
 
@@ -109,11 +110,13 @@ function standardSheets({ players = MAIN_PLAYERS, nights, nightsHeader = ['date'
  * its own fake spreadsheet 'sheet-<id>'; `registration` replaces the LEAGUE_<id> value).
  * `prepared: false` leaves every schema version unset, so the first request prepares the sheet.
  * `settings` / `leagues.<id>.settings` are the Settings rows of the sheet ([key, value] pairs).
+ * `leagues.<id>` also takes `nights`, `matches` and `games` rows (`players: [], nights: []` makes an EMPTY league).
+ * `triggers` lists the handler names of project triggers that already exist.
  * The main league is registered as LEAGUE_main ({ sheetId: 'sheet', pin: PIN }, no name) unless `props` replaces it;
  * a `props` value of null removes that property (`{ LEAGUE_main: null }` = no main league at all).
  */
 function load({ quota = 100, today = '2026-11-11', sends = null, nights, nightsHeader, omitTabs = [], leagues = {},
-  prepared = true, props = {}, mainTitle = 'Fotballkveld', renameFails = false, settings = [] } = {}) {
+  prepared = true, props = {}, mainTitle = 'Fotballkveld', renameFails = false, settings = [], triggers: initialTriggers = [] } = {}) {
   const sheets = standardSheets({ nights, nightsHeader, settings });
   omitTabs.forEach((name) => delete sheets[name]);
   const spreadsheets = { sheet: fakeSpreadsheet(sheets, mainTitle, { renameFails }) };
@@ -123,7 +126,7 @@ function load({ quota = 100, today = '2026-11-11', sends = null, nights, nightsH
   };
   Object.keys(properties).forEach((key) => { if (properties[key] === null) delete properties[key]; });
   Object.entries(leagues).forEach(([id, league]) => {
-    spreadsheets[`sheet-${id}`] = fakeSpreadsheet(standardSheets({ players: league.players ?? LEAGUE_PLAYERS, settings: league.settings }), league.title ?? 'Liga');
+    spreadsheets[`sheet-${id}`] = fakeSpreadsheet(standardSheets({ players: league.players ?? LEAGUE_PLAYERS, settings: league.settings, nights: league.nights, matches: league.matches, games: league.games }), league.title ?? 'Liga');
     properties[`LEAGUE_${id}`] = league.registration
       ?? JSON.stringify({ name: league.name ?? id, sheetId: `sheet-${id}`, pin: league.pin ?? `pin-${id}` });
     if (prepared) properties[`SCHEMA_${id}`] = SCHEMA;
@@ -132,6 +135,8 @@ function load({ quota = 100, today = '2026-11-11', sends = null, nights, nightsH
   const reads = [];
   const writes = [];
   const logs = [];
+  /** Project triggers as { handler, calls } (calls = the builder steps that created it). */
+  const triggers = initialTriggers.map((handler) => ({ handler, calls: [] }));
   const lock = { tries: 0, releases: 0, fail: false, onTry: null };
   const context = vm.createContext({
     console: { log: (...a) => logs.push(a.join(' ')), warn: (...a) => logs.push(a.join(' ')), error: (...a) => logs.push(a.join(' ')) },
@@ -161,17 +166,33 @@ function load({ quota = 100, today = '2026-11-11', sends = null, nights, nightsH
     },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (text) => ({ setMimeType: () => JSON.parse(text) }) },
     MailApp: { sendEmail: (message) => sent.push(message), getRemainingDailyQuota: () => quota },
+    ScriptApp: {
+      WeekDay: { MONDAY: 'MONDAY' },
+      getProjectTriggers: () => triggers.map((spec) => ({ spec, getHandlerFunction: () => spec.handler })),
+      deleteTrigger: (trigger) => { triggers.splice(triggers.indexOf(trigger.spec), 1); },
+      newTrigger: (handler) => {
+        const spec = { handler, calls: [] };
+        const builder = {
+          timeBased: () => { spec.calls.push('timeBased'); return builder; },
+          onWeekDay: (day) => { spec.calls.push(`onWeekDay:${day}`); return builder; },
+          atHour: (hour) => { spec.calls.push(`atHour:${hour}`); return builder; },
+          create: () => { spec.calls.push('create'); triggers.push(spec); return {}; },
+        };
+        return builder;
+      },
+    },
     Session: { getEffectiveUser: () => ({ getEmail: () => OWNER }), getScriptTimeZone: () => 'Europe/Oslo' },
-    Utilities: { formatDate: () => today },
+    Utilities: { formatDate: () => today, newBlob: (data, type, name) => ({ data, type, name }) },
   });
   const api = vm.runInContext(
-    `${SOURCE}\n;({ doGet, doPost, summaryRecipients, countMissingEmails, setup, prepareLeagues, authorize, resetAllData, registeredLeagueIds })`, context);
+    `${SOURCE}\n;({ doGet, doPost, summaryRecipients, countMissingEmails, setup, prepareLeagues, authorize, resetAllData, registeredLeagueIds,
+  buildBackup, validateBackup, sendBackups, installBackupTrigger, removeBackupTrigger })`, context);
   const request = (action, payload, pin = PIN, league) => api.doPost({
     postData: { contents: JSON.stringify({ action, payload, pin, ...(league === undefined ? {} : { league }) }) },
   });
   const post = (payload, pin = PIN, league) => request('sendNightSummary', payload, pin, league);
   const get = (league) => api.doGet(league === undefined ? undefined : { parameter: { l: league } });
-  return { ...api, post, request, get, sent, sheets, spreadsheets, properties, reads, writes, logs, lock };
+  return { ...api, post, request, get, sent, sheets, spreadsheets, properties, reads, writes, logs, lock, triggers };
 }
 
 /** Names in column A below the header (the fake grows in blocks of blank rows, as a real sheet does). */
@@ -862,4 +883,575 @@ test('resetAllData() keeps the league name (Settings is configuration, not data)
   request('setLeagueName', { name: 'Stua' }, PIN);
   resetAllData();
   assert.deepEqual(settingsOf(sheets.Settings), [['name', 'Stua']]);
+});
+
+// ---------- Backup and restore ----------
+
+const SRC_PLAYERS = [['Mari', true, 'mari@example.com'], ['Ola', true, ''], ['Pia', false, 'pia@example.com'], ['Per', 'TRUE', ' per@example.com ']];
+const SRC_NIGHTS = [
+  ['2026-11-10', 'Mari, Ola, Pia, Per', 'Pia', '2026-11-11T08:00:00.000Z'],
+  ['2026-11-03', 'Mari, Ola, Per', '', ''],
+];
+const SRC_MATCHES = [
+  ['2026-11-10#1', '2026-11-10', 'Mari', 'Ola', '', 'Pia', 'Per', ''],
+  ['2026-11-10#2', '2026-11-10', 'Mari', 'Per', '', 'Ola', 'Pia', ''],
+];
+const SRC_GAMES = [
+  ['2026-11-10#1', 1, 'A', '2026-11-10T19:00:00.000Z'],
+  ['2026-11-10#1', 2, 'B', '2026-11-10T19:10:00.000Z'],
+  ['2026-11-10#2', 1, 'D', '2026-11-10T19:20:00.000Z'],
+];
+/** A league with data (src, PIN pin-src), an empty one (dest, PIN pin-dest, its own name in Settings) and main. */
+const BACKUP_LEAGUES = {
+  src: { name: 'Kilde', players: SRC_PLAYERS, nights: SRC_NIGHTS, matches: SRC_MATCHES, games: SRC_GAMES },
+  dest: { name: 'Mål', players: [], nights: [], settings: [['name', 'Min liga']] },
+};
+const DATA_TABS = ['Players', 'Nights', 'Matches', 'Games'];
+const WIDTH = { Players: 3, Nights: 4, Matches: 8, Games: 4 };
+/** The data rows of a tab (header and blank padding left out) as the cells that were written. */
+const dataRows = (sheet, width) => sheet.rows.slice(1).filter((r) => r[0] !== undefined && r[0] !== '').map((r) => r.slice(0, width));
+const snapshot = (sheets) => JSON.stringify(Object.values(sheets).map((s) => s.rows));
+const exportOf = (ctx, league = 'src') => ctx.request('exportData', {}, `pin-${league}`, league);
+const clone = (value) => JSON.parse(JSON.stringify(value));
+const restore = (ctx, backup, league = 'dest') => ctx.request('restoreData', { backup }, `pin-${league}`, league);
+const backupLoad = (extra = {}) => load({ leagues: BACKUP_LEAGUES, ...extra });
+
+test('exportData: the whole league as one document, email included, effective name, exportedAt now', () => {
+  const ctx = load({ leagues: { src: { ...BACKUP_LEAGUES.src, settings: [['name', 'Slekta']] } } });
+  const before = Date.now();
+  const body = exportOf(ctx);
+  assert.equal(body.ok, true);
+  assert.equal(body.result, 'noop');
+  const backup = body.data;
+  assert.deepEqual(Object.keys(backup), ['format', 'version', 'exportedAt', 'league', 'players', 'nights', 'matches', 'games']);
+  assert.equal(backup.format, 'sjineser-backup');
+  assert.equal(backup.version, 1);
+  assert.match(backup.exportedAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  assert.ok(Date.parse(backup.exportedAt) >= before - 1000 && Date.parse(backup.exportedAt) <= Date.now() + 1000);
+  assert.deepEqual(backup.league, { id: 'src', name: 'Slekta' }, 'the Settings name, not the registered one');
+  assert.deepEqual(backup.players, [
+    { name: 'Mari', active: true, email: 'mari@example.com' }, { name: 'Ola', active: true, email: '' },
+    { name: 'Pia', active: false, email: 'pia@example.com' }, { name: 'Per', active: true, email: 'per@example.com' },
+  ]);
+  assert.deepEqual(backup.nights, [
+    { date: '2026-11-10', players: ['Mari', 'Ola', 'Pia', 'Per'], left: ['Pia'], summarySent: '2026-11-11T08:00:00.000Z' },
+    { date: '2026-11-03', players: ['Mari', 'Ola', 'Per'], left: [], summarySent: '' },
+  ]);
+  assert.deepEqual(backup.matches[0], { matchId: '2026-11-10#1', date: '2026-11-10', A1: 'Mari', A2: 'Ola', A3: '', B1: 'Pia', B2: 'Per', B3: '' });
+  assert.deepEqual(backup.games[1], { matchId: '2026-11-10#1', gameNo: 2, result: 'B', timestamp: '2026-11-10T19:10:00.000Z' });
+  assert.equal(backup.matches.length, 2);
+  assert.equal(backup.games.length, 3);
+  const main = ctx.request('exportData', undefined, PIN).data;
+  assert.deepEqual(main.league, { id: 'main', name: 'Sjineser' });
+  assert.equal(main.players.length, 6);
+  assert.equal(main.players[0].email, 'fredrik@example.com');
+});
+
+test('exportData reads only: no sheet or property changes, and just the one POST lock', () => {
+  const ctx = backupLoad();
+  const before = snapshot(ctx.spreadsheets['sheet-src'].sheets);
+  exportOf(ctx);
+  assert.equal(snapshot(ctx.spreadsheets['sheet-src'].sheets), before);
+  assert.equal(ctx.lock.tries, 1);
+  assert.equal(ctx.lock.releases, 1);
+  assert.deepEqual(ctx.writes, []);
+});
+
+test('exportData needs the league\'s PIN; a refused call carries no data, and GET still has no addresses', () => {
+  const ctx = backupLoad();
+  for (const [pin, league] of [['nope', 'src'], [undefined, 'src'], [PIN, 'src'], ['pin-dest', 'src'], ['pin-src', undefined], [PIN, 'nobody']]) {
+    const body = ctx.request('exportData', {}, pin, league);
+    assert.equal(body.ok, false, `${pin} ${league}`);
+    assert.ok(['pin', 'invalid'].includes(body.error));
+    assert.ok(!JSON.stringify(body).includes('@'));
+  }
+  assert.ok(!JSON.stringify(ctx.get('src')).includes('@'), 'GET still has no addresses');
+});
+
+test('exportData of one league never carries another league\'s data', () => {
+  const ctx = backupLoad();
+  const src = JSON.stringify(exportOf(ctx));
+  assert.ok(!src.includes('Fredrik') && !src.includes('fredrik@') && !src.includes('Min liga'));
+  const main = JSON.stringify(ctx.request('exportData', {}, PIN).data);
+  assert.ok(!main.includes('Mari') && !main.includes('mari@') && !main.includes('2026-11-10#1'));
+  const dest = exportOf(ctx, 'dest').data;
+  assert.deepEqual(dest, { ...dest, players: [], nights: [], matches: [], games: [], league: { id: 'dest', name: 'Min liga' } });
+});
+
+test('buildBackup: copies only the listed fields, and shares no arrays with its input', () => {
+  const { buildBackup } = load();
+  const data = {
+    players: [{ name: 'Mari', active: true, email: 'm@example.com', secret: 'x' }],
+    nights: [{ date: '2026-11-10', players: ['Mari'], left: [], summarySent: '', extra: 1 }],
+    matches: [{ matchId: '2026-11-10#1', date: '2026-11-10', A1: 'Mari', A2: 'Ola', A3: '', B1: 'Pia', B2: 'Per', B3: '', status: 'x' }],
+    games: [{ matchId: '2026-11-10#1', gameNo: 1, result: 'A', timestamp: 't', extra: 1 }],
+  };
+  const backup = JSON.parse(JSON.stringify(buildBackup({ id: 'src', name: 'Kilde', main: false, pin: 'p' }, data, '2026-11-11T00:00:00.000Z')));
+  assert.deepEqual(backup, {
+    format: 'sjineser-backup', version: 1, exportedAt: '2026-11-11T00:00:00.000Z', league: { id: 'src', name: 'Kilde' },
+    players: [{ name: 'Mari', active: true, email: 'm@example.com' }],
+    nights: [{ date: '2026-11-10', players: ['Mari'], left: [], summarySent: '' }],
+    matches: [{ matchId: '2026-11-10#1', date: '2026-11-10', A1: 'Mari', A2: 'Ola', A3: '', B1: 'Pia', B2: 'Per', B3: '' }],
+    games: [{ matchId: '2026-11-10#1', gameNo: 1, result: 'A', timestamp: 't' }],
+  });
+  assert.notEqual(buildBackup({ id: 'a', name: 'b' }, data, 'x').nights[0].players, data.nights[0].players);
+});
+
+test('restoreData round trip: league A\'s export into an empty league B gives B the same data, dates and ids as text', () => {
+  const ctx = backupLoad();
+  const src = ctx.spreadsheets['sheet-src'].sheets;
+  const dest = ctx.spreadsheets['sheet-dest'].sheets;
+  const backup = exportOf(ctx).data;
+  const body = restore(ctx, backup);
+  assert.deepEqual(body, { ok: true, result: 'applied', data: { players: 4, nights: 2, matches: 2, games: 3 } });
+  for (const name of DATA_TABS) {
+    const expected = dataRows(src[name], WIDTH[name]);
+    if (name === 'Players') expected.forEach((row) => { row[1] = row[1] === true || row[1] === 'TRUE'; row[2] = row[2].trim(); });
+    assert.deepEqual(dataRows(dest[name], WIDTH[name]), expected, name);
+  }
+  assert.deepEqual(dataRows(dest.Players, 3).map((r) => r[1]), [true, true, false, true], 'real booleans');
+  for (const row of dataRows(dest.Nights, 4)) assert.ok(row.every((c) => typeof c === 'string'), 'Nights are all text');
+  for (const row of dataRows(dest.Matches, 8)) assert.ok(row.every((c) => typeof c === 'string'), 'Matches are all text');
+  for (const row of dataRows(dest.Games, 4)) assert.deepEqual(row.map((c) => typeof c), ['string', 'number', 'string', 'string']);
+  assert.equal(dest.Nights.rows[1][1], 'Mari, Ola, Pia, Per', 'comma-joined like writeRoster');
+  assert.equal(dest.Nights.rows[1][2], 'Pia');
+  assert.deepEqual(settingsOf(dest.Settings), [['name', 'Min liga']], 'the new league keeps its own name');
+  assert.equal(ctx.get('dest').data.league.name, 'Min liga');
+  // And the restored league exports the same document again (but for the time and the identity).
+  const again = exportOf(ctx, 'dest').data;
+  assert.deepEqual({ ...again, exportedAt: '', league: null }, { ...backup, exportedAt: '', league: null });
+  assert.equal(ctx.lock.tries, 3, 'one POST lock per call');
+  assert.equal(ctx.lock.releases, 3);
+});
+
+test('restoreData: the other leagues are untouched, and a second restore is refused as a conflict', () => {
+  const ctx = backupLoad();
+  const backup = exportOf(ctx).data;
+  const mainBefore = snapshot(ctx.sheets);
+  const srcBefore = snapshot(ctx.spreadsheets['sheet-src'].sheets);
+  assert.equal(restore(ctx, backup).result, 'applied');
+  const dest = snapshot(ctx.spreadsheets['sheet-dest'].sheets);
+  assert.deepEqual({ ...restore(ctx, backup) }, { ok: false, error: 'conflict', message: 'League is not empty' });
+  assert.equal(snapshot(ctx.spreadsheets['sheet-dest'].sheets), dest, 'the second call writes nothing');
+  assert.equal(snapshot(ctx.sheets), mainBefore);
+  assert.equal(snapshot(ctx.spreadsheets['sheet-src'].sheets), srcBefore);
+  assert.equal(restore(ctx, backup, 'src').error, 'conflict', 'a league with data is never overwritten');
+});
+
+test('restoreData is refused when ANY of Players, Nights, Matches or Games has a row, and writes nothing', () => {
+  const stray = {
+    Players: ['Zed', true, ''], Nights: ['2026-01-01', 'Zed', '', ''],
+    Matches: ['2026-01-01#1', '2026-01-01', 'a', 'b', '', 'c', 'd', ''], Games: ['x#1', 1, 'A', 't'],
+  };
+  const backup = exportOf(backupLoad()).data;
+  for (const name of DATA_TABS) {
+    const ctx = backupLoad();
+    const dest = ctx.spreadsheets['sheet-dest'].sheets;
+    dest[name].rows.push([...stray[name]]);
+    const before = snapshot(dest);
+    assert.deepEqual({ ...restore(ctx, backup) }, { ok: false, error: 'conflict', message: 'League is not empty' }, name);
+    assert.equal(snapshot(dest), before, `${name}: nothing written`);
+  }
+  // The check comes first: even garbage reports the conflict, never touching the sheet.
+  const ctx = backupLoad();
+  ctx.spreadsheets['sheet-dest'].sheets.Games.rows.push([...stray.Games]);
+  assert.equal(restore(ctx, 'garbage').error, 'conflict');
+});
+
+test('restoreData ignores the Settings tab when it asks whether the league is empty', () => {
+  const ctx = backupLoad();
+  ctx.spreadsheets['sheet-dest'].sheets.Settings.rows.push(['theme', 'dark']);
+  assert.equal(restore(ctx, exportOf(ctx).data).result, 'applied');
+});
+
+test('restoreData needs the league\'s PIN and writes nothing without it', () => {
+  const ctx = backupLoad();
+  const backup = exportOf(ctx).data;
+  const before = snapshot(ctx.spreadsheets['sheet-dest'].sheets);
+  for (const pin of ['nope', undefined, '', PIN, 'pin-src']) {
+    assert.equal(ctx.request('restoreData', { backup }, pin, 'dest').error, 'pin', String(pin));
+  }
+  assert.equal(ctx.request('restoreData', { backup }, 'pin-dest').error, 'pin', 'without the league the main PIN is needed');
+  assert.equal(snapshot(ctx.spreadsheets['sheet-dest'].sheets), before);
+  assert.equal(ctx.lock.tries, 1, 'only the export took the lock');
+});
+
+test('restoreData applies the normal write rules: names and emails are trimmed, a bad email is blanked, seats are trimmed', () => {
+  const ctx = backupLoad();
+  const backup = clone(exportOf(ctx).data);
+  backup.players[0].name = '  Mari ';
+  backup.players[0].email = 'not-an-address';
+  backup.players[1].email = null;
+  backup.nights[0].players = [' Mari', 'Ola ', 'Pia', 'Per'];
+  backup.matches[0].A1 = ' Mari ';
+  delete backup.matches[0].A3;
+  delete backup.matches[1].B3;
+  assert.equal(restore(ctx, backup).result, 'applied');
+  const dest = ctx.spreadsheets['sheet-dest'].sheets;
+  assert.deepEqual(dataRows(dest.Players, 3).slice(0, 2), [['Mari', true, ''], ['Ola', true, '']]);
+  assert.equal(dest.Nights.rows[1][1], 'Mari, Ola, Pia, Per');
+  assert.deepEqual(dataRows(dest.Matches, 8)[0], ['2026-11-10#1', '2026-11-10', 'Mari', 'Ola', '', 'Pia', 'Per', '']);
+  assert.equal(dataRows(dest.Matches, 8)[1][7], '');
+});
+
+test('restoreData into a sheet with too few rows adds rows first (one setValues for the tab)', () => {
+  const ctx = backupLoad();
+  const backup = clone(exportOf(ctx).data);
+  backup.players = Array.from({ length: 300 }, (_, i) => ({ name: `P${i}`, active: true, email: '' }));
+  backup.nights = []; backup.matches = []; backup.games = [];
+  let setValues = 0;
+  const players = ctx.spreadsheets['sheet-dest'].sheets.Players;
+  const getRange = players.getRange;
+  players.getRange = (...args) => {
+    const range = getRange(...args);
+    const original = range.setValues;
+    range.setValues = (values) => { setValues += 1; return original(values); };
+    return range;
+  };
+  assert.deepEqual({ ...restore(ctx, backup).data }, { players: 300, nights: 0, matches: 0, games: 0 });
+  assert.equal(setValues, 1);
+  assert.equal(dataRows(players, 3).length, 300);
+});
+
+test('restoreData: a failure half way clears what was written, so the league is empty again and can be retried', () => {
+  const ctx = backupLoad();
+  const backup = exportOf(ctx).data;
+  const dest = ctx.spreadsheets['sheet-dest'].sheets;
+  const getRange = dest.Games.getRange;
+  dest.Games.getRange = (...args) => {
+    const range = getRange(...args);
+    range.setValues = () => { throw new Error('Service error'); };
+    return range;
+  };
+  const body = restore(ctx, backup);
+  assert.deepEqual({ ...body }, { ok: false, error: 'server', message: 'Service error' });
+  for (const name of DATA_TABS) assert.deepEqual(dataRows(dest[name], WIDTH[name]), [], name);
+  assert.equal(ctx.lock.tries, ctx.lock.releases, 'the lock is released');
+  dest.Games.getRange = getRange;
+  assert.equal(restore(ctx, backup).result, 'applied', 'a retry works');
+});
+
+/** A valid backup from the fixture league, to break one rule at a time. */
+const validBackup = () => clone(exportOf(backupLoad()).data);
+
+/** [what, change(backup), expected message] */
+const BAD_BACKUPS = [
+  ['not an object: null', () => null, 'Not a Sjineser backup'],
+  ['not an object: string', () => 'backup', 'Not a Sjineser backup'],
+  ['not an object: number', () => 5, 'Not a Sjineser backup'],
+  ['not an object: array', () => [], 'Not a Sjineser backup'],
+  ['not an object: true', () => true, 'Not a Sjineser backup'],
+  ['empty object', () => ({}), 'Not a Sjineser backup'],
+  ['wrong format', (b) => ({ ...b, format: 'other' }), 'Not a Sjineser backup'],
+  ['no format', (b) => ({ ...b, format: undefined }), 'Not a Sjineser backup'],
+  ['version 2', (b) => ({ ...b, version: 2 }), 'Unsupported backup version'],
+  ['version 0', (b) => ({ ...b, version: 0 }), 'Unsupported backup version'],
+  ['version as text', (b) => ({ ...b, version: '1' }), 'Unsupported backup version'],
+  ['no version', (b) => ({ ...b, version: undefined }), 'Unsupported backup version'],
+  ['players missing', (b) => ({ ...b, players: undefined }), 'Invalid player'],
+  ['players null', (b) => ({ ...b, players: null }), 'Invalid player'],
+  ['players an object', (b) => ({ ...b, players: {} }), 'Invalid player'],
+  ['players a string', (b) => ({ ...b, players: 'Mari' }), 'Invalid player'],
+  ['nights null', (b) => ({ ...b, nights: null }), 'Invalid night'],
+  ['matches a number', (b) => ({ ...b, matches: 7 }), 'Invalid match'],
+  ['games null', (b) => ({ ...b, games: null }), 'Invalid game'],
+  ['player null', (b) => { b.players[0] = null; return b; }, 'Invalid player'],
+  ['player a string', (b) => { b.players[0] = 'Mari'; return b; }, 'Invalid player'],
+  ['player an array', (b) => { b.players[0] = ['Mari', true, '']; return b; }, 'Invalid player'],
+  ['player name missing', (b) => { delete b.players[0].name; return b; }, 'Invalid player'],
+  ['player name blank', (b) => { b.players[0].name = '  '; return b; }, 'Invalid player'],
+  ['player name a number', (b) => { b.players[0].name = 5; return b; }, 'Invalid player'],
+  ['player name with a comma', (b) => { b.players[0].name = 'Ma,ri'; return b; }, 'Invalid player'],
+  ['player name with a plus', (b) => { b.players[0].name = 'Ma+ri'; return b; }, 'Invalid player'],
+  ['player name twice', (b) => { b.players[1].name = 'Mari'; return b; }, 'Invalid player'],
+  ['player name twice, other case', (b) => { b.players[1].name = ' mARI '; return b; }, 'Invalid player'],
+  ['player active as text', (b) => { b.players[0].active = 'TRUE'; return b; }, 'Invalid player'],
+  ['player active missing', (b) => { delete b.players[0].active; return b; }, 'Invalid player'],
+  ['player email a number', (b) => { b.players[0].email = 5; return b; }, 'Invalid player'],
+  ['player email an object', (b) => { b.players[0].email = {}; return b; }, 'Invalid player'],
+  ['night null', (b) => { b.nights[0] = null; return b; }, 'Invalid night'],
+  ['night a string', (b) => { b.nights[0] = '2026-11-10'; return b; }, 'Invalid night'],
+  ['night date missing', (b) => { delete b.nights[0].date; return b; }, 'Invalid night'],
+  ['night date not ISO', (b) => { b.nights[0].date = '10.11.2026'; return b; }, 'Invalid night'],
+  ['night date a number', (b) => { b.nights[0].date = 20261110; return b; }, 'Invalid night'],
+  ['night date twice', (b) => { b.nights[1].date = b.nights[0].date; return b; }, 'Invalid night'],
+  ['night players not a list', (b) => { b.nights[0].players = 'Mari, Ola'; return b; }, 'Invalid night'],
+  ['night players with null', (b) => { b.nights[0].players = ['Mari', null]; return b; }, 'Invalid night'],
+  ['night players with a number', (b) => { b.nights[0].players = ['Mari', 5]; return b; }, 'Invalid night'],
+  ['night players duplicate', (b) => { b.nights[0].players = ['Mari', 'Mari']; return b; }, 'Invalid night'],
+  ['night player unknown', (b) => { b.nights[0].players.push('Ukjent'); return b; }, 'Invalid night'],
+  ['night left not on the roster', (b) => { b.nights[1].left = ['Pia']; return b; }, 'Invalid night'],
+  ['night left not a list', (b) => { b.nights[0].left = null; return b; }, 'Invalid night'],
+  ['night left duplicate', (b) => { b.nights[0].left = ['Pia', 'Pia']; return b; }, 'Invalid night'],
+  ['night summarySent a number', (b) => { b.nights[0].summarySent = 5; return b; }, 'Invalid night'],
+  ['night summarySent missing', (b) => { delete b.nights[0].summarySent; return b; }, 'Invalid night'],
+  ['night summarySent not a timestamp', (b) => { b.nights[0].summarySent = 'yesterday'; return b; }, 'Invalid night'],
+  ['match null', (b) => { b.matches[0] = null; return b; }, 'Invalid match'],
+  ['match a string', (b) => { b.matches[0] = 'x'; return b; }, 'Invalid match'],
+  ['match id missing', (b) => { delete b.matches[0].matchId; return b; }, 'Invalid match'],
+  ['match id malformed', (b) => { b.matches[0].matchId = '2026-11-10-1'; return b; }, 'Invalid match'],
+  ['match id with another date', (b) => { b.matches[0].date = '2026-11-11'; return b; }, 'Invalid match'],
+  ['match date missing', (b) => { delete b.matches[0].date; return b; }, 'Invalid match'],
+  ['match id twice', (b) => { b.matches[1].matchId = b.matches[0].matchId; return b; }, 'Invalid match'],
+  ['match with a seat missing', (b) => { b.matches[0].A2 = ''; return b; }, 'Invalid match'],
+  ['match with a player on both teams', (b) => { b.matches[0].B1 = 'Mari'; return b; }, 'Invalid match'],
+  ['match with a player twice in a team', (b) => { b.matches[1].A3 = 'Mari'; return b; }, 'Invalid match'],
+  ['match seat a number', (b) => { b.matches[0].A1 = 5; return b; }, 'Invalid match'],
+  ['match seat null in a required seat', (b) => { b.matches[0].B1 = null; return b; }, 'Invalid match'],
+  ['match seat an unknown player', (b) => { b.matches[0].A3 = 'Ukjent'; return b; }, 'Invalid match'],
+  ['game null', (b) => { b.games[0] = null; return b; }, 'Invalid game'],
+  ['game a string', (b) => { b.games[0] = 'x'; return b; }, 'Invalid game'],
+  ['game match unknown', (b) => { b.games[0].matchId = '2026-11-10#9'; return b; }, 'Invalid game'],
+  ['game match missing', (b) => { delete b.games[0].matchId; return b; }, 'Invalid game'],
+  ['game number 0', (b) => { b.games[0].gameNo = 0; return b; }, 'Invalid game'],
+  ['game number negative', (b) => { b.games[0].gameNo = -1; return b; }, 'Invalid game'],
+  ['game number fractional', (b) => { b.games[0].gameNo = 1.5; return b; }, 'Invalid game'],
+  ['game number as text', (b) => { b.games[0].gameNo = '1'; return b; }, 'Invalid game'],
+  ['game number twice in a match', (b) => { b.games[1].gameNo = 1; return b; }, 'Invalid game'],
+  ['game result unknown', (b) => { b.games[0].result = 'C'; return b; }, 'Invalid game'],
+  ['game result lowercase', (b) => { b.games[0].result = 'a'; return b; }, 'Invalid game'],
+  ['game timestamp missing', (b) => { delete b.games[0].timestamp; return b; }, 'Invalid game'],
+  ['game timestamp a number', (b) => { b.games[0].timestamp = 1; return b; }, 'Invalid game'],
+  ['game timestamp very long', (b) => { b.games[0].timestamp = 't'.repeat(1000); return b; }, 'Invalid game'],
+  ['too many players', (b) => { b.players = Array(501).fill(null); return b; }, 'Too many rows'],
+  ['too many nights', (b) => { b.nights = Array(2001).fill(null); return b; }, 'Too many rows'],
+  ['too many matches', (b) => { b.matches = Array(10001).fill(null); return b; }, 'Too many rows'],
+  ['too many games', (b) => { b.games = Array(60001).fill(null); return b; }, 'Too many rows'],
+];
+
+test('validateBackup accepts a real export and says nothing; the fixture really is valid', () => {
+  const { validateBackup } = load();
+  assert.equal(validateBackup(validBackup()), null);
+  assert.equal(validateBackup({ ...validBackup(), exportedAt: 5, league: 'x', extra: 1 }), null, 'league and exportedAt are informational');
+});
+
+test('validateBackup: every rule has a negative, and never throws', () => {
+  const { validateBackup } = load();
+  for (const [what, change, message] of BAD_BACKUPS) {
+    assert.equal(validateBackup(change(validBackup())), message, what);
+  }
+  for (const garbage of [undefined, null, 0, '', 'x', true, [], [[]], () => 1, Symbol('x'), NaN]) {
+    assert.doesNotThrow(() => validateBackup(garbage));
+    assert.equal(validateBackup(garbage), 'Not a Sjineser backup');
+  }
+});
+
+test('validateBackup: the caps are inclusive (500 / 2000 / 10000 / 60000 rows are fine, one more is not)', () => {
+  const { validateBackup } = load();
+  const players = Array.from({ length: 500 }, (_, i) => ({ name: `P${i}`, active: true, email: '' }));
+  const nights = Array.from({ length: 2000 }, (_, i) => ({
+    date: new Date(Date.UTC(2000, 0, 1 + i)).toISOString().slice(0, 10), players: ['P0', 'P1'], left: [], summarySent: '',
+  }));
+  const matches = Array.from({ length: 10000 }, (_, i) => ({
+    matchId: `2026-01-01#${i + 1}`, date: '2026-01-01', A1: 'P0', A2: 'P1', A3: '', B1: 'P2', B2: 'P3', B3: '',
+  }));
+  const games = Array.from({ length: 60000 }, (_, i) => ({
+    matchId: `2026-01-01#${(i % 10000) + 1}`, gameNo: Math.floor(i / 10000) + 1, result: 'A', timestamp: '2026-01-01T00:00:00.000Z',
+  }));
+  const big = { format: 'sjineser-backup', version: 1, players, nights, matches, games };
+  assert.equal(validateBackup(big), null);
+  assert.equal(validateBackup({ ...big, players: [...players, { name: 'Extra', active: true, email: '' }] }), 'Too many rows');
+  assert.equal(validateBackup({ ...big, games: [...games, { ...games[0], gameNo: 7 }] }), 'Too many rows');
+});
+
+test('restoreData: every invalid backup is refused with its reason and NOTHING is written', () => {
+  const ctx = backupLoad();
+  const dest = ctx.spreadsheets['sheet-dest'].sheets;
+  const before = snapshot(dest);
+  for (const [what, change, message] of BAD_BACKUPS) {
+    const body = restore(ctx, change(validBackup()));
+    assert.deepEqual({ ...body }, { ok: false, error: 'invalid', message }, what);
+  }
+  for (const payload of [undefined, null, 'x', 5, true, [], {}, { backup: null }, { backup: 'x' }, { backups: validBackup() }]) {
+    const body = ctx.request('restoreData', payload, 'pin-dest', 'dest');
+    assert.equal(body.ok, false, JSON.stringify(payload));
+    assert.equal(body.error, 'invalid');
+    assert.equal(body.message, 'Not a Sjineser backup');
+  }
+  assert.equal(snapshot(dest), before, 'not a single cell changed');
+  assert.deepEqual(ctx.writes, []);
+  assert.equal(ctx.lock.tries, ctx.lock.releases);
+  assert.equal(restore(ctx, validBackup()).result, 'applied', 'and the league is still empty enough to restore');
+});
+
+test('restoreData is a POST handler only: GET has no way to reach it', () => {
+  const ctx = backupLoad();
+  const before = snapshot(ctx.spreadsheets['sheet-dest'].sheets);
+  const body = ctx.doGet({ parameter: { l: 'dest', action: 'restoreData', backup: JSON.stringify(validBackup()) } });
+  assert.equal(body.ok, true);
+  assert.deepEqual(body.data.players, []);
+  assert.equal(snapshot(ctx.spreadsheets['sheet-dest'].sheets), before);
+});
+
+// ---------- Weekly backup email ----------
+
+/** The file names of a message's attachments (as an array of this realm: the fake mail lives in the script's). */
+const attachmentNames = (message) => Array.from(message.attachments, (a) => a.name);
+const attachmentOf = (message, id) => {
+  const blob = message.attachments.find((a) => a.name.startsWith(`sjineser-${id}-`));
+  return blob && { ...blob, backup: JSON.parse(blob.data) };
+};
+
+test('sendBackups: ONE email to the owner with one JSON attachment per league, main first, counts in a Norwegian body', () => {
+  const ctx = backupLoad();
+  ctx.sendBackups();
+  assert.equal(ctx.sent.length, 1, 'one email in all');
+  const [message] = ctx.sent;
+  assert.deepEqual(Object.keys(message).sort(), ['attachments', 'body', 'subject', 'to'], 'no cc, no bcc, nothing else');
+  assert.equal(message.to, OWNER);
+  assert.equal(message.subject, 'Sjineser sikkerhetskopi 2026-11-11');
+  assert.deepEqual(attachmentNames(message), [
+    'sjineser-main-2026-11-11.json', 'sjineser-src-2026-11-11.json', 'sjineser-dest-2026-11-11.json',
+  ]);
+  for (const blob of message.attachments) assert.equal(blob.type, 'application/json');
+  assert.ok(message.attachments[0].data.includes('\n  "format"'), 'pretty-printed with two spaces');
+  const src = attachmentOf(message, 'src').backup;
+  assert.deepEqual(src.league, { id: 'src', name: 'Kilde' });
+  assert.equal(src.players[0].email, 'mari@example.com', 'the attachment is the real backup, emails and all');
+  assert.equal(src.games.length, 3);
+  assert.deepEqual(attachmentOf(message, 'main').backup.league, { id: 'main', name: 'Sjineser' });
+  assert.deepEqual(attachmentOf(message, 'dest').backup.league, { id: 'dest', name: 'Min liga' });
+  assert.match(message.body, /Sjineser \(main\): 6 spillere, 1 kvelder, 0 kamper, 0 spill/);
+  assert.match(message.body, /Kilde \(src\): 4 spillere, 2 kvelder, 2 kamper, 3 spill/);
+  assert.match(message.body, /Min liga \(dest\): 0 spillere, 0 kvelder, 0 kamper, 0 spill/);
+  assert.ok(message.body.indexOf('(main)') < message.body.indexOf('(src)'));
+  assert.ok(!message.body.includes('@'), 'no addresses in the body');
+  for (const secret of [PIN, 'pin-src', 'pin-dest', 'sheet-src', 'sheet-dest']) {
+    assert.ok(!message.body.includes(secret), `no secret in the body: ${secret}`);
+  }
+  assert.equal(ctx.lock.tries, ctx.lock.releases);
+  assert.equal(ctx.lock.tries, 3, 'each league is read under the lock');
+});
+
+test('sendBackups: a broken league is listed as failed and the others are still sent; nothing throws or leaks', () => {
+  const ctx = load({
+    leagues: {
+      ...BACKUP_LEAGUES,
+      broken: { registration: 'not json' },
+      gone: { name: 'Borte', registration: JSON.stringify({ name: 'Borte', sheetId: 'sheet-missing', pin: 'pin-secret-9' }) },
+      leaky: { name: 'Lekk', pin: 'pin-secret-8' },
+    },
+    props: { LEAGUE_Typo: JSON.stringify({ sheetId: 'sheet', pin: 'p' }) },
+  });
+  ctx.spreadsheets['sheet-leaky'].getSheetByName = () => { throw new Error('Cannot open sheet-leaky with pin-secret-8'); };
+  assert.doesNotThrow(() => ctx.sendBackups());
+  assert.equal(ctx.sent.length, 1);
+  const [message] = ctx.sent;
+  assert.deepEqual(attachmentNames(message), [
+    'sjineser-main-2026-11-11.json', 'sjineser-src-2026-11-11.json', 'sjineser-dest-2026-11-11.json',
+  ]);
+  assert.match(message.body, /- broken: feilet: Unknown league/);
+  assert.match(message.body, /- gone: feilet: No item with the given ID could be found/);
+  assert.match(message.body, /- leaky: feilet: Cannot open … with …/, 'a quoted sheet id or PIN is scrubbed');
+  assert.match(message.body, /- Typo: feilet: Unknown league/);
+  assert.match(message.body, /Kilde \(src\): 4 spillere/);
+  const everything = message.body + ctx.logs.join('\n');
+  for (const secret of ['pin-secret', 'sheet-missing', 'sheet-leaky', PIN]) assert.ok(!everything.includes(secret), secret);
+  assert.equal(ctx.lock.tries, ctx.lock.releases, 'no lock is left taken');
+});
+
+test('sendBackups: a league that is busy is listed as failed, the rest is sent', () => {
+  const ctx = backupLoad();
+  let tries = 0;
+  ctx.lock.onTry = () => { tries += 1; ctx.lock.fail = tries === 2; };
+  ctx.sendBackups();
+  assert.match(ctx.sent[0].body, /- src: feilet: Busy, try again/);
+  assert.deepEqual(attachmentNames(ctx.sent[0]), ['sjineser-main-2026-11-11.json', 'sjineser-dest-2026-11-11.json']);
+});
+
+test('sendBackups: when every league fails the owner still hears about it (an email without attachments)', () => {
+  const ctx = load({ props: { LEAGUE_main: '{' } });
+  ctx.sendBackups();
+  assert.equal(ctx.sent.length, 1);
+  assert.deepEqual(attachmentNames(ctx.sent[0]), []);
+  assert.match(ctx.sent[0].body, /- main: feilet: Unknown league/);
+});
+
+test('sendBackups: respects the daily mail quota (needs at least one) and does nothing with no league', () => {
+  const none = load({ quota: 0, leagues: BACKUP_LEAGUES });
+  none.sendBackups();
+  assert.deepEqual(none.sent, []);
+  assert.equal(none.lock.tries, 0, 'nothing is even read');
+  assert.match(none.logs.join('\n'), /quota/);
+  const one = load({ quota: 1, leagues: BACKUP_LEAGUES });
+  one.sendBackups();
+  assert.equal(one.sent.length, 1);
+  const bare = load({ props: { LEAGUE_main: null } });
+  bare.sendBackups();
+  assert.deepEqual(bare.sent, []);
+});
+
+test('sendBackups reads the Settings name, and does not change any sheet or property', () => {
+  const ctx = load({ leagues: { src: { ...BACKUP_LEAGUES.src, settings: [['name', 'Slekta']] } } });
+  const before = [snapshot(ctx.sheets), snapshot(ctx.spreadsheets['sheet-src'].sheets)];
+  ctx.sendBackups();
+  assert.match(ctx.sent[0].body, /Slekta \(src\)/);
+  assert.deepEqual([snapshot(ctx.sheets), snapshot(ctx.spreadsheets['sheet-src'].sheets)], before);
+  assert.deepEqual(ctx.writes, []);
+});
+
+// ---------- Backup trigger ----------
+
+const WEEKLY = ['timeBased', 'onWeekDay:MONDAY', 'atHour:6', 'create'];
+
+test('installBackupTrigger creates ONE weekly Monday 06:00 trigger for sendBackups, and is idempotent', () => {
+  const ctx = load({ triggers: ['other', 'sendBackups', 'sendBackups'] });
+  ctx.installBackupTrigger();
+  assert.deepEqual(ctx.triggers.map((t) => t.handler), ['other', 'sendBackups']);
+  assert.deepEqual(ctx.triggers[1].calls, WEEKLY);
+  ctx.installBackupTrigger();
+  ctx.installBackupTrigger();
+  assert.equal(ctx.triggers.filter((t) => t.handler === 'sendBackups').length, 1);
+  assert.equal(ctx.triggers.length, 2, 'the trigger of something else is never touched');
+  assert.equal(ctx.lock.tries, 0, 'lock-free');
+  assert.equal(ctx.logs.length, 3, 'one log line per call');
+  assert.ok(!ctx.logs.join('\n').includes(PIN));
+  const fresh = load();
+  fresh.installBackupTrigger();
+  assert.deepEqual(fresh.triggers.map((t) => [t.handler, ...t.calls]), [['sendBackups', ...WEEKLY]]);
+});
+
+test('removeBackupTrigger deletes every sendBackups trigger and nothing else', () => {
+  const ctx = load({ triggers: ['other', 'sendBackups', 'sendBackups'] });
+  ctx.removeBackupTrigger();
+  assert.deepEqual(ctx.triggers.map((t) => t.handler), ['other']);
+  assert.match(ctx.logs.join('\n'), /removed: 2/);
+  ctx.removeBackupTrigger();
+  assert.match(ctx.logs.join('\n'), /removed: 0/);
+  assert.equal(ctx.lock.tries, 0);
+});
+
+test('authorize() touches the triggers and says how many sendBackups triggers exist (0 = not installed)', () => {
+  const none = load({ triggers: ['other'] });
+  none.authorize();
+  assert.match(none.logs.join('\n'), /Backup triggers \(0 = not installed\): 0/);
+  const two = load({ triggers: ['sendBackups', 'other', 'sendBackups'] });
+  two.authorize();
+  assert.match(two.logs.join('\n'), /Backup triggers \(0 = not installed\): 2/);
+});
+
+test('the editor and timer functions are not web actions: only exportData and restoreData are new', () => {
+  const ctx = backupLoad();
+  for (const action of ['sendBackups', 'installBackupTrigger', 'removeBackupTrigger', 'readBackup', 'buildBackup', 'validateBackup',
+    'parseBackup', 'leagueIsEmpty', 'writeRows', 'authorize', 'resetAllData', 'setup']) {
+    assert.deepEqual({ ...ctx.request(action, {}, PIN) }, { ok: false, error: 'invalid', message: 'Unknown action' }, action);
+    assert.equal(ctx.request(action, {}, 'wrong').error, 'pin', 'the PIN is checked first, as for any action');
+  }
+  assert.deepEqual(ctx.sent, []);
+  assert.deepEqual(ctx.triggers, []);
+  assert.equal(ctx.request('exportData', {}, PIN).ok, true);
+});
+
+test('restoreData keeps a team of three: the third seats are written', () => {
+  const six = ['Ann', 'Bo', 'Cy', 'Di', 'Ed', 'Fy'];
+  const ctx = backupLoad();
+  const backup = {
+    format: 'sjineser-backup', version: 1, exportedAt: '2026-11-11T00:00:00.000Z', league: { id: 'x', name: 'X' },
+    players: six.map((name) => ({ name, active: true, email: '' })),
+    nights: [],
+    matches: [{ matchId: '2026-11-12#1', date: '2026-11-12', A1: 'Ann', A2: 'Bo', A3: 'Cy', B1: 'Di', B2: 'Ed', B3: 'Fy' }],
+    games: [{ matchId: '2026-11-12#1', gameNo: 1, result: 'B', timestamp: '2026-11-12T20:00:00.000Z' }],
+  };
+  assert.equal(restore(ctx, backup).result, 'applied');
+  assert.deepEqual(dataRows(ctx.spreadsheets['sheet-dest'].sheets.Matches, 8), [['2026-11-12#1', '2026-11-12', 'Ann', 'Bo', 'Cy', 'Di', 'Ed', 'Fy']]);
 });
