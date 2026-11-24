@@ -37,11 +37,11 @@ Browser (GitHub Pages, static)  ──HTTPS/JSON──▶  Apps Script web app  
   stamps `sw.js`, §10), no runtime
   dependencies. JSDoc type annotations. Served by GitHub Pages from the `docs/` folder.
 - **Backend:** a standalone Google Apps Script project, deployed as a web app
-  ("execute as me, anyone can access"). It locates the sheet by an ID stored in
-  Script Properties — never in code. Pushed from the repo with `clasp`.
+  ("execute as me, anyone can access"). It locates each league's sheet through its `LEAGUE_<id>` Script
+  Property (§19) — never in code. Pushed from the repo with `clasp`.
 - **Data store:** a Google Sheet, private. The developer needs Editor access.
   Development uses the developer's own sheet; switching to the real sheet means
-  changing the Script Property and running `setup()` there.
+  changing the `LEAGUE_main` Script Property and running `setup()` there.
 - The backend is deliberately thin: validate, lock, read/append/delete rows.
   All logic lives in the frontend domain layer. Replacing the backend later only
   touches `apps-script/` and `js/api/`.
@@ -183,7 +183,7 @@ Historical data from the old sheet is imported once by `scripts/import-history.m
 | POST | `deleteGame` | `{ matchId, gameNo }` | Deletes the row; `noop` if absent. |
 | POST | `deleteMatch` | `{ matchId }` | Deletes the row; `noop` if absent; `invalid` if the match has games. |
 
-- Every POST carries `pin`; checked against Script Property `PIN`. Reads are public.
+- Every POST carries `pin`; checked against the league's own PIN (the `pin` in its `LEAGUE_<id>` Script Property, §19). Reads are public.
 - POST bodies are sent as `text/plain` JSON with no custom headers (a CORS "simple
   request"; fetch follows Apps Script's 302 redirect).
 - All writes run under `LockService.getScriptLock()` with `waitLock` and a timeout;
@@ -779,7 +779,7 @@ Chart.js (§11), loaded only when a chart is shown.
 - All asset paths, the manifest scope and the service worker scope are relative, so
   the app works both on the custom domain and on `<user>.github.io/<repo>/`.
 - Apps Script pushed with `clasp`, deployed as a web app; URL in `js/config.js`.
-- Script Properties: `LEAGUE_main` (and `LEAGUE_<id>` per further league, §19); the legacy `SHEET_ID` and `PIN` work until `migrateMainLeague()` has run.
+- Script Properties: `LEAGUE_main` (and `LEAGUE_<id>` per further league, §19), each `{"name"?,"sheetId","pin"}`. Old installs must have `LEAGUE_main` (created once by the since removed `migrateMainLeague()`); the flat `SHEET_ID`, `PIN` and `NAME` properties are no longer read.
 
 ## 15. Out of scope (first version)
 
@@ -891,7 +891,7 @@ so all three get the game in their stats and the same Elo change.
 
 Several independent groups ("ligaer") use the same app and the same Apps Script deployment. Each has its own Google Sheet, its own write PIN and its own data on the phone.
 
-- **The main league** is the original one: no `league` in requests, the storage prefix `sjineser:`. Nothing changes for it, and old cached clients keep working. Like every league it is one Script Property, `LEAGUE_main`; until the owner runs the editor function `migrateMainLeague()` (writes `LEAGUE_main`, verifies it, then deletes the legacy `SHEET_ID`, `PIN` and `NAME`), a temporary fallback reads the legacy `SHEET_ID` and `PIN`. A `LEAGUE_main` that is present but invalid makes main an unknown league instead of falling back (no silent switch to another sheet or PIN).
+- **The main league** is the original one: no `league` in requests, the storage prefix `sjineser:`. Nothing changes for it, and old cached clients keep working. Like every league it is one Script Property, `LEAGUE_main` = `{"name"?,"sheetId","pin"}`, resolved exactly like any other league: absent or invalid means an unknown league. Old installs must have `LEAGUE_main` (created once by the since removed `migrateMainLeague()`).
 - **Leagues** are registered by the owner as a Script Property `LEAGUE_<id>` = `{"name"?,"sheetId","pin"}` (`name` optional, only the starting value of the league's name). The id is `[a-z0-9-]{3,40}` and contains a random part (`hp-k7x2`): reading is public, so the id works as an unlisted link, while writing needs the league's own PIN. The group owner creates an empty sheet and shares it with the script owner's Google account as editor; the script sets it up the first time (§ schema below).
 - **The name** lives in the sheet: a `Settings` tab (`key`, `value`, one setting per row; only `name` exists today, 1–40 characters, never returned as a whole). The preparation seeds the `name` row (registered name, else the id, `Sjineser` for main) and never overwrites it; a blank value counts as absent. Effective name = Settings name, else the registered default; it is what `league.name` carries and what the mail sender name uses. The write handler `setLeagueName({ name })` (the league's PIN; trimmed, 1–40 characters, no control characters; `noop` when unchanged, else `applied`) is called directly by the app, which then re-reads; it is not a mirrored client op.
 - **Requests:** `GET …/exec?l=<id>`; POST bodies carry `league`. The client sends neither for the main league. Unknown id → `invalid` / "Unknown league". `GET` data gains `league: { id, name, main }` (one extra small range read for the name).

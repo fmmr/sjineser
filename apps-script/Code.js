@@ -8,17 +8,15 @@
  * 'main' is the MAIN league, so old cached clients keep working. An id is lowercase [a-z0-9-],
  * 3-40 characters, starting with a letter or digit; anything else is 'Unknown league' without
  * touching any Script Property (so 'PIN' or 'SHEET_ID' can never be read through an id).
+ * A request for a league that is not registered, main included, is 'Unknown league'.
  *
  * Script Properties (Project Settings; never in the code) are for the app as a whole. Each league,
  * main included, is ONE property:
  * - LEAGUE_<id> (LEAGUE_main for main): JSON {"name":"Familie","sheetId":"<spreadsheet id>","pin":"<pin>"}.
  *   sheetId and pin must be non-empty strings. `name` is optional and only the STARTING value of
  *   the league's name (the default is the id, 'Sjineser' for main): the live name is the `name`
- *   row of the league's Settings tab. A registration that is present but invalid makes the league
- *   unknown; main does NOT then fall back to the legacy properties (that could silently serve the
- *   wrong sheet under the wrong PIN), prepareLeagues() logs it as failed.
- * - TEMPORARY legacy fallback: while LEAGUE_main is absent, main is read from SHEET_ID and PIN.
- *   migrateMainLeague() (editor) converts them; the fallback is then removed in a later change.
+ *   row of the league's Settings tab. A registration that is absent or invalid makes the league
+ *   unknown (main included); prepareLeagues() logs an invalid one as failed.
  * - SCHEMA_<id> (SCHEMA_main for main): the SCHEMA_VERSION the league's sheet was last prepared
  *   for. Written by the script itself.
  * - SUMMARY_SENDS (main) / SUMMARY_SENDS_<id>: real summary emails sent today, 'YYYY-MM-DD:n'.
@@ -565,8 +563,7 @@ let currentLeague = null;
  * property key is built from it, so a client can never make this read PIN, SHEET_ID or any other
  * reserved property. A registration that is not valid JSON, or lacks a non-empty string sheetId
  * or pin, or has a name that is not a string, counts as unknown; a blank name is just absent.
- * That holds for LEAGUE_main too: when it is present but invalid, main is unknown and the legacy
- * properties are NOT consulted (no silent switch to another sheet or PIN).
+ * Main is resolved exactly like any other league, from LEAGUE_main.
  */
 function resolveLeague(rawId) {
   const props = PropertiesService.getScriptProperties();
@@ -574,12 +571,7 @@ function resolveLeague(rawId) {
   if (typeof id !== 'string' || !LEAGUE_ID.test(id)) return null;
   const main = id === MAIN_LEAGUE;
   const registration = props.getProperty(LEAGUE_PREFIX + id);
-  if (main && registration == null) {
-    // TEMPORARY legacy fallback: remove once LEAGUE_main exists
-    return {
-      id, main, name: DEFAULT_LEAGUE_NAME, sheetId: props.getProperty('SHEET_ID'), pin: props.getProperty('PIN'),
-    };
-  }
+  if (registration == null) return null;
   let found;
   try {
     found = JSON.parse(registration);
@@ -605,17 +597,15 @@ function enterLeague(rawId) {
 }
 
 /**
- * Ids of all registered leagues: main first, then the suffix of every other LEAGUE_<id> property.
- * Suffixes are NOT validated here, so a mistyped key (LEAGUE_Familie) shows up in the editor logs
- * as an invalid league instead of silently vanishing; resolveLeague() refuses them. Main is
- * listed once, first, whether it is LEAGUE_main or (temporarily) the legacy SHEET_ID and PIN.
+ * Ids of all registered leagues: the suffix of every LEAGUE_<id> property, main first when
+ * LEAGUE_main exists. Suffixes are NOT validated here, so a mistyped key (LEAGUE_Familie) shows up
+ * in the editor logs as an invalid league instead of silently vanishing; resolveLeague() refuses them.
  */
 function registeredLeagueIds() {
   const ids = PropertiesService.getScriptProperties().getKeys()
     .filter((key) => key.startsWith(LEAGUE_PREFIX))
-    .map((key) => key.slice(LEAGUE_PREFIX.length))
-    .filter((id) => id !== MAIN_LEAGUE);
-  return [MAIN_LEAGUE].concat(ids);
+    .map((key) => key.slice(LEAGUE_PREFIX.length));
+  return ids.filter((id) => id === MAIN_LEAGUE).concat(ids.filter((id) => id !== MAIN_LEAGUE));
 }
 
 // ---------- Schema (lazy, versioned, per league) ----------
@@ -697,36 +687,6 @@ function nameOrDefault() {
   } catch (err) {
     return currentLeague.name;
   }
-}
-
-/**
- * One-off, run by hand from the editor: moves the legacy main-league properties into LEAGUE_main
- * = {"name":"Sjineser","sheetId":<SHEET_ID>,"pin":<PIN>}, then deletes SHEET_ID, PIN and NAME.
- * Writes first and verifies by resolving main again BEFORE deleting anything, so the script is
- * never without a usable main league. Idempotent: when LEAGUE_main exists it does nothing and
- * deletes nothing. Logs only what it did, never a value.
- */
-function migrateMainLeague() {
-  const props = PropertiesService.getScriptProperties();
-  const key = LEAGUE_PREFIX + MAIN_LEAGUE;
-  if (props.getProperty(key) != null) {
-    console.log('Already migrated: LEAGUE_main exists, nothing changed');
-    return;
-  }
-  const sheetId = props.getProperty('SHEET_ID');
-  const pin = props.getProperty('PIN');
-  if (typeof sheetId !== 'string' || sheetId.trim() === '' || typeof pin !== 'string' || pin.trim() === '') {
-    console.log('Nothing to migrate: no legacy SHEET_ID and PIN');
-    return;
-  }
-  props.setProperty(key, JSON.stringify({ name: DEFAULT_LEAGUE_NAME, sheetId, pin }));
-  const league = resolveLeague(MAIN_LEAGUE);
-  if (!league || league.sheetId !== sheetId || league.pin !== pin) {
-    props.deleteProperty(key);
-    throw new Error('LEAGUE_main did not resolve after writing it; legacy properties kept');
-  }
-  ['SHEET_ID', 'PIN', 'NAME'].forEach((legacy) => props.deleteProperty(legacy));
-  console.log('Migrated: LEAGUE_main written, legacy SHEET_ID, PIN and NAME removed');
 }
 
 /** Prepares the MAIN league's spreadsheet now (the same preparation the first request would run). */
