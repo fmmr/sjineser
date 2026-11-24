@@ -55,6 +55,12 @@
  * account's daily recipient quota (MailApp.getRemainingDailyQuota()). Anti-spam: a night's
  * summary goes out for real once (Nights.summarySent), and at most MAX_DAILY_SENDS real sends a
  * day PER LEAGUE. Test sends (testPlayer) exist in the main league only.
+ *
+ * Backup and restore: the exportData handler returns a league's whole data as ONE JSON document
+ * (buildBackup; the players' email included, which is why it needs the league's PIN, unlike GET).
+ * restoreData loads such a document into an EMPTY league (validateBackup first, then one bulk write
+ * per tab). sendBackups() (a weekly time trigger, installBackupTrigger()) mails every league's
+ * backup to the script owner only. The trigger functions are not in HANDLERS: the web cannot call them.
  */
 
 const TABS = {
@@ -66,6 +72,8 @@ const TABS = {
 };
 /** Text format keeps a name like "2026" or "=x" a plain string in Settings. */
 const TEXT_COLUMNS = { Nights: ['A', 'D'], Matches: ['A', 'B'], Games: ['A', 'D'], Settings: ['A', 'B'] };
+/** The tabs that hold data (everything but the Settings configuration). */
+const DATA_TABS = ['Players', 'Nights', 'Matches', 'Games'];
 /** The settings that exist; nothing else in the Settings tab is ever read or returned. */
 const SETTING_KEYS = ['name'];
 /** Settings is tiny (one row per key): one read of this many rows is plenty and costs a single call. */
@@ -92,6 +100,14 @@ const SUMMARY_SENT_COLUMN = 4;
 /** Real summary sends allowed per day (script time zone) and league, all nights together; counted in SUMMARY_SENDS[_<id>]. */
 const MAX_DAILY_SENDS = 3;
 const SENDS_PROPERTY = 'SUMMARY_SENDS';
+/** Backup document: its `format`, the only `version` restore accepts, and the size caps that bound a restore. */
+const BACKUP_FORMAT = 'sjineser-backup';
+const BACKUP_VERSION = 1;
+const MAX_BACKUP_ROWS = { players: 500, nights: 2000, matches: 10000, games: 60000 };
+/** A timestamp cell is an ISO string (24 characters); anything much longer is not one. */
+const MAX_TIMESTAMP = 100;
+/** The function the weekly time trigger runs (see installBackupTrigger). */
+const BACKUP_FUNCTION = 'sendBackups';
 const MAIN_LEAGUE = 'main';
 const DEFAULT_LEAGUE_NAME = 'Sjineser';
 /** League ids: lowercase letters, digits and '-', 3-40 characters, not starting with '-'. */
@@ -330,6 +346,41 @@ const HANDLERS = {
   },
 
   /**
+   * The whole league as ONE backup document (see buildBackup), including the players' email, so it
+   * needs the league's PIN like every handler. Read-only; the payload is ignored. The reply is
+   * `noop`: nothing was changed.
+   */
+  exportData() {
+    return done('noop', readBackup());
+  },
+
+  /**
+   * Loads a backup into an EMPTY league: refused as `conflict` when any data row exists (checked
+   * first, inside the lock the POST holds, so a second call is refused too), and as `invalid`
+   * (with the reason from validateBackup) before anything is written when the document is not
+   * acceptable under the normal write rules. The name in Settings is never touched. If the write
+   * itself fails half way, the rows already written are cleared again so the league stays empty
+   * and the restore can be retried.
+   */
+  restoreData({ backup } = {}) {
+    if (!leagueIsEmpty()) return fail('conflict', 'League is not empty');
+    const parsed = parseBackup(backup);
+    if (parsed.error) return fail('invalid', parsed.error);
+    const { players, nights, matches, games } = parsed.data;
+    try {
+      // Players first: the Matches seat validation requires the names to exist.
+      writeRows('Players', players.map((p) => [p.name, p.active, p.email]));
+      writeRows('Nights', nights.map((n) => [n.date, n.players.join(', '), n.left.join(', '), n.summarySent]));
+      writeRows('Matches', matches.map((m) => [m.matchId, m.date].concat(SEATS.map((seat) => m[seat]))));
+      writeRows('Games', games.map((g) => [g.matchId, g.gameNo, g.result, g.timestamp]));
+    } catch (err) {
+      DATA_TABS.forEach((name) => clearDataRows(tab(name), name));
+      throw err;
+    }
+    return done('applied', { players: players.length, nights: nights.length, matches: matches.length, games: games.length });
+  },
+
+  /**
    * Emails a night summary (subject, HTML body and plain-text fallback, all built by the app) in
    * ONE message: to the script owner, every active player with an address in CC (the players see
    * who got it). With `testPlayer` (a name) only that player gets it, as `to`, with "[TEST] "
@@ -551,6 +602,234 @@ function appendTo(sheet, cells) {
   sheet.getRange(row, 1, 1, cells.length).setValues([cells]);
 }
 
+// ---------- Backup and restore ----------
+
+/**
+ * The backup document of a league: its identity and all four data tabs. Pure, so it can be tested
+ * and reused by the weekly email. Only the listed fields are copied (nothing else leaks in).
+ * `data.players` carry the email column (see readPlayersWithEmail).
+ * @param {{ id: string, name: string }} league
+ * @param {{ players: object[], nights: object[], matches: object[], games: object[] }} data
+ * @param {string} exportedAt ISO timestamp
+ */
+function buildBackup(league, data, exportedAt) {
+  return {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt,
+    league: { id: league.id, name: league.name },
+    players: data.players.map((p) => ({ name: p.name, active: p.active, email: p.email })),
+    nights: data.nights.map((n) => ({ date: n.date, players: [...n.players], left: [...n.left], summarySent: n.summarySent })),
+    matches: data.matches.map((m) => {
+      const match = { matchId: m.matchId, date: m.date };
+      SEATS.forEach((seat) => { match[seat] = m[seat]; });
+      return match;
+    }),
+    games: data.games.map((g) => ({ matchId: g.matchId, gameNo: g.gameNo, result: g.result, timestamp: g.timestamp })),
+  };
+}
+
+/** The current league's backup document, read with the same parsers as GET (plus the private email column). */
+function readBackup() {
+  const values = (name) => readTab(name).map((r) => r.value);
+  const data = { players: readPlayersWithEmail(), nights: values('Nights'), matches: values('Matches'), games: values('Games') };
+  return buildBackup({ id: currentLeague.id, name: leagueName() }, data, new Date().toISOString());
+}
+
+/**
+ * Why a backup document cannot be restored, or null when it can. Applies the normal write rules
+ * (see parseBackup) to the WHOLE document; never throws, whatever the input is.
+ * @returns {string | null} a short English reason
+ */
+function validateBackup(backup) {
+  return parseBackup(backup).error || null;
+}
+
+const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/** A list of trimmed, distinct, non-empty strings (a night's roster), or null when it is anything else. */
+function nameList(list) {
+  if (!Array.isArray(list) || !list.every((n) => typeof n === 'string')) return null;
+  const names = list.map((n) => n.trim());
+  return new Set(names).size === names.length && names.every(Boolean) ? names : null;
+}
+
+/**
+ * Checks a backup document against the rules of the normal writes (cleanName, ISO dates, MATCH_ID
+ * with its date part, validSeats, results, no duplicates, every name a known player) and returns
+ * { data } with the rows exactly as they will be written (trimmed, a bad email blanked), or
+ * { error }. Nothing here touches a sheet. Never throws.
+ */
+function parseBackup(backup) {
+  if (!isRecord(backup) || backup.format !== BACKUP_FORMAT) return { error: 'Not a Sjineser backup' };
+  if (backup.version !== BACKUP_VERSION) return { error: 'Unsupported backup version' };
+  const label = { players: 'Invalid player', nights: 'Invalid night', matches: 'Invalid match', games: 'Invalid game' };
+  for (const key of Object.keys(label)) {
+    if (!Array.isArray(backup[key])) return { error: label[key] };
+  }
+  for (const key of Object.keys(label)) {
+    if (backup[key].length > MAX_BACKUP_ROWS[key]) return { error: 'Too many rows' };
+  }
+
+  const playerNames = new Set();
+  const lowerNames = new Set();
+  const players = [];
+  for (const p of backup.players) {
+    const name = isRecord(p) ? cleanName(p.name) : null;
+    const emailOk = isRecord(p) && (p.email == null || typeof p.email === 'string');
+    if (!name || !emailOk || typeof p.active !== 'boolean' || lowerNames.has(name.toLowerCase())) return { error: 'Invalid player' };
+    const email = String(p.email == null ? '' : p.email).trim();
+    lowerNames.add(name.toLowerCase());
+    playerNames.add(name);
+    players.push({ name, active: p.active, email: EMAIL.test(email) ? email : '' });
+  }
+
+  const nightDates = new Set();
+  const nights = [];
+  for (const n of backup.nights) {
+    const roster = isRecord(n) ? nameList(n.players) : null;
+    const left = isRecord(n) ? nameList(n.left) : null;
+    const sent = isRecord(n) && typeof n.summarySent === 'string' ? n.summarySent.trim() : null;
+    const sentOk = sent === '' || (sent !== null && sent.length <= MAX_TIMESTAMP && /^\d{4}-\d{2}-\d{2}T/.test(sent));
+    if (!roster || !left || !sentOk || typeof n.date !== 'string' || !ISO_DATE.test(n.date) || nightDates.has(n.date)) {
+      return { error: 'Invalid night' };
+    }
+    if (!roster.every((name) => playerNames.has(name)) || !left.every((name) => roster.includes(name))) return { error: 'Invalid night' };
+    nightDates.add(n.date);
+    nights.push({ date: n.date, players: roster, left, summarySent: sent });
+  }
+
+  const matchIds = new Set();
+  const matches = [];
+  for (const m of backup.matches) {
+    if (!isRecord(m) || typeof m.matchId !== 'string' || !MATCH_ID.test(m.matchId) || m.matchId.split('#')[0] !== m.date
+      || matchIds.has(m.matchId) || !validSeats(m)) {
+      return { error: 'Invalid match' };
+    }
+    const match = { matchId: m.matchId, date: m.date };
+    SEATS.forEach((seat) => { match[seat] = m[seat] == null ? '' : m[seat].trim(); });
+    if (!SEATS.every((seat) => match[seat] === '' || playerNames.has(match[seat]))) return { error: 'Invalid match' };
+    matchIds.add(m.matchId);
+    matches.push(match);
+  }
+
+  const gameKeys = new Set();
+  const games = [];
+  for (const g of backup.games) {
+    if (!isRecord(g) || typeof g.matchId !== 'string' || !matchIds.has(g.matchId) || !Number.isInteger(g.gameNo) || g.gameNo < 1
+      || !RESULTS.includes(g.result) || typeof g.timestamp !== 'string' || g.timestamp.length > MAX_TIMESTAMP) {
+      return { error: 'Invalid game' };
+    }
+    const key = `${g.matchId}|${g.gameNo}`;
+    if (gameKeys.has(key)) return { error: 'Invalid game' };
+    gameKeys.add(key);
+    games.push({ matchId: g.matchId, gameNo: g.gameNo, result: g.result, timestamp: g.timestamp });
+  }
+  return { data: { players, nights, matches, games } };
+}
+
+/** True when none of Players, Nights, Matches and Games of the current league has a data row. */
+function leagueIsEmpty() {
+  return DATA_TABS.every((name) => dataRowCount(tab(name)) === 0);
+}
+
+/** Writes rows below the header of a tab in ONE setValues, adding sheet rows first when it is too short. */
+function writeRows(name, rows) {
+  if (rows.length === 0) return;
+  const sheet = tab(name);
+  const missing = rows.length + 1 - sheet.getMaxRows();
+  if (missing > 0) sheet.insertRowsAfter(sheet.getMaxRows(), missing);
+  sheet.getRange(2, 1, rows.length, TABS[name].length).setValues(rows);
+}
+
+/** Clears the data rows of a tab (values only: formats, checkboxes, validation and the status formula stay). */
+function clearDataRows(sheet, name) {
+  const rows = sheet.getMaxRows() - 1;
+  if (rows > 0) sheet.getRange(2, 1, rows, TABS[name].length).clearContent();
+}
+
+/**
+ * The weekly backup (run by a time trigger, see installBackupTrigger; also runnable from the
+ * editor): ONE email to the script owner, and only the owner (a backup holds the players' email
+ * addresses), with one JSON attachment per registered league, main first, and a Norwegian body
+ * that lists name, id and row counts per league, or why a league failed. A league that cannot be
+ * read is listed as failed and the others are still sent. Each league is read under the script
+ * lock so a write cannot slip in half way through the snapshot. The mail goes against the daily
+ * quota; with none left nothing is read or sent. The body holds no PIN and no sheet id.
+ */
+function sendBackups() {
+  if (MailApp.getRemainingDailyQuota() < 1) {
+    console.log('Backup not sent: the daily email quota is used up');
+    return;
+  }
+  const ids = registeredLeagueIds();
+  if (ids.length === 0) {
+    console.log('Backup not sent: no leagues are registered');
+    return;
+  }
+  const day = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const attachments = [];
+  const lines = [];
+  ids.forEach((id) => {
+    const league = enterLeague(id);
+    try {
+      if (!league) throw new Error('Unknown league');
+      const backup = readBackupLocked();
+      attachments.push(Utilities.newBlob(JSON.stringify(backup, null, 2), 'application/json', `sjineser-${id}-${day}.json`));
+      lines.push(`- ${backup.league.name} (${id}): ${backup.players.length} spillere, ${backup.nights.length} kvelder, `
+        + `${backup.matches.length} kamper, ${backup.games.length} spill`);
+    } catch (err) {
+      const reason = scrub(String(err && err.message ? err.message : err), league);
+      lines.push(`- ${id}: feilet: ${reason}`);
+      console.error(`Backup of league ${id} failed:`, reason);
+    }
+  });
+  const body = `Sikkerhetskopi av Sjineser ${day}\n\n${lines.join('\n')}\n\n`
+    + 'Hver vedlagte JSON-fil er én ligas data, inkludert spillernes e-postadresser, så ta vare på dem. '
+    + 'Den kan leses inn igjen i en tom liga.\n';
+  MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: `Sjineser sikkerhetskopi ${day}`, body, attachments });
+  console.log(`Backup sent: ${attachments.length} of ${ids.length} leagues`);
+}
+
+/** readBackup() of the current league under the script lock. */
+function readBackupLocked() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(LOCK_TIMEOUT_MS)) throw new Error('Busy, try again');
+  try {
+    return readBackup();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** An error message without the league's sheet id or PIN, should a service error ever quote them. */
+function scrub(message, league) {
+  return [league && league.sheetId, league && league.pin].filter(Boolean)
+    .reduce((text, secret) => text.split(secret).join('…'), message);
+}
+
+/** The project's triggers that run sendBackups. */
+function backupTriggers() {
+  return ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === BACKUP_FUNCTION);
+}
+
+/**
+ * Editor: makes sendBackups run weekly, Mondays between 06:00 and 07:00 (script time zone).
+ * Idempotent: the existing sendBackups triggers are deleted first, so there is always exactly one.
+ */
+function installBackupTrigger() {
+  backupTriggers().forEach((t) => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger(BACKUP_FUNCTION).timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(6).create();
+  console.log('Backup trigger installed: Mondays 06:00-07:00');
+}
+
+/** Editor: stops the weekly backup by deleting every sendBackups trigger. */
+function removeBackupTrigger() {
+  const triggers = backupTriggers();
+  triggers.forEach((t) => ScriptApp.deleteTrigger(t));
+  console.log(`Backup triggers removed: ${triggers.length}`);
+}
+
 // ---------- Leagues ----------
 
 /** The league the current request works on: { id, name, main, sheetId, pin }. Set by enterLeague(). */
@@ -674,6 +953,8 @@ function authorize() {
   console.log('Time zone:', Session.getScriptTimeZone());
   console.log('Mail quota left today:', MailApp.getRemainingDailyQuota());
   console.log('Send count:', PropertiesService.getScriptProperties().getProperty(SENDS_PROPERTY));
+  // Reading the triggers is what asks for the trigger permission that installBackupTrigger() needs.
+  console.log('Backup triggers (0 = not installed):', backupTriggers().length);
   registeredLeagueIds().forEach((id) => {
     const league = enterLeague(id);
     console.log('League:', id, league ? nameOrDefault() : '(invalid registration)');
@@ -737,11 +1018,9 @@ function prepareNow(id) {
  */
 function resetAllData() {
   enterLeague(MAIN_LEAGUE);
-  Object.keys(TABS).filter((name) => name !== 'Settings').forEach((name) => {
+  DATA_TABS.forEach((name) => {
     const sheet = tab(name);
-    if (!sheet) return;
-    const rows = sheet.getMaxRows() - 1;
-    if (rows > 0) sheet.getRange(2, 1, rows, TABS[name].length).clearContent();
+    if (sheet) clearDataRows(sheet, name);
   });
 }
 
