@@ -58,9 +58,9 @@ function sandboxRow(sandbox) {
  * The leagues this phone knows, the open one marked, and "Legg til liga". Switching reloads the
  * app on the other league's address; changes not yet sent to the sheet stay on the phone,
  * under their own league, and go out the next time that league is open, so the user is told.
- * @param {{ league: object, leagues: object, unsynced: () => number }} ctx
+ * @param {{ league: object, leagues: object, unsynced: () => number, actions: object }} ctx
  */
-function leaguesGroup({ league, leagues, unsynced }) {
+function leaguesGroup({ league, leagues, unsynced, actions }) {
   async function switchTo(target) {
     const pending = unsynced();
     if (pending > 0) {
@@ -89,6 +89,23 @@ function leaguesGroup({ league, leagues, unsynced }) {
     await switchTo({ id: result.id });
   }
 
+  async function rename() {
+    const input = await textSheet({
+      title: t.leagues.renameTitle,
+      message: t.leagues.renameMessage,
+      label: t.leagues.renameLabel,
+      value: league.name,
+      confirmLabel: t.leagues.renameConfirm,
+    });
+    if (input === null || input.trim() === league.name) return;
+    const result = await actions.renameLeague(input);
+    if (!result.ok) return showToast(t.errors[result.error]);
+    leagues.remember(league.id, result.name);
+    showToast(t.leagues.renamed(result.name));
+    // The row texts hold the old name: draw the page again.
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  }
+
   const rows = leagues.list().map((known) => {
     const open = known.id === league.id;
     return h('button', {
@@ -101,6 +118,8 @@ function leaguesGroup({ league, leagues, unsynced }) {
     rowText(known.name, open ? t.leagues.open : null),
     open ? null : h('span', { class: 'list-trail' }, chevronIcon()));
   });
+  rows.push(h('button', { class: 'list-row', type: 'button', onclick: rename },
+    rowText(t.leagues.rename, league.name), h('span', { class: 'list-trail' }, chevronIcon())));
   rows.push(h('button', { class: 'list-row', type: 'button', onclick: add },
     rowText(t.leagues.add, t.leagues.addNote), h('span', { class: 'list-trail' }, chevronIcon())));
   return listGroup('more-leagues', t.leagues.heading, rows, h('p', { class: 'list-note muted' }, t.leagues.note));

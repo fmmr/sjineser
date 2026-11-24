@@ -43,3 +43,12 @@ test('leagueQuery is empty for the main league (links in emails)', () => {
   assert.equal(leagueQuery(MAIN_LEAGUE), '');
   assert.equal(leagueQuery('hp-k7x2'), '?l=hp-k7x2');
 });
+
+test('cleanLeagueName: trimmed, 1–40 characters, no control characters', async () => {
+  const { cleanLeagueName, LEAGUE_NAME_MAX } = await import('../docs/js/leagues.js');
+  assert.equal(LEAGUE_NAME_MAX, 40);
+  assert.equal(cleanLeagueName('  Jaktlaget '), 'Jaktlaget');
+  assert.equal(cleanLeagueName('Familie-kineser å ø'), 'Familie-kineser å ø');
+  assert.equal(cleanLeagueName('x'.repeat(40)), 'x'.repeat(40));
+  for (const bad of ['', '   ', 'x'.repeat(41), 'a\nb', 'a\tb', null, undefined, 7]) assert.equal(cleanLeagueName(bad), null, String(bad));
+});

@@ -181,10 +181,11 @@ export function pinSheet() {
 
 /**
  * Asks for one line of text; Enter submits.
- * @param {{ title: string, message?: string, label: string, confirmLabel: string, placeholder?: string }} options
+ * @param {{ title: string, message?: string, label: string, confirmLabel: string, placeholder?: string, value?: string }} options
+ *   value: what the field starts with
  * @returns {Promise<string | null>} what was typed, or null when cancelled
  */
-export function textSheet({ title, message, label, confirmLabel, placeholder }) {
+export function textSheet({ title, message, label, confirmLabel, placeholder, value }) {
   const input = h('input', {
     class: 'field sheet-field',
     type: 'text',
@@ -194,6 +195,7 @@ export function textSheet({ title, message, label, confirmLabel, placeholder }) 
     spellcheck: 'false',
     enterkeyhint: 'done',
     placeholder,
+    value,
     'aria-label': label,
   });
   return openSheet({

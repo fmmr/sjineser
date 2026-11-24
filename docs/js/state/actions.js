@@ -1,4 +1,5 @@
 import { applyOp } from '../domain/dataset.js';
+import { cleanLeagueName } from '../leagues.js';
 import { createClock } from './clock.js';
 import { findPlayer, hasHistory, validateNewName, validateRename } from '../domain/players.js';
 import {
@@ -9,7 +10,7 @@ import {
  * User intents. Each validates against the current view, enqueues ops and
  * returns { ok: true } or { ok: false, error } where error is a key of t.errors.
  * Play writes only into the active night (domain activeNight: until noon the next day).
- * sendNightSummary is the one exception: a one-shot request straight to the api, never queued.
+ * sendNightSummary and renameLeague are the exceptions: one-shot requests straight to the api, never queued.
  * @param {{ store: object, outbox: object, clock?: { today(): string, hour(): number }, now?: () => string,
  *   api?: { post(action: string, payload: object, pin: string): Promise<object> }, pin?: () => string,
  *   online?: () => boolean, askPin?: () => Promise<void> }} options
@@ -21,6 +22,18 @@ export function createActions({
   api = null, pin = () => '', online = () => globalThis.navigator?.onLine !== false, askPin = async () => {},
 }) {
   const view = () => store.get();
+
+  /** A one-shot post; a wrong PIN asks for it once and retries with the new one. */
+  async function postWithPin(action, payload) {
+    const send = () => api.post(action, payload, pin());
+    let response = await send();
+    if (!response.ok && response.error === 'pin') {
+      const before = pin();
+      await askPin();
+      if (pin() !== before) response = await send();
+    }
+    return response;
+  }
   const night = () => activeNight(view(), clock.today(), clock.hour());
 
   function submit(action, payload) {
@@ -178,13 +191,7 @@ export function createActions({
       if (!view().nights.some((n) => n.date === date)) return { ok: false, error: 'invalid' };
       if (!online()) return { ok: false, error: 'offline' };
       const payload = { date, subject, text, html, ...(testPlayer ? { testPlayer } : {}) };
-      const send = () => api.post('sendNightSummary', payload, pin());
-      let response = await send();
-      if (!response.ok && response.error === 'pin') {
-        const before = pin();
-        await askPin();
-        if (pin() !== before) response = await send();
-      }
+      const response = await postWithPin('sendNightSummary', payload);
       if (response.ok) {
         // The server stamped the night's summarySent: fetch it so the page shows it at once.
         if (!testPlayer) store.refresh();
@@ -193,6 +200,22 @@ export function createActions({
       const error = mailError(response);
       const detail = error === 'sendFailed' && typeof response.message === 'string' && response.message.trim();
       return detail ? { ok: false, error, detail: detail.slice(0, MAX_DETAIL) } : { ok: false, error };
+    },
+
+    /**
+     * Renames the open league (the name every phone shows; stored in the league's sheet). Sent at
+     * once, never queued, like the summary: offline it fails and the user tries again.
+     * @param {string} name
+     * @returns {Promise<{ ok: true, name: string } | { ok: false, error: string }>}
+     */
+    async renameLeague(name) {
+      const clean = cleanLeagueName(name);
+      if (!clean) return { ok: false, error: 'invalidLeagueName' };
+      if (!online()) return { ok: false, error: 'offline' };
+      const response = await postWithPin('setLeagueName', { name: clean });
+      if (response.ok) return { ok: true, name: response.data?.name ?? clean };
+      if (response.error === 'pin' || response.error === 'network') return { ok: false, error: response.error };
+      return { ok: false, error: response.error === 'invalid' ? 'invalidLeagueName' : 'leagueRenameFailed' };
     },
   };
 }

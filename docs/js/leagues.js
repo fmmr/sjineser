@@ -50,3 +50,19 @@ export const storagePrefix = (id) => (id === MAIN_LEAGUE ? 'sjineser:' : `sjines
 
 /** The `?l=…` part of an absolute link into a league, empty for the main league (emails, shared links). @param {string} id */
 export const leagueQuery = (id) => (id === MAIN_LEAGUE ? '' : `?l=${id}`);
+
+/** Longest league name (the server enforces the same). */
+export const LEAGUE_NAME_MAX = 40;
+
+/**
+ * A league name as it will be stored: trimmed, 1–LEAGUE_NAME_MAX characters, no line breaks or
+ * other control characters.
+ * @param {unknown} name
+ * @returns {string | null} null when it is not a usable name
+ */
+export function cleanLeagueName(name) {
+  if (typeof name !== 'string') return null;
+  const clean = name.trim();
+  // eslint-disable-next-line no-control-regex
+  return clean.length >= 1 && clean.length <= LEAGUE_NAME_MAX && !/[\u0000-\u001f\u007f]/.test(clean) ? clean : null;
+}

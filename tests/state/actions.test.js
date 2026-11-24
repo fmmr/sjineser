@@ -388,3 +388,34 @@ test('sendNightSummary: a cancelled PIN prompt sends nothing more', async () => 
   assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: false, error: 'pin' });
   assert.equal(calls.length, 1);
 });
+
+test('renameLeague posts the trimmed name straight to the api and returns the name the server stored', async () => {
+  const { actions, calls, outbox } = mailSetup([{ ok: true, result: 'applied', data: { name: 'Jaktlaget' } }]);
+  assert.deepEqual(await actions.renameLeague('  Jaktlaget '), { ok: true, name: 'Jaktlaget' });
+  assert.deepEqual(calls, [{ action: 'setLeagueName', payload: { name: 'Jaktlaget' }, pin: '1234' }]);
+  assert.deepEqual(outbox.queue, []);
+});
+
+test('renameLeague refuses unusable names without asking the server, and offline sends nothing', async () => {
+  const { actions, calls } = mailSetup([]);
+  for (const bad of ['', '   ', 'x'.repeat(41), 'to\nlinjer', null, 42]) {
+    assert.deepEqual(await actions.renameLeague(bad), { ok: false, error: 'invalidLeagueName' }, String(bad));
+  }
+  const offline = mailSetup([], { online: false });
+  assert.deepEqual(await offline.actions.renameLeague('Jaktlaget'), { ok: false, error: 'offline' });
+  assert.deepEqual([...calls, ...offline.calls], []);
+});
+
+test('renameLeague: a wrong PIN asks for it and retries once; server errors map to t.errors keys', async () => {
+  const retry = mailSetup([{ ok: false, error: 'pin' }, { ok: true, result: 'noop', data: { name: 'Jaktlaget' } }], { newPin: '9999' });
+  assert.deepEqual(await retry.actions.renameLeague('Jaktlaget'), { ok: true, name: 'Jaktlaget' });
+  assert.deepEqual(retry.calls.map((c) => c.pin), ['1234', '9999']);
+  for (const [reply, error] of [
+    [{ ok: false, error: 'network' }, 'network'],
+    [{ ok: false, error: 'invalid', message: 'Invalid name' }, 'invalidLeagueName'],
+    [{ ok: false, error: 'server', message: 'boom' }, 'leagueRenameFailed'],
+    [{ ok: false, error: 'busy' }, 'leagueRenameFailed'],
+  ]) {
+    assert.deepEqual(await mailSetup([reply]).actions.renameLeague('Jaktlaget'), { ok: false, error }, JSON.stringify(reply));
+  }
+});
