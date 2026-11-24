@@ -93,7 +93,7 @@ cell means no email.
   out for real (ISO timestamp, written by the server after `sendNightSummary`, §4); blank = not
   sent. Not sensitive: GET returns it as `night.summarySent` (`''` when blank; `startNight` and
   `applyOp` store `''`). The owner clears the cell by hand to allow another send.
-- The server adds missing headers (`left`, `summarySent`, …) by itself: `ensureHeaders()` runs at
+- The server adds missing headers (`left`, `summarySent`, …) by itself: the lazy schema check (§19) runs at
   the start of every GET and POST (one read of row 1 per tab, writes only blank header cells), so
   a new column needs no `setup()` run; `setup()` still writes all headers. Old rows keep blank cells.
 
