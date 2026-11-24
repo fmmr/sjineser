@@ -9,20 +9,32 @@
  * 3-40 characters, starting with a letter or digit; anything else is 'Unknown league' without
  * touching any Script Property (so 'PIN' or 'SHEET_ID' can never be read through an id).
  *
- * Script Properties (Project Settings; never in the code):
- * - SHEET_ID, PIN: spreadsheet id and shared write PIN of the main league.
- * - NAME: display name of the main league (default 'Sjineser').
- * - LEAGUE_<id>: another league, JSON {"name":"Familie","sheetId":"<spreadsheet id>","pin":"<pin>"};
- *   all three must be non-empty strings, otherwise the league counts as unknown.
+ * Script Properties (Project Settings; never in the code) are for the app as a whole. Each league,
+ * main included, is ONE property:
+ * - LEAGUE_<id> (LEAGUE_main for main): JSON {"name":"Familie","sheetId":"<spreadsheet id>","pin":"<pin>"}.
+ *   sheetId and pin must be non-empty strings. `name` is optional and only the STARTING value of
+ *   the league's name (the default is the id, 'Sjineser' for main): the live name is the `name`
+ *   row of the league's Settings tab. A registration that is present but invalid makes the league
+ *   unknown; main does NOT then fall back to the legacy properties (that could silently serve the
+ *   wrong sheet under the wrong PIN), prepareLeagues() logs it as failed.
+ * - TEMPORARY legacy fallback: while LEAGUE_main is absent, main is read from SHEET_ID and PIN.
+ *   migrateMainLeague() (editor) converts them; the fallback is then removed in a later change.
  * - SCHEMA_<id> (SCHEMA_main for main): the SCHEMA_VERSION the league's sheet was last prepared
  *   for. Written by the script itself.
  * - SUMMARY_SENDS (main) / SUMMARY_SENDS_<id>: real summary emails sent today, 'YYYY-MM-DD:n'.
  *
  * Schema/setup is lazy and versioned: every request reads SCHEMA_<id> (one property read); when it
  * differs from SCHEMA_VERSION the league's sheet is prepared once (missing tabs, headers, formats,
- * checkboxes, status formula, seat validation) inside the script lock, and the version is stored. A new column or tab is
- * therefore a SCHEMA_VERSION bump, not a per-request header check. setup() and prepareLeagues()
- * run the same preparation by hand from the editor.
+ * checkboxes, status formula, seat validation, the seeded Settings name) inside the script lock,
+ * and the version is stored. A new column or tab is therefore a SCHEMA_VERSION bump, not a
+ * per-request header check. setup() and prepareLeagues() run the same preparation by hand from
+ * the editor.
+ *
+ * Settings layout: key, value (one setting per row). Only the keys in SETTING_KEYS are ever read
+ * or returned (today `name`, the league's display name, 1-40 characters, changed by the
+ * setLeagueName handler); the tab as a whole never leaves the script. A blank value counts as
+ * absent and the first row of a key is the one that counts. The effective name is the Settings
+ * name, else the registered default.
  *
  * Matches layout (teams of 2 or 3): matchId, date, A1, A2, A3, B1, B2, B3, status (formula in I1).
  * A3 / B3 are blank for a 2-player team. This replaced the old layout (A1, A2, B1, B2, status in
@@ -52,8 +64,17 @@ const TABS = {
   Nights: ['date', 'players', 'left', 'summarySent'],
   Matches: ['matchId', 'date', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3'],
   Games: ['matchId', 'gameNo', 'result', 'timestamp'],
+  Settings: ['key', 'value'],
 };
-const TEXT_COLUMNS = { Nights: ['A', 'D'], Matches: ['A', 'B'], Games: ['A', 'D'] };
+/** Text format keeps a name like "2026" or "=x" a plain string in Settings. */
+const TEXT_COLUMNS = { Nights: ['A', 'D'], Matches: ['A', 'B'], Games: ['A', 'D'], Settings: ['A', 'B'] };
+/** The settings that exist; nothing else in the Settings tab is ever read or returned. */
+const SETTING_KEYS = ['name'];
+/** Settings is tiny (one row per key): one read of this many rows is plenty and costs a single call. */
+const SETTINGS_READ_ROWS = 50;
+const MAX_LEAGUE_NAME = 40;
+/** Control characters (incl. newlines and the Unicode line separators) never belong in a league name. */
+const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 const SEATS = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3'];
 /** Seat columns of Matches: C (3) to H (8). The status formula sits right after them, in I. */
 const FIRST_SEAT_COLUMN = 3;
@@ -79,7 +100,7 @@ const DEFAULT_LEAGUE_NAME = 'Sjineser';
 const LEAGUE_ID = /^[a-z0-9][a-z0-9-]{2,39}$/;
 const LEAGUE_PREFIX = 'LEAGUE_';
 /** Bump when the sheet layout changes (new tab, column, format): every league is then prepared again, once. */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const SCHEMA_PREFIX = 'SCHEMA_';
 /** A plain address check: something@domain.tld, no spaces or list separators. */
 const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
@@ -299,6 +320,18 @@ const HANDLERS = {
   },
 
   /**
+   * Sets the league's display name (the `name` row of Settings). Not a client-op the app mirrors:
+   * the app calls it directly and re-reads. 1-40 characters after trimming, no control characters.
+   */
+  setLeagueName({ name }) {
+    const clean = typeof name === 'string' ? name.trim() : '';
+    if (!clean || Array.from(clean).length > MAX_LEAGUE_NAME || CONTROL_CHARS.test(clean)) return fail('invalid', 'Invalid name');
+    if (clean === leagueName()) return done('noop', { name: clean });
+    writeSetting(tab('Settings'), 'name', clean);
+    return done('applied', { name: clean });
+  },
+
+  /**
    * Emails a night summary (subject, HTML body and plain-text fallback, all built by the app) in
    * ONE message: to the script owner, every active player with an address in CC (the players see
    * who got it). With `testPlayer` (a name) only that player gets it, as `to`, with "[TEST] "
@@ -332,7 +365,7 @@ const HANDLERS = {
     message.subject = message.subject.slice(0, MAX_SUBJECT);
     message.body = text.slice(0, MAX_TEXT);
     message.htmlBody = html.slice(0, MAX_HTML);
-    if (!currentLeague.main) message.name = currentLeague.name;
+    if (!currentLeague.main) message.name = leagueName();
     MailApp.sendEmail(message);
     if (!test) {
       PropertiesService.getScriptProperties().setProperty(sendsProperty(), `${sends.day}:${sends.count + 1}`);
@@ -443,10 +476,45 @@ function readPlayersWithEmail() {
     .map((r) => r.value);
 }
 
+/**
+ * The Settings rows as { row, key, value } (trimmed) in ONE range read, no row count first.
+ * A sheet without the tab (not prepared yet) has no settings.
+ */
+function settingRows(sheet = tab('Settings')) {
+  const rows = sheet ? Math.min(sheet.getMaxRows() - 1, SETTINGS_READ_ROWS) : 0;
+  if (rows < 1) return [];
+  return sheet.getRange(2, 1, rows, 2).getValues().map((cells, i) => ({
+    row: i + 2, key: String(cells[0] == null ? '' : cells[0]).trim(), value: String(cells[1] == null ? '' : cells[1]).trim(),
+  }));
+}
+
+/** The known settings of the current league, '' for a missing or blank one. Unknown keys are dropped here. */
+function readSettings() {
+  const rows = settingRows();
+  const settings = {};
+  SETTING_KEYS.forEach((key) => {
+    const found = rows.find((r) => r.key === key);
+    settings[key] = found ? found.value : '';
+  });
+  return settings;
+}
+
+/** Writes a setting: updates the key's first row, or appends one when there is none. */
+function writeSetting(sheet, key, value) {
+  const found = settingRows(sheet).find((r) => r.key === key);
+  if (found) sheet.getRange(found.row, 2).setValue(value);
+  else appendTo(sheet, [key, value]);
+}
+
+/** The current league's effective name: the Settings name when not blank, else the registered default. */
+function leagueName() {
+  return readSettings().name || currentLeague.name;
+}
+
 function readAll() {
   const values = (name) => readTab(name).map((r) => r.value);
   return {
-    league: { id: currentLeague.id, name: currentLeague.name, main: currentLeague.main },
+    league: { id: currentLeague.id, name: leagueName(), main: currentLeague.main },
     players: values('Players'), nights: values('Nights'), matches: values('Matches'), games: values('Games'),
   };
 }
@@ -476,7 +544,10 @@ function writeRoster(row, players, left) {
 }
 
 function append(name, cells) {
-  const sheet = tab(name);
+  appendTo(tab(name), cells);
+}
+
+function appendTo(sheet, cells) {
   const row = dataRowCount(sheet) + 2;
   if (row > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 100);
   sheet.getRange(row, 1, 1, cells.length).setValues([cells]);
@@ -489,30 +560,37 @@ let currentLeague = null;
 
 /**
  * Looks a league up by the id a client sent (absent, null or '' means main) and returns
- * { id, name, main, sheetId, pin }, or null when it is unknown. The id is checked against
- * LEAGUE_ID BEFORE any property key is built from it, so a client can never make this read
- * PIN, SHEET_ID or any other reserved property. A registration that is not valid JSON, or lacks
- * a non-empty string name, sheetId or pin, counts as unknown.
+ * { id, name, main, sheetId, pin }, or null when it is unknown; `name` is the registered default
+ * (the live name is in Settings, see leagueName). The id is checked against LEAGUE_ID BEFORE any
+ * property key is built from it, so a client can never make this read PIN, SHEET_ID or any other
+ * reserved property. A registration that is not valid JSON, or lacks a non-empty string sheetId
+ * or pin, or has a name that is not a string, counts as unknown; a blank name is just absent.
+ * That holds for LEAGUE_main too: when it is present but invalid, main is unknown and the legacy
+ * properties are NOT consulted (no silent switch to another sheet or PIN).
  */
 function resolveLeague(rawId) {
   const props = PropertiesService.getScriptProperties();
   const id = rawId == null || rawId === '' ? MAIN_LEAGUE : rawId;
-  if (id === MAIN_LEAGUE) {
+  if (typeof id !== 'string' || !LEAGUE_ID.test(id)) return null;
+  const main = id === MAIN_LEAGUE;
+  const registration = props.getProperty(LEAGUE_PREFIX + id);
+  if (main && registration == null) {
+    // TEMPORARY legacy fallback: remove once LEAGUE_main exists
     return {
-      id: MAIN_LEAGUE, main: true, sheetId: props.getProperty('SHEET_ID'), pin: props.getProperty('PIN'),
-      name: props.getProperty('NAME') || DEFAULT_LEAGUE_NAME,
+      id, main, name: DEFAULT_LEAGUE_NAME, sheetId: props.getProperty('SHEET_ID'), pin: props.getProperty('PIN'),
     };
   }
-  if (typeof id !== 'string' || !LEAGUE_ID.test(id)) return null;
   let found;
   try {
-    found = JSON.parse(props.getProperty(LEAGUE_PREFIX + id));
+    found = JSON.parse(registration);
   } catch (err) {
     return null;
   }
   const filled = (value) => typeof value === 'string' && value.trim() !== '';
-  if (!found || !filled(found.name) || !filled(found.sheetId) || !filled(found.pin)) return null;
-  return { id, main: false, name: found.name, sheetId: found.sheetId, pin: found.pin };
+  if (!found || !filled(found.sheetId) || !filled(found.pin)) return null;
+  if (found.name != null && typeof found.name !== 'string') return null;
+  const fallback = main ? DEFAULT_LEAGUE_NAME : id;
+  return { id, main, name: filled(found.name) ? found.name.trim() : fallback, sheetId: found.sheetId, pin: found.pin };
 }
 
 /**
@@ -527,10 +605,10 @@ function enterLeague(rawId) {
 }
 
 /**
- * Ids of all registered leagues: main first, then the suffix of every LEAGUE_<id> property.
+ * Ids of all registered leagues: main first, then the suffix of every other LEAGUE_<id> property.
  * Suffixes are NOT validated here, so a mistyped key (LEAGUE_Familie) shows up in the editor logs
- * as an invalid league instead of silently vanishing; resolveLeague() refuses them. (LEAGUE_main
- * is ignored: main is configured by SHEET_ID and PIN.)
+ * as an invalid league instead of silently vanishing; resolveLeague() refuses them. Main is
+ * listed once, first, whether it is LEAGUE_main or (temporarily) the legacy SHEET_ID and PIN.
  */
 function registeredLeagueIds() {
   const ids = PropertiesService.getScriptProperties().getKeys()
@@ -558,7 +636,7 @@ function schemaCurrent() {
  */
 function prepareLeague(force) {
   if (!force && schemaCurrent()) return;
-  prepareSpreadsheet(spreadsheet());
+  prepareSpreadsheet(spreadsheet(), currentLeague.name);
   PropertiesService.getScriptProperties().setProperty(schemaProperty(), String(SCHEMA_VERSION));
 }
 
@@ -566,9 +644,11 @@ function prepareLeague(force) {
  * Brings a spreadsheet to the full layout; idempotent, so it is safe on a live sheet and on a
  * half-prepared one: creates missing tabs, fills blank header cells (never overwrites a filled
  * one), bold + frozen header, text-format columns, Players checkboxes, the Matches status
- * formula and the seat validation. Data rows are never touched.
+ * formula and the seat validation, and seeds the Settings `name` with `defaultName` when the
+ * sheet has none (blank counts as none; an existing name is never overwritten). Data rows are
+ * never touched.
  */
-function prepareSpreadsheet(ss) {
+function prepareSpreadsheet(ss, defaultName) {
   Object.keys(TABS).forEach((name) => {
     const sheet = ss.getSheetByName(name) || ss.insertSheet(name);
     const header = sheet.getRange(1, 1, 1, TABS[name].length);
@@ -578,6 +658,8 @@ function prepareSpreadsheet(ss) {
     sheet.setFrozenRows(1);
     (TEXT_COLUMNS[name] || []).forEach((col) => sheet.getRange(col + ':' + col).setNumberFormat('@'));
   });
+  const settings = ss.getSheetByName('Settings');
+  if (!settingRows(settings).some((r) => r.key === 'name' && r.value !== '')) writeSetting(settings, 'name', defaultName);
   const players = ss.getSheetByName('Players');
   players.getRange('B2:B').insertCheckboxes();
   const matches = ss.getSheetByName('Matches');
@@ -603,9 +685,48 @@ function authorize() {
   console.log('Mail quota left today:', MailApp.getRemainingDailyQuota());
   console.log('Send count:', PropertiesService.getScriptProperties().getProperty(SENDS_PROPERTY));
   registeredLeagueIds().forEach((id) => {
-    const league = resolveLeague(id);
-    console.log('League:', id, league ? league.name : '(invalid registration)');
+    const league = enterLeague(id);
+    console.log('League:', id, league ? nameOrDefault() : '(invalid registration)');
   });
+}
+
+/** The current league's name, or its registered default when its sheet cannot be read (editor logs only). */
+function nameOrDefault() {
+  try {
+    return leagueName();
+  } catch (err) {
+    return currentLeague.name;
+  }
+}
+
+/**
+ * One-off, run by hand from the editor: moves the legacy main-league properties into LEAGUE_main
+ * = {"name":"Sjineser","sheetId":<SHEET_ID>,"pin":<PIN>}, then deletes SHEET_ID, PIN and NAME.
+ * Writes first and verifies by resolving main again BEFORE deleting anything, so the script is
+ * never without a usable main league. Idempotent: when LEAGUE_main exists it does nothing and
+ * deletes nothing. Logs only what it did, never a value.
+ */
+function migrateMainLeague() {
+  const props = PropertiesService.getScriptProperties();
+  const key = LEAGUE_PREFIX + MAIN_LEAGUE;
+  if (props.getProperty(key) != null) {
+    console.log('Already migrated: LEAGUE_main exists, nothing changed');
+    return;
+  }
+  const sheetId = props.getProperty('SHEET_ID');
+  const pin = props.getProperty('PIN');
+  if (typeof sheetId !== 'string' || sheetId.trim() === '' || typeof pin !== 'string' || pin.trim() === '') {
+    console.log('Nothing to migrate: no legacy SHEET_ID and PIN');
+    return;
+  }
+  props.setProperty(key, JSON.stringify({ name: DEFAULT_LEAGUE_NAME, sheetId, pin }));
+  const league = resolveLeague(MAIN_LEAGUE);
+  if (!league || league.sheetId !== sheetId || league.pin !== pin) {
+    props.deleteProperty(key);
+    throw new Error('LEAGUE_main did not resolve after writing it; legacy properties kept');
+  }
+  ['SHEET_ID', 'PIN', 'NAME'].forEach((legacy) => props.deleteProperty(legacy));
+  console.log('Migrated: LEAGUE_main written, legacy SHEET_ID, PIN and NAME removed');
 }
 
 /** Prepares the MAIN league's spreadsheet now (the same preparation the first request would run). */
@@ -622,7 +743,7 @@ function prepareLeagues() {
   registeredLeagueIds().forEach((id) => {
     try {
       const league = prepareNow(id);
-      console.log(`League ${league.id} | ${league.name} | ${spreadsheet().getName()} | ${dataRowCount(tab('Players'))} players`);
+      console.log(`League ${league.id} | ${leagueName()} | ${spreadsheet().getName()} | ${dataRowCount(tab('Players'))} players`);
     } catch (err) {
       console.error(`League ${id} failed:`, err && err.message ? err.message : err);
     }
@@ -645,7 +766,8 @@ function prepareNow(id) {
 
 /**
  * DANGER: DELETES ALL DATA. Clears every data row (row 2 and down) of Players, Nights, Matches
- * and Games, every player, night, match and game, and keeps only the header rows. There is no undo
+ * and Games, every player, night, match and game, and keeps only the header rows. Settings is
+ * configuration, not data: the league's name stays. There is no undo
  * apart from the spreadsheet's version history.
  *
  * Only for the one-off history import (spec §18): the owner runs it by hand from the Apps Script
@@ -655,7 +777,7 @@ function prepareNow(id) {
  */
 function resetAllData() {
   enterLeague(MAIN_LEAGUE);
-  Object.keys(TABS).forEach((name) => {
+  Object.keys(TABS).filter((name) => name !== 'Settings').forEach((name) => {
     const sheet = tab(name);
     if (!sheet) return;
     const rows = sheet.getMaxRows() - 1;
