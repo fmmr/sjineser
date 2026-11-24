@@ -59,7 +59,7 @@
  * Backup and restore: the exportData handler returns a league's whole data as ONE JSON document
  * (buildBackup; the players' email included, which is why it needs the league's PIN, unlike GET).
  * restoreData loads such a document into an EMPTY league (validateBackup first, then one bulk write
- * per tab). sendBackups() (a weekly time trigger, installBackupTrigger()) mails every league's
+ * per tab). sendBackups() (a monthly time trigger, installBackupTrigger()) mails every league's
  * backup to the script owner only. The trigger functions are not in HANDLERS: the web cannot call them.
  */
 
@@ -106,7 +106,9 @@ const BACKUP_VERSION = 1;
 const MAX_BACKUP_ROWS = { players: 500, nights: 2000, matches: 10000, games: 60000 };
 /** A timestamp cell is an ISO string (24 characters); anything much longer is not one. */
 const MAX_TIMESTAMP = 100;
-/** The function the weekly time trigger runs (see installBackupTrigger). */
+/** The day of the month the backup email goes out. */
+const BACKUP_MONTH_DAY = 10;
+/** The function the monthly time trigger runs (see installBackupTrigger). */
 const BACKUP_FUNCTION = 'sendBackups';
 const MAIN_LEAGUE = 'main';
 const DEFAULT_LEAGUE_NAME = 'Sjineser';
@@ -606,7 +608,7 @@ function appendTo(sheet, cells) {
 
 /**
  * The backup document of a league: its identity and all four data tabs. Pure, so it can be tested
- * and reused by the weekly email. Only the listed fields are copied (nothing else leaks in).
+ * and reused by the backup email. Only the listed fields are copied (nothing else leaks in).
  * `data.players` carry the email column (see readPlayersWithEmail).
  * @param {{ id: string, name: string }} league
  * @param {{ players: object[], nights: object[], matches: object[], games: object[] }} data
@@ -749,7 +751,7 @@ function clearDataRows(sheet, name) {
 }
 
 /**
- * The weekly backup (run by a time trigger, see installBackupTrigger; also runnable from the
+ * The backup email (run by a time trigger, see installBackupTrigger; also runnable from the
  * editor): ONE email to the script owner, and only the owner (a backup holds the players' email
  * addresses), with one JSON attachment per registered league, main first, and a Norwegian body
  * that lists name, id and row counts per league, or why a league failed. A league that cannot be
@@ -814,16 +816,16 @@ function backupTriggers() {
 }
 
 /**
- * Editor: makes sendBackups run weekly, Mondays between 06:00 and 07:00 (script time zone).
+ * Editor: makes sendBackups run monthly, on the 10th between 06:00 and 07:00 (script time zone).
  * Idempotent: the existing sendBackups triggers are deleted first, so there is always exactly one.
  */
 function installBackupTrigger() {
   backupTriggers().forEach((t) => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger(BACKUP_FUNCTION).timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(6).create();
-  console.log('Backup trigger installed: Mondays 06:00-07:00');
+  ScriptApp.newTrigger(BACKUP_FUNCTION).timeBased().onMonthDay(BACKUP_MONTH_DAY).atHour(6).create();
+  console.log('Backup trigger installed: the 10th of every month, 06:00-07:00');
 }
 
-/** Editor: stops the weekly backup by deleting every sendBackups trigger. */
+/** Editor: stops the monthly backup by deleting every sendBackups trigger. */
 function removeBackupTrigger() {
   const triggers = backupTriggers();
   triggers.forEach((t) => ScriptApp.deleteTrigger(t));

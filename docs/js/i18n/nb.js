@@ -111,7 +111,7 @@ export const t = {
       `Filen har ${players} spillere, ${nights} kvelder, ${matches} sett og ${games} spill. Det går bare hvis ligaen er helt tom.`,
     restoreConfirm: 'Gjenopprett',
     restored: ({ players, matches, games }) => `Gjenopprettet: ${players} spillere, ${matches} sett, ${games} spill`,
-    backupNoteEmail: 'Et sikkerhetskopi-eksemplar av alle ligaene sendes også til eieren på e-post hver mandag.',
+    backupNoteEmail: 'Et sikkerhetskopi-eksemplar av alle ligaene sendes også til eieren på e-post den 10. hver måned.',
   },
   matchTaken: (n) => `Sett ${n} ble startet på en annen enhet eller i et annet vindu. Henter siste data.`,
   rejected: { conflict: 'En endring kolliderte med data fra en annen enhet eller et annet vindu. Henter siste data.', invalid: 'En endring ble avvist. Henter siste data.' },

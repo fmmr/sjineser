@@ -167,14 +167,13 @@ function load({ quota = 100, today = '2026-11-11', sends = null, nights, nightsH
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (text) => ({ setMimeType: () => JSON.parse(text) }) },
     MailApp: { sendEmail: (message) => sent.push(message), getRemainingDailyQuota: () => quota },
     ScriptApp: {
-      WeekDay: { MONDAY: 'MONDAY' },
       getProjectTriggers: () => triggers.map((spec) => ({ spec, getHandlerFunction: () => spec.handler })),
       deleteTrigger: (trigger) => { triggers.splice(triggers.indexOf(trigger.spec), 1); },
       newTrigger: (handler) => {
         const spec = { handler, calls: [] };
         const builder = {
           timeBased: () => { spec.calls.push('timeBased'); return builder; },
-          onWeekDay: (day) => { spec.calls.push(`onWeekDay:${day}`); return builder; },
+          onMonthDay: (day) => { spec.calls.push(`onMonthDay:${day}`); return builder; },
           atHour: (hour) => { spec.calls.push(`atHour:${hour}`); return builder; },
           create: () => { spec.calls.push('create'); triggers.push(spec); return {}; },
         };
@@ -1283,7 +1282,7 @@ test('restoreData is a POST handler only: GET has no way to reach it', () => {
   assert.equal(snapshot(ctx.spreadsheets['sheet-dest'].sheets), before);
 });
 
-// ---------- Weekly backup email ----------
+// ---------- Backup email ----------
 
 /** The file names of a message's attachments (as an array of this realm: the fake mail lives in the script's). */
 const attachmentNames = (message) => Array.from(message.attachments, (a) => a.name);
@@ -1392,13 +1391,13 @@ test('sendBackups reads the Settings name, and does not change any sheet or prop
 
 // ---------- Backup trigger ----------
 
-const WEEKLY = ['timeBased', 'onWeekDay:MONDAY', 'atHour:6', 'create'];
+const MONTHLY = ['timeBased', 'onMonthDay:10', 'atHour:6', 'create'];
 
-test('installBackupTrigger creates ONE weekly Monday 06:00 trigger for sendBackups, and is idempotent', () => {
+test('installBackupTrigger creates ONE monthly trigger (the 10th, 06:00) for sendBackups, and is idempotent', () => {
   const ctx = load({ triggers: ['other', 'sendBackups', 'sendBackups'] });
   ctx.installBackupTrigger();
   assert.deepEqual(ctx.triggers.map((t) => t.handler), ['other', 'sendBackups']);
-  assert.deepEqual(ctx.triggers[1].calls, WEEKLY);
+  assert.deepEqual(ctx.triggers[1].calls, MONTHLY);
   ctx.installBackupTrigger();
   ctx.installBackupTrigger();
   assert.equal(ctx.triggers.filter((t) => t.handler === 'sendBackups').length, 1);
@@ -1408,7 +1407,7 @@ test('installBackupTrigger creates ONE weekly Monday 06:00 trigger for sendBacku
   assert.ok(!ctx.logs.join('\n').includes(PIN));
   const fresh = load();
   fresh.installBackupTrigger();
-  assert.deepEqual(fresh.triggers.map((t) => [t.handler, ...t.calls]), [['sendBackups', ...WEEKLY]]);
+  assert.deepEqual(fresh.triggers.map((t) => [t.handler, ...t.calls]), [['sendBackups', ...MONTHLY]]);
 });
 
 test('removeBackupTrigger deletes every sendBackups trigger and nothing else', () => {
