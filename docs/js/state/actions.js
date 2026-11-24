@@ -170,7 +170,8 @@ export function createActions({
      * @param {string} date
      * @param {{ subject: string, text: string, html: string }} mail the HTML body and its plain-text fallback
      * @param {{ testPlayer?: string }} [options]
-     * @returns {Promise<{ ok: true, recipients: number } | { ok: false, error: string, detail?: string }>}
+     * @returns {Promise<{ ok: true, recipients: number, missing: number } | { ok: false, error: string, detail?: string }>}
+     *   `missing`: active players the server had no usable address for
      *   `detail` is the server's own message when no t.errors key explains the failure
      */
     async sendNightSummary(date, { subject, text, html }, { testPlayer } = {}) {
@@ -187,7 +188,7 @@ export function createActions({
       if (response.ok) {
         // The server stamped the night's summarySent: fetch it so the page shows it at once.
         if (!testPlayer) store.refresh();
-        return { ok: true, recipients: response.data?.recipients ?? 0 };
+        return { ok: true, recipients: response.data?.recipients ?? 0, missing: response.data?.missing ?? 0 };
       }
       const error = mailError(response);
       const detail = error === 'sendFailed' && typeof response.message === 'string' && response.message.trim();

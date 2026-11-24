@@ -309,14 +309,19 @@ const SENT = (recipients) => ({ ok: true, result: 'applied', data: { recipients 
 
 test('sendNightSummary posts once, straight to the api (not the outbox), and reports the recipient count', async () => {
   const { actions, calls, outbox } = mailSetup([SENT(5)]);
-  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 5 });
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 5, missing: 0 });
   assert.deepEqual(calls, [{ action: 'sendNightSummary', payload: { date: DATE, subject: 'S', text: 'T', html: '<p>T</p>' }, pin: '1234' }]);
   assert.deepEqual(outbox.queue, []);
 });
 
+test('sendNightSummary reports how many active players had no usable address', async () => {
+  const { actions } = mailSetup([{ ok: true, result: 'applied', data: { recipients: 3, missing: 2 } }]);
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 3, missing: 2 });
+});
+
 test('sendNightSummary with a test player sends the name along (the server mails only them)', async () => {
   const { actions, calls } = mailSetup([SENT(1)]);
-  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL, { testPlayer: 'Fredrik' }), { ok: true, recipients: 1 });
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL, { testPlayer: 'Fredrik' }), { ok: true, recipients: 1, missing: 0 });
   assert.deepEqual(calls[0].payload, { date: DATE, subject: 'S', text: 'T', html: '<p>T</p>', testPlayer: 'Fredrik' });
 });
 
@@ -373,7 +378,7 @@ test('sendNightSummary passes on the server message (shortened) when no t.errors
 
 test('sendNightSummary with a wrong PIN asks for it and retries once with the new one', async () => {
   const { actions, calls, asked } = mailSetup([{ ok: false, error: 'pin' }, SENT(3)], { newPin: '9999' });
-  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 3 });
+  assert.deepEqual(await actions.sendNightSummary(DATE, MAIL), { ok: true, recipients: 3, missing: 0 });
   assert.equal(asked.length, 1);
   assert.deepEqual(calls.map((c) => c.pin), ['1234', '9999']);
 });

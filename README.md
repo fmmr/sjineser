@@ -8,6 +8,7 @@ Webapp for kortspillet sjineser: registrer resultater ved bordet og se statistik
 - Lagforslag før hvert sett (alle med alle, jevne lag), 2 mot 2, 3 mot 2 og 3 mot 3.
 - Statistikk som små, utskiftbare moduler (plugins).
 - Testmodus (`?sandbox`, eller under «Mer») med genererte data – rører aldri de ekte dataene.
+- Flere ligaer: hver gruppe har sitt eget regneark og sin egen PIN, og man bytter under «Mer → Ligaer» (se `design/specs/…` §19 og «Ny liga» under).
 
 ## Slik er det bygget
 

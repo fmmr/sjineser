@@ -10,13 +10,21 @@ test('summarySentText: when the summary went out, in local time; nothing when no
 });
 
 test('summaryActions: not sent yet → Send, test send and cancel, Send focused', () => {
-  const { actions, focusIndex } = summaryActions('');
+  const { actions, focusIndex } = summaryActions('', { test: true });
   assert.deepEqual(actions.map((a) => [a.value, Boolean(a.disabled)]), [['all', false], ['test', false], [null, false]]);
   assert.equal(focusIndex, 0);
 });
 
 test('summaryActions: already sent → Send disabled, the test send still available and focused', () => {
-  const { actions, focusIndex } = summaryActions('2026-11-10T20:03:00.000Z');
+  const { actions, focusIndex } = summaryActions('2026-11-10T20:03:00.000Z', { test: true });
   assert.deepEqual(actions.map((a) => [a.value, Boolean(a.disabled)]), [['all', true], ['test', false], [null, false]]);
   assert.equal(focusIndex, 1);
+});
+
+test('summaryActions: outside the main league there is no test send', () => {
+  const open = summaryActions('', { test: false });
+  assert.deepEqual(open.actions.map((a) => a.value), ['all', null]);
+  assert.equal(open.focusIndex, 0);
+  const sent = summaryActions('2026-11-10T20:03:00.000Z', { test: false });
+  assert.deepEqual(sent.actions.map((a) => [a.value, Boolean(a.disabled)]), [['all', true], [null, false]]);
 });

@@ -111,6 +111,24 @@ test('nightSummary: ends with the links to the night page and the stats overview
   ]);
 });
 
+test('nightSummary: another league is named in the subject and heading, and the links keep the league', () => {
+  const league = { id: 'hp-k7x2', name: 'Familie', isMain: false };
+  const mail = summary({ league });
+  assert.equal(mail.subject, 'Sjineser (Familie) — kveld 14. okt. 2026');
+  assert.deepEqual(mail.text.split('\n').slice(-2), [
+    'Se hele kvelden: https://sjineser.rodland.no/?l=hp-k7x2#/stats/night/2026-10-14',
+    'All statistikk: https://sjineser.rodland.no/?l=hp-k7x2#/stats?s=2026-2',
+  ]);
+  assert.ok(mail.html.includes('Sjineser · Familie'));
+});
+
+test('nightSummary: the main league looks as it always did', () => {
+  const main = summary({ league: { id: 'main', name: 'Sjineser', isMain: true } });
+  assert.equal(main.subject, 'Sjineser — kveld 14. okt. 2026');
+  assert.ok(main.text.includes('https://sjineser.rodland.no/#/stats/night/2026-10-14'));
+  assert.ok(!main.html.includes('Sjineser ·'));
+});
+
 test('nightSummary: a night without games says so and still links to the page', () => {
   const empty = dataset({ players: [...FOUR, 'Kari'].map((name) => ({ name, active: true })), nights: [{ date: DATE, players: FOUR }] });
   const { text } = summary({}, empty);

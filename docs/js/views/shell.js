@@ -34,6 +34,24 @@ export function mountShell({ outbox, storage }) {
   return update;
 }
 
+/**
+ * Shows the open league's name next to the logo, but only on a phone that knows more than one
+ * league (everyone else never needs to think about leagues).
+ * @param {{ leagues: { list(): unknown[], nameOf(id: string): string, subscribe(l: () => void): void }, league: string }} deps
+ */
+export function mountLeagueLabel({ leagues, league }) {
+  const label = document.querySelector('.app-league');
+  function update() {
+    const name = leagues.nameOf(league);
+    // Without a second league there is nothing to tell apart, and a league called just "Sjineser" repeats the app's name.
+    const shown = leagues.list().length > 1 && name !== t.appName;
+    label.hidden = !shown;
+    label.textContent = shown ? name : '';
+  }
+  update();
+  leagues.subscribe(update);
+}
+
 /** @param {string} path */
 export function markActiveTab(path) {
   const active = activeTab(path);

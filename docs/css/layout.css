@@ -91,6 +91,18 @@
   letter-spacing: -0.01em;
 }
 
+/* The open league, shown only on a phone that knows more than one. */
+.app-league {
+  max-width: 9rem;
+  overflow: hidden;
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .app-main {
   max-width: var(--content-width);
   margin: 0 auto;

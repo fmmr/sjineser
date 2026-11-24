@@ -69,3 +69,20 @@ test('an aborted or timed-out request becomes a network error', async () => {
     assert.equal((await api.getAll()).error, 'network', name);
   }
 });
+
+test('another league: GET carries ?l=, POST carries league; the main league sends neither', async () => {
+  const other = fakeFetch(() => jsonResponse({ ok: true, result: 'applied' }));
+  const api = createApiClient({ url: 'https://x/exec', league: 'hp-k7x2', fetchFn: other.fetchFn });
+  await api.getAll();
+  await api.post('addPlayer', { name: 'Kari' }, '1234');
+  assert.equal(other.calls[0].url, 'https://x/exec?l=hp-k7x2');
+  assert.deepEqual(JSON.parse(other.calls[1].init.body), { action: 'addPlayer', payload: { name: 'Kari' }, pin: '1234', league: 'hp-k7x2' });
+  assert.equal(other.calls[1].url, 'https://x/exec', 'writes go to the plain address');
+
+  const main = fakeFetch(() => jsonResponse({ ok: true, result: 'applied' }));
+  const mainApi = createApiClient({ url: 'https://x/exec', league: 'main', fetchFn: main.fetchFn });
+  await mainApi.getAll();
+  await mainApi.post('addPlayer', { name: 'Kari' }, '1234');
+  assert.equal(main.calls[0].url, 'https://x/exec');
+  assert.equal('league' in JSON.parse(main.calls[1].init.body), false);
+});

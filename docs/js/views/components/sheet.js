@@ -178,3 +178,33 @@ export function pinSheet() {
     initialFocus: () => input,
   });
 }
+
+/**
+ * Asks for one line of text; Enter submits.
+ * @param {{ title: string, message?: string, label: string, confirmLabel: string, placeholder?: string }} options
+ * @returns {Promise<string | null>} what was typed, or null when cancelled
+ */
+export function textSheet({ title, message, label, confirmLabel, placeholder }) {
+  const input = h('input', {
+    class: 'field sheet-field',
+    type: 'text',
+    autocomplete: 'off',
+    autocapitalize: 'none',
+    autocorrect: 'off',
+    spellcheck: 'false',
+    enterkeyhint: 'done',
+    placeholder,
+    'aria-label': label,
+  });
+  return openSheet({
+    title,
+    message,
+    body: [input],
+    actions: [
+      { label: confirmLabel, value: () => input.value, variant: 'primary', submit: true },
+      { label: t.sheet.cancel, value: null, variant: 'ghost' },
+    ],
+    cancelValue: null,
+    initialFocus: () => input,
+  });
+}

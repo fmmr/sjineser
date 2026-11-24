@@ -886,3 +886,16 @@ so all three get the game in their stats and the same Elo change.
   5. Apply: `SJINESER_PIN=… npm run import:history -- --apply`; it ends with "Verified".
   6. Open the app's stats and check players, nights, the Elo leaderboard and the draw rate against
      the dry-run summary.
+
+## 19. Leagues (added 2026-11-24)
+
+Several independent groups ("ligaer") use the same app and the same Apps Script deployment. Each has its own Google Sheet, its own write PIN and its own data on the phone.
+
+- **The main league** is the original one: Script Properties `SHEET_ID` and `PIN`, no `league` in requests, the storage prefix `sjineser:`. Nothing changes for it, and old cached clients keep working.
+- **Other leagues** are registered by the owner as a Script Property `LEAGUE_<id>` = `{"name","sheetId","pin"}`. The id is `[a-z0-9-]{3,40}` and contains a random part (`hp-k7x2`): reading is public, so the id works as an unlisted link, while writing needs the league's own PIN. The group owner creates an empty sheet and shares it with the script owner's Google account as editor; the script sets it up the first time (§ schema below).
+- **Requests:** `GET …/exec?l=<id>`; POST bodies carry `league`. The client sends neither for the main league. Unknown id → `invalid` / "Unknown league". `GET` data gains `league: { id, name, main }`.
+- **Schema** is versioned per league (`SCHEMA_VERSION`, Script Property `SCHEMA_<id>`): a request does one property read and nothing more when the version matches; otherwise the sheet is prepared once (tabs, headers, formats, validation; a default-named spreadsheet is renamed `sjineser_league`). A new column is therefore one deploy with a bumped version, and every league follows when it is next used. `prepareLeagues()` (editor) does it for all leagues at once.
+- **Choosing a league:** the address `?l=<id>` wins; a bare address opens the league used last (kept in `sjineser-leagues`, outside every league's own storage); a league from an address is only remembered once the server has confirmed it. Test mode ignores leagues. Mer → Ligaer lists the leagues this phone knows and has "Legg til liga" (paste a link or the code; verified with a GET). Switching reloads on `?l=<id>`; unsent changes stay under their own league and go out when it is next open (the user is told).
+- **Storage per league:** dataset, outbox and PIN use the prefix `sjineser-l-<id>:`. The home-screen app has storage of its own on iOS, so leagues are added there too.
+- **Email:** the real night summary works in every league (sent from the script owner's account, sender name = the league; players without an address are skipped and counted as `missing` in the reply); the test send ("Send test til …") exists only in the main league, also enforced by the server. The daily cap is per league. The email's subject, heading and links name the league (`?l=` in links).
+- **Not in scope:** sending from another account, removing a league from the list, per-league themes, a league picker for the very first visit.

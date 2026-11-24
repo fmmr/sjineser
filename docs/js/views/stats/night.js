@@ -46,7 +46,7 @@ export function mountStatsNight(root, ctx) {
     // The season's facts only when the button is tapped (the email's "season so far").
     const seasonFacts = () => buildFacts(data.dataset, seasonFilterOf(date), { today: data.today, hour: clock.hour() });
     const { summarySent } = data.dataset.nights.find((n) => n.date === date) ?? {};
-    page.append(summaryButton(ctx, date, summarySent, () => nightSummary(data.facts, seasonFacts(), date, { ongoing })));
+    page.append(summaryButton(ctx, date, summarySent, () => nightSummary(data.facts, seasonFacts(), date, { ongoing, league: ctx.league })));
     return rendered;
   }, { filter: nightFilter(isISODate(date) ? date : '') });
 
@@ -70,20 +70,22 @@ export function summarySentText(summarySent) {
 }
 
 /**
- * The confirm sheet's actions: Send, Send test til …, Avbryt. Once the night's summary has gone
- * out for real (summarySent), Send is disabled (the server would refuse it) and the test send
- * is focused instead.
+ * The confirm sheet's actions: Send, Send test til … (main league only: the server refuses it
+ * elsewhere, and the test player is a person of the main league), Avbryt. Once the night's
+ * summary has gone out for real (summarySent), Send is disabled (the server would refuse it) and
+ * the test send is focused instead, or nothing is when there is no test send.
  * @param {string | undefined} summarySent
+ * @param {{ test: boolean }} options whether to offer the test send
  * @returns {{ actions: import('../components/sheet.js').SheetAction[], focusIndex: number }}
  */
-export function summaryActions(summarySent) {
+export function summaryActions(summarySent, { test }) {
   const sent = Boolean(summarySent);
   return {
     actions: [
       { label: t.nightEmail.send, value: 'all', variant: 'primary', disabled: sent },
-      { label: t.nightEmail.sendTest(SUMMARY_TEST_PLAYER), value: 'test', variant: 'ghost' },
+      test && { label: t.nightEmail.sendTest(SUMMARY_TEST_PLAYER), value: 'test', variant: 'ghost' },
       { label: t.sheet.cancel, value: null, variant: 'ghost' },
-    ],
+    ].filter(Boolean),
     focusIndex: sent ? 1 : 0,
   };
 }
@@ -93,12 +95,12 @@ export function summaryActions(summarySent) {
  * sandboxed iframe, so its inline styles stay out of the app), then sends it to everyone (or as
  * a test to SUMMARY_TEST_PLAYER) and says how it went. A real send happens once per night (the
  * server stamps summarySent); after that the page says when, and only the test send is offered.
- * @param {{ actions: object, sandbox?: boolean }} ctx
+ * @param {{ actions: object, sandbox?: boolean, league: { isMain: boolean } }} ctx
  * @param {string} date
  * @param {string | undefined} summarySent the night's Nights.summarySent
  * @param {() => { subject: string, text: string, html: string }} buildMail the summary as of the tap
  */
-function summaryButton({ actions, sandbox = false }, date, summarySent, buildMail) {
+function summaryButton({ actions, sandbox = false, league }, date, summarySent, buildMail) {
   const button = h('button', { class: 'btn btn-ghost stats-night-email', type: 'button', onclick: send }, t.nightEmail.button);
 
   async function send() {
@@ -112,7 +114,7 @@ function summaryButton({ actions, sandbox = false }, date, summarySent, buildMai
         summarySent && h('p', { class: 'sheet-message muted' }, summarySentText(summarySent), '. ', t.nightEmail.resendHint),
         h('iframe', { class: 'email-preview', sandbox: '', srcdoc: mail.html, title: t.nightEmail.previewLabel }),
       ],
-      ...summaryActions(summarySent),
+      ...summaryActions(summarySent, { test: league.isMain }),
       cancelValue: null,
     });
     if (!choice) return;
@@ -123,7 +125,7 @@ function summaryButton({ actions, sandbox = false }, date, summarySent, buildMai
     button.disabled = false;
     button.textContent = t.nightEmail.button;
     if (!result.ok) showToast(result.detail ? t.errors.sendFailedBecause(result.detail) : t.errors[result.error]);
-    else showToast(test ? t.nightEmail.sentTest(SUMMARY_TEST_PLAYER) : t.nightEmail.sent(result.recipients));
+    else showToast(test ? t.nightEmail.sentTest(SUMMARY_TEST_PLAYER) : t.nightEmail.sent(result.recipients, result.missing));
   }
 
   return h('div', { class: 'stats-night-email-row' },

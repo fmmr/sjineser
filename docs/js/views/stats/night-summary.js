@@ -1,5 +1,6 @@
 import { formatDateLong, t } from '../../i18n/nb.js';
 import { SITE_URL } from '../../config.js';
+import { leagueQuery } from '../../leagues.js';
 import { parseMatchId } from '../../domain/match.js';
 import { formatFilter, seasonFilterOf } from '../../domain/stats/filter.js';
 import { nightSubject, overallSubject } from '../../domain/stats/subjects.js';
@@ -33,7 +34,7 @@ const HEADLINE_STREAK = 3;
  * @typedef {{ number: number, A: string[], B: string[], score: { A: number, B: number, D: number },
  *   winner: 'A' | 'B' | null, status: 'ongoing' | 'unfinished' | null }} EmailSet
  * @typedef {{ title: string, value: string, about: string | null }} EmailRecord
- * @typedef {{ date: string, longDate: string, subject: string, players: string[],
+ * @typedef {{ date: string, longDate: string, subject: string, brand: string, players: string[],
  *   winner: { name: string, gain: number } | null, highlight: string | null, sets: EmailSet[],
  *   leaderboard: object[], decisive: object[] | null, pairs: object[] | null, records: EmailRecord[],
  *   season: { label: string, league: object[] | null, elo: object[] | null },
@@ -92,10 +93,14 @@ function highlightOf(facts) {
  * @param {import('../../domain/stats/facts.js').Facts} facts facts for nightFilter(date)
  * @param {import('../../domain/stats/facts.js').Facts} seasonFacts facts for seasonFilterOf(date)
  * @param {string} date YYYY-MM-DD
- * @param {{ ongoing?: boolean }} [options] ongoing: the night is still going on (marks the last unfinished set)
+ * @param {{ ongoing?: boolean, league?: { id: string, name: string, isMain: boolean } }} [options]
+ *   ongoing: the night is still going on (marks the last unfinished set); league: the league the
+ *   night belongs to, named in the subject and heading and kept in the links when it is not the main one
  * @returns {NightEmailData}
  */
-export function nightSummaryData(facts, seasonFacts, date, { ongoing = false } = {}) {
+export function nightSummaryData(facts, seasonFacts, date, { ongoing = false, league } = {}) {
+  const named = league && !league.isMain ? league : null;
+  const site = `${SITE_URL}${named ? leagueQuery(named.id) : ''}`;
   const subject = overallSubject();
   const longDate = formatDateLong(date);
   const night = facts.nights.find((n) => n.date === date);
@@ -113,7 +118,8 @@ export function nightSummaryData(facts, seasonFacts, date, { ongoing = false } =
   return {
     date,
     longDate,
-    subject: t.nightEmail.subject(longDate),
+    subject: t.nightEmail.subject(longDate, named?.name),
+    brand: t.nightEmail.brand(named?.name),
     players: night ? nightPlayers(night) : [],
     winner: winner && { name: winner.holders[0], gain: winner.value },
     highlight: played ? highlightOf(facts) : null,
@@ -128,8 +134,8 @@ export function nightSummaryData(facts, seasonFacts, date, { ongoing = false } =
       elo: elo.length > 0 ? elo : null,
     },
     links: {
-      night: `${SITE_URL}#${subjectPath(nightSubject(date))}`,
-      stats: `${SITE_URL}#/stats?s=${formatFilter(season)}`,
+      night: `${site}#${subjectPath(nightSubject(date))}`,
+      stats: `${site}#/stats?s=${formatFilter(season)}`,
     },
   };
 }
@@ -190,7 +196,7 @@ export function nightSummaryText(data) {
  * @param {import('../../domain/stats/facts.js').Facts} facts facts for nightFilter(date)
  * @param {import('../../domain/stats/facts.js').Facts} seasonFacts facts for seasonFilterOf(date)
  * @param {string} date YYYY-MM-DD
- * @param {{ ongoing?: boolean }} [options]
+ * @param {Parameters<typeof nightSummaryData>[3]} [options]
  * @returns {{ subject: string, text: string, html: string }}
  */
 export function nightSummary(facts, seasonFacts, date, options) {

@@ -50,16 +50,29 @@
   padding-block: 0;
 }
 
-a.list-row {
+a.list-row,
+button.list-row {
   transition: background-color var(--duration) var(--ease);
 }
 
-a.list-row:active {
+/* A row that does something instead of opening a page is a button dressed as a row. */
+button.list-row {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+a.list-row:active,
+button.list-row:active {
   background: var(--surface-raised);
 }
 
 /* The card clips overflow, so the focus ring sits inside the row. */
-a.list-row:focus-visible {
+a.list-row:focus-visible,
+button.list-row:focus-visible {
   outline-offset: -2px;
 }
 

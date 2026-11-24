@@ -105,7 +105,7 @@ function header(data) {
         data.highlight))));
   return el('tr', {}, el('td', { style: { padding: `${PAD} ${PAD} 20px`, 'font-family': FONT, color: C.text } },
     el('div', { style: { 'font-size': '12px', 'font-weight': 600, 'letter-spacing': '0.08em', 'text-transform': 'uppercase', color: C.textMuted } },
-      t.appName),
+      data.brand),
     el('h1', { style: { margin: '4px 0 0', 'font-size': '26px', 'line-height': '32px', 'font-weight': 700, 'letter-spacing': '-0.02em', color: C.text } },
       e.heading(data.longDate)),
     data.players.length > 0 && el('p', { style: { margin: '6px 0 0', 'font-size': '14px', 'line-height': '20px', color: C.textMuted } },

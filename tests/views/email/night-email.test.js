@@ -10,6 +10,7 @@ const DATA = {
   date: '2026-11-10',
   longDate: '10. nov. 2026',
   subject: 'Sjineser — kveld 10. nov. 2026',
+  brand: 'Sjineser',
   players: ['Anne', 'Bjørn', 'Cato', 'Dag', 'Eva'],
   winner: { name: 'Anne', gain: 87 },
   highlight: 'Anne vant 5 spill på rad.',

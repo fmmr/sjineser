@@ -24,7 +24,7 @@ const section = (heading, ...children) =>
 const external = (href, text) => h('a', { class: 'link', href, target: '_blank', rel: 'noopener' }, text);
 
 /** #/about: what the app is, links, live data counts, code statistics and the installed version. */
-export function mountAbout(root, { store }) {
+export function mountAbout(root, { store, league }) {
   const labels = t.about.dataLabels;
   const code = t.about.codeLabels;
   let version = null;
@@ -40,7 +40,7 @@ export function mountAbout(root, { store }) {
           section(t.about.linksHeading,
             h('ul', { class: 'about-links' },
               h('li', {}, external(REPO_URL, t.about.repoLink)),
-              h('li', {}, external(SHEET_URL, t.about.sheetLink), h('p', { class: 'muted' }, t.about.sheetNote)))),
+              league.isMain && h('li', {}, external(SHEET_URL, t.about.sheetLink), h('p', { class: 'muted' }, t.about.sheetNote)))),
           section(t.about.dataHeading,
             h('div', { class: 'stat-grid' },
               tile(labels.players, count(data.players)),

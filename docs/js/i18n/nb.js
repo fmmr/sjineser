@@ -71,6 +71,26 @@ export const t = {
   pinNeeded: 'PIN trengs',
   pin: { title: 'PIN', message: 'Skriv inn PIN for å lagre resultater', label: 'PIN', save: 'Lagre' },
   sheet: { cancel: 'Avbryt' },
+
+  leagues: {
+    heading: 'Ligaer',
+    open: 'Åpen nå',
+    switchTo: (name) => `Bytt til ${name}`,
+    add: 'Legg til liga',
+    addNote: 'Lim inn lenken eller koden du har fått',
+    addTitle: 'Legg til liga',
+    addMessage: 'Lim inn lenken, eller bare koden (for eksempel hp-k7x2).',
+    addLabel: 'Lenke eller kode',
+    addPlaceholder: 'hp-k7x2',
+    addConfirm: 'Legg til',
+    badCode: 'Det ser ikke ut som en ligakode',
+    unknown: 'Fant ikke ligaen',
+    unsyncedTitle: 'Endringer som ikke er sendt',
+    unsyncedMessage: (n, name) =>
+      `${n} ${n === 1 ? 'endring' : 'endringer'} i ${name} er ikke lagret i regnearket ennå. De sendes neste gang du åpner ${name} med nett.`,
+    unsyncedConfirm: 'Bytt likevel',
+    note: 'Hver liga har sitt eget regneark og sin egen PIN. Lesing er åpen for alle som har lenken.',
+  },
   matchTaken: (n) => `Sett ${n} ble startet på en annen enhet eller i et annet vindu. Henter siste data.`,
   rejected: { conflict: 'En endring kolliderte med data fra en annen enhet eller et annet vindu. Henter siste data.', invalid: 'En endring ble avvist. Henter siste data.' },
 
@@ -103,7 +123,9 @@ export const t = {
   /** The night summary email (built here, sent as plain text) and its button and sheet on the night page. */
   nightEmail: {
     button: 'Send kveldens oppsummering på e-post',
-    subject: (date) => `Sjineser — kveld ${date}`,
+    subject: (date, league) => `Sjineser${league ? ` (${league})` : ''} — kveld ${date}`,
+    /** The small heading of the email: the app, and the league when it is not the main one. */
+    brand: (league) => (league ? `${t.appName} · ${league}` : t.appName),
     heading: (date) => `Kveld ${date}`,
     players: (names) => `Med: ${names}`,
     winner: (name, gain) => `Kveldens vinner: ${name} (${gain})`,
@@ -148,7 +170,8 @@ export const t = {
     send: 'Send',
     sendTest: (name) => `Send test til ${name}`,
     sending: 'Sender …',
-    sent: (n) => `Sendt til ${n} ${n === 1 ? 'spiller' : 'spillere'}`,
+    sent: (n, missing = 0) =>
+      `Sendt til ${n} ${n === 1 ? 'spiller' : 'spillere'}${missing > 0 ? ` (${missing} mangler e-postadresse)` : ''}`,
     sentTest: (name) => `Test sendt til ${name}`,
     /** The night's real summary already went out (Nights.summarySent). */
     sentAt: (date, time) => `Oppsummering sendt ${date} kl. ${time}`,
