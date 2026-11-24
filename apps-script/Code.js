@@ -1,7 +1,29 @@
 /**
- * Sjineser backend: a thin, locked read/write layer over the sheet.
- * Script Properties: SHEET_ID (target spreadsheet), PIN (shared write PIN).
+ * Sjineser backend: a thin, locked read/write layer over the sheet(s).
  * Every response is a JSON envelope: { ok: true, result, data } | { ok: false, error, message }.
+ *
+ * Leagues: one deployment serves several independent leagues (groups of players), each with its
+ * OWN spreadsheet and its OWN write PIN. A request names its league with `l` (GET query
+ * parameter) or `league` (POST body, next to action/payload/pin). No league, an empty one or
+ * 'main' is the MAIN league, so old cached clients keep working. An id is lowercase [a-z0-9-],
+ * 3-40 characters, starting with a letter or digit; anything else is 'Unknown league' without
+ * touching any Script Property (so 'PIN' or 'SHEET_ID' can never be read through an id).
+ *
+ * Script Properties (Project Settings; never in the code):
+ * - SHEET_ID, PIN: spreadsheet id and shared write PIN of the main league.
+ * - NAME: display name of the main league (default 'Sjineser').
+ * - LEAGUE_<id>: another league, JSON {"name":"Familie","sheetId":"<spreadsheet id>","pin":"<pin>"};
+ *   all three must be non-empty strings, otherwise the league counts as unknown.
+ * - SCHEMA_<id> (SCHEMA_main for main): the SCHEMA_VERSION the league's sheet was last prepared
+ *   for. Written by the script itself.
+ * - SUMMARY_SENDS (main) / SUMMARY_SENDS_<id>: real summary emails sent today, 'YYYY-MM-DD:n'.
+ *
+ * Schema/setup is lazy and versioned: every request reads SCHEMA_<id> (one property read); when it
+ * differs from SCHEMA_VERSION the league's sheet is prepared once (missing tabs, headers, formats,
+ * checkboxes, status formula, seat validation, and a default spreadsheet title renamed to
+ * sjineser_league) inside the script lock, and the version is stored. A new column or tab is
+ * therefore a SCHEMA_VERSION bump, not a per-request header check. setup() and prepareLeagues()
+ * run the same preparation by hand from the editor.
  *
  * Matches layout (teams of 2 or 3): matchId, date, A1, A2, A3, B1, B2, B3, status (formula in I1).
  * A3 / B3 are blank for a 2-player team. This replaced the old layout (A1, A2, B1, B2, status in
@@ -10,19 +32,20 @@
  *
  * Nights layout: date, players (everyone who was there, comma-joined), left (those of them who
  * have gone home, comma-joined, may be blank), summarySent (ISO timestamp of the night's real
- * summary email, blank until sent; clear it by hand to allow another send). ensureHeaders() adds
- * missing headers (e.g. `left`, `summarySent`) to an older sheet on every request; existing rows
- * keep blank cells, which read as nobody left / not sent.
+ * summary email, blank until sent; clear it by hand to allow another send). The preparation adds
+ * missing headers (e.g. `left`, `summarySent`) to an older sheet; existing rows keep blank cells,
+ * which read as nobody left / not sent.
  *
  * Players layout: name, active, email. `email` is PRIVATE: it is only read by sendNightSummary
  * and never leaves the script (doGet is public; PARSERS.Players returns only { name, active }).
- * setup() adds the `email` header to an older sheet; addresses are typed into the sheet by hand.
+ * Addresses are typed into the sheet by hand; players without a valid one are simply not mailed.
  *
  * sendNightSummary uses MailApp, which needs the "Send email as you" scope (script.send_mail):
- * the owner authorises it once by running a function from the editor after deploying. Mail goes
- * against the account's daily recipient quota (MailApp.getRemainingDailyQuota()). Anti-spam: a
- * night's summary goes out for real once (Nights.summarySent), and at most MAX_DAILY_SENDS real
- * sends a day across all nights (Script Property SUMMARY_SENDS = 'YYYY-MM-DD:n').
+ * the owner authorises it once by running authorize() from the editor after deploying. Mail
+ * always comes from the owner's account (To = owner, CC = the players) and goes against the
+ * account's daily recipient quota (MailApp.getRemainingDailyQuota()). Anti-spam: a night's
+ * summary goes out for real once (Nights.summarySent), and at most MAX_DAILY_SENDS real sends a
+ * day PER LEAGUE. Test sends (testPlayer) exist in the main league only.
  */
 
 const TABS = {
@@ -48,9 +71,20 @@ const MAX_HTML = 100000;
 const TEST_SUBJECT_PREFIX = '[TEST] ';
 /** Nights column of summarySent (D). */
 const SUMMARY_SENT_COLUMN = 4;
-/** Real summary sends allowed per day (script time zone), all nights together; counted in SUMMARY_SENDS. */
+/** Real summary sends allowed per day (script time zone) and league, all nights together; counted in SUMMARY_SENDS[_<id>]. */
 const MAX_DAILY_SENDS = 3;
 const SENDS_PROPERTY = 'SUMMARY_SENDS';
+const MAIN_LEAGUE = 'main';
+const DEFAULT_LEAGUE_NAME = 'Sjineser';
+/** League ids: lowercase letters, digits and '-', 3-40 characters, not starting with '-'. */
+const LEAGUE_ID = /^[a-z0-9][a-z0-9-]{2,39}$/;
+const LEAGUE_PREFIX = 'LEAGUE_';
+/** Bump when the sheet layout changes (new tab, column, format): every league is then prepared again, once. */
+const SCHEMA_VERSION = 1;
+const SCHEMA_PREFIX = 'SCHEMA_';
+/** Titles Google gives a brand-new spreadsheet (lowercase; '' = no title): only these get renamed. */
+const DEFAULT_TITLES = ['untitled spreadsheet', 'regneark uten tittel', ''];
+const SHEET_TITLE = 'sjineser_league';
 /** A plain address check: something@domain.tld, no spaces or list separators. */
 const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const STATUS_FORMULA =
@@ -60,9 +94,21 @@ const STATUS_FORMULA =
 
 // ---------- HTTP entry points ----------
 
-function doGet() {
+/** Reads one league's data (`?l=<id>`; none means main). Takes the lock only while its sheet is being prepared. */
+function doGet(e) {
   return respond(() => {
-    ensureHeaders();
+    const league = enterLeague(e && e.parameter ? e.parameter.l : undefined);
+    if (!league) return fail('invalid', 'Unknown league');
+    if (!schemaCurrent()) {
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(LOCK_TIMEOUT_MS)) return fail('busy', 'Busy, try again');
+      try {
+        // Another request may have prepared the sheet while this one waited for the lock.
+        prepareLeague(false);
+      } finally {
+        lock.releaseLock();
+      }
+    }
     return done('noop', readAll());
   });
 }
@@ -92,15 +138,18 @@ function handlePost(e) {
   } catch (err) {
     return fail('invalid', 'Malformed JSON');
   }
-  const pin = PropertiesService.getScriptProperties().getProperty('PIN');
-  if (!pin || request.pin !== pin) return fail('pin', 'Wrong PIN');
+  if (request === null || typeof request !== 'object') return fail('invalid', 'Malformed JSON');
+  // The league first, so a wrong league is not mistaken for a wrong PIN; the PIN is that league's only.
+  const league = enterLeague(request.league);
+  if (!league) return fail('invalid', 'Unknown league');
+  if (!league.pin || request.pin !== league.pin) return fail('pin', 'Wrong PIN');
   const handler = HANDLERS[request.action];
   if (!handler) return fail('invalid', 'Unknown action');
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(LOCK_TIMEOUT_MS)) return fail('busy', 'Busy, try again');
   try {
-    ensureHeaders();
+    prepareLeague(false);
     return handler(request.payload || {});
   } finally {
     lock.releaseLock();
@@ -258,22 +307,26 @@ const HANDLERS = {
    * ONE message: to the script owner, every active player with an address in CC (the players see
    * who got it). With `testPlayer` (a name) only that player gets it, as `to`, with "[TEST] "
    * before the subject. A real send happens once per night (refused as `conflict` once
-   * summarySent is set; stamps it after sending) and at most MAX_DAILY_SENDS times a day
-   * (`quota`); test sends skip both and stamp nothing. Not idempotent otherwise; the reply holds
-   * the count only, never addresses.
+   * summarySent is set; stamps it after sending) and at most MAX_DAILY_SENDS times a day per
+   * league (`quota`); test sends skip both and stamp nothing, and exist in the main league only.
+   * Players without a valid address are skipped, never an error. Not idempotent otherwise; the
+   * reply holds counts only, never addresses: `recipients` mailed, `missing` active players
+   * without a usable address. A league other than main sends under its own name.
    */
   sendNightSummary({ date, subject, text, html, testPlayer }) {
+    const test = typeof testPlayer === 'string' && testPlayer.trim() !== '';
+    if (test && !currentLeague.main) return fail('invalid', 'Test send is only for the main league');
     const night = readTab('Nights').find((r) => r.value.date === date);
     if (!night) return fail('invalid', 'Unknown night');
     if (typeof subject !== 'string' || !subject.trim() || typeof text !== 'string' || !text.trim()
       || typeof html !== 'string' || !html.trim()) {
       return fail('invalid', 'Empty email');
     }
-    const test = typeof testPlayer === 'string' && testPlayer.trim() !== '';
     if (!test && night.value.summarySent) return fail('conflict', 'Summary already sent');
     const sends = test ? null : sendsToday();
     if (sends && sends.count >= MAX_DAILY_SENDS) return fail('quota', 'Daily send limit reached');
-    const recipients = summaryRecipients(readPlayersWithEmail(), test ? testPlayer : undefined);
+    const players = readPlayersWithEmail();
+    const recipients = summaryRecipients(players, test ? testPlayer : undefined);
     if (recipients.length === 0) return fail('invalid', test ? 'Test player has no email' : 'No recipients');
     const message = test
       ? { to: recipients[0], subject: TEST_SUBJECT_PREFIX + subject }
@@ -283,20 +336,35 @@ const HANDLERS = {
     message.subject = message.subject.slice(0, MAX_SUBJECT);
     message.body = text.slice(0, MAX_TEXT);
     message.htmlBody = html.slice(0, MAX_HTML);
+    if (!currentLeague.main) message.name = currentLeague.name;
     MailApp.sendEmail(message);
     if (!test) {
-      PropertiesService.getScriptProperties().setProperty(SENDS_PROPERTY, `${sends.day}:${sends.count + 1}`);
+      PropertiesService.getScriptProperties().setProperty(sendsProperty(), `${sends.day}:${sends.count + 1}`);
       tab('Nights').getRange(night.row, SUMMARY_SENT_COLUMN).setNumberFormat('@').setValue(new Date().toISOString());
     }
-    return done('applied', { recipients: recipients.length });
+    return done('applied', { recipients: recipients.length, missing: test ? 0 : countMissingEmails(players) });
   },
 };
 
-/** Real summary sends so far today (script time zone), from SUMMARY_SENDS; another day counts from 0. */
+/** Script Property that counts the current league's real sends today. */
+function sendsProperty() {
+  return currentLeague.main ? SENDS_PROPERTY : `${SENDS_PROPERTY}_${currentLeague.id}`;
+}
+
+/** Real summary sends so far today (script time zone) in the current league; another day counts from 0. */
 function sendsToday() {
   const day = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  const found = /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(PropertiesService.getScriptProperties().getProperty(SENDS_PROPERTY) || '');
+  const found = /^(\d{4}-\d{2}-\d{2}):(\d+)$/.exec(PropertiesService.getScriptProperties().getProperty(sendsProperty()) || '');
   return { day, count: found && found[1] === day ? Number(found[2]) : 0 };
+}
+
+/**
+ * How many ACTIVE players have no usable address (blank or invalid). A duplicate address is not
+ * missing, just mailed once; inactive players are never counted. Pure, so it can be tested.
+ * @param {{ active: boolean, email: string }[]} players
+ */
+function countMissingEmails(players) {
+  return players.filter((p) => p.active === true && !EMAIL.test(String(p.email == null ? '' : p.email).trim())).length;
 }
 
 /**
@@ -341,9 +409,10 @@ const PARSERS = {
 };
 
 let spreadsheetCache = null;
+/** The current league's spreadsheet (see enterLeague), opened once per league entered. */
 function spreadsheet() {
-  spreadsheetCache = spreadsheetCache ||
-    SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+  if (!currentLeague || !currentLeague.sheetId) throw new Error('No spreadsheet configured');
+  spreadsheetCache = spreadsheetCache || SpreadsheetApp.openById(currentLeague.sheetId);
   return spreadsheetCache;
 }
 
@@ -380,7 +449,10 @@ function readPlayersWithEmail() {
 
 function readAll() {
   const values = (name) => readTab(name).map((r) => r.value);
-  return { players: values('Players'), nights: values('Nights'), matches: values('Matches'), games: values('Games') };
+  return {
+    league: { id: currentLeague.id, name: currentLeague.name, main: currentLeague.main },
+    players: values('Players'), nights: values('Nights'), matches: values('Matches'), games: values('Games'),
+  };
 }
 
 /**
@@ -414,46 +486,100 @@ function append(name, cells) {
   sheet.getRange(row, 1, 1, cells.length).setValues([cells]);
 }
 
-let headersChecked = false;
+// ---------- Leagues ----------
+
+/** The league the current request works on: { id, name, main, sheetId, pin }. Set by enterLeague(). */
+let currentLeague = null;
 
 /**
- * Writes any missing header cell of row 1 of every tab (e.g. `summarySent` on an older Nights
- * tab), so a new column needs no setup() run. Cheap and idempotent: one read per tab, writes
- * only blanks; once per execution. Tabs that do not exist yet are left to setup().
+ * Looks a league up by the id a client sent (absent, null or '' means main) and returns
+ * { id, name, main, sheetId, pin }, or null when it is unknown. The id is checked against
+ * LEAGUE_ID BEFORE any property key is built from it, so a client can never make this read
+ * PIN, SHEET_ID or any other reserved property. A registration that is not valid JSON, or lacks
+ * a non-empty string name, sheetId or pin, counts as unknown.
  */
-function ensureHeaders() {
-  if (headersChecked) return;
-  headersChecked = true;
-  Object.keys(TABS).forEach((name) => {
-    const sheet = tab(name);
-    if (!sheet) return;
-    const cells = sheet.getRange(1, 1, 1, TABS[name].length).getValues()[0];
-    TABS[name].forEach((title, i) => {
-      if (String(cells[i] == null ? '' : cells[i]).trim() === '') sheet.getRange(1, i + 1).setValue(title);
-    });
-  });
+function resolveLeague(rawId) {
+  const props = PropertiesService.getScriptProperties();
+  const id = rawId == null || rawId === '' ? MAIN_LEAGUE : rawId;
+  if (id === MAIN_LEAGUE) {
+    return {
+      id: MAIN_LEAGUE, main: true, sheetId: props.getProperty('SHEET_ID'), pin: props.getProperty('PIN'),
+      name: props.getProperty('NAME') || DEFAULT_LEAGUE_NAME,
+    };
+  }
+  if (typeof id !== 'string' || !LEAGUE_ID.test(id)) return null;
+  let found;
+  try {
+    found = JSON.parse(props.getProperty(LEAGUE_PREFIX + id));
+  } catch (err) {
+    return null;
+  }
+  const filled = (value) => typeof value === 'string' && value.trim() !== '';
+  if (!found || !filled(found.name) || !filled(found.sheetId) || !filled(found.pin)) return null;
+  return { id, main: false, name: found.name, sheetId: found.sheetId, pin: found.pin };
 }
-
-// ---------- Setup (run once per sheet from the editor) ----------
 
 /**
- * Run once from the editor after a change that uses a new Google service: it touches every
- * service the web app needs, so Google asks the owner to approve them all. Sends nothing and
- * changes nothing; logs the results.
+ * Makes `rawId` the league of this execution and returns it (null when unknown, and then no
+ * league is current). Drops the cached spreadsheet, so several requests in one execution (tests,
+ * prepareLeagues) never see each other's sheet.
  */
-function authorize() {
-  console.log('Spreadsheet:', spreadsheet().getName());
-  console.log('Owner:', Session.getEffectiveUser().getEmail());
-  console.log('Time zone:', Session.getScriptTimeZone());
-  console.log('Mail quota left today:', MailApp.getRemainingDailyQuota());
-  console.log('Send count:', PropertiesService.getScriptProperties().getProperty(SENDS_PROPERTY));
+function enterLeague(rawId) {
+  spreadsheetCache = null;
+  currentLeague = resolveLeague(rawId);
+  return currentLeague;
 }
 
-function setup() {
-  const ss = spreadsheet();
+/**
+ * Ids of all registered leagues: main first, then the suffix of every LEAGUE_<id> property.
+ * Suffixes are NOT validated here, so a mistyped key (LEAGUE_Familie) shows up in the editor logs
+ * as an invalid league instead of silently vanishing; resolveLeague() refuses them. (LEAGUE_main
+ * is ignored: main is configured by SHEET_ID and PIN.)
+ */
+function registeredLeagueIds() {
+  const ids = PropertiesService.getScriptProperties().getKeys()
+    .filter((key) => key.startsWith(LEAGUE_PREFIX))
+    .map((key) => key.slice(LEAGUE_PREFIX.length))
+    .filter((id) => id !== MAIN_LEAGUE);
+  return [MAIN_LEAGUE].concat(ids);
+}
+
+// ---------- Schema (lazy, versioned, per league) ----------
+
+function schemaProperty() {
+  return SCHEMA_PREFIX + currentLeague.id;
+}
+
+/** True when the current league's sheet was already prepared for SCHEMA_VERSION: one property read, no sheet access. */
+function schemaCurrent() {
+  return PropertiesService.getScriptProperties().getProperty(schemaProperty()) === String(SCHEMA_VERSION);
+}
+
+/**
+ * Prepares the current league's spreadsheet when its stored schema version is behind (or always
+ * with `force`), then stores SCHEMA_VERSION. The CALLER holds the script lock: preparing is a
+ * burst of writes that must not interleave with another request's.
+ */
+function prepareLeague(force) {
+  if (!force && schemaCurrent()) return;
+  prepareSpreadsheet(spreadsheet());
+  PropertiesService.getScriptProperties().setProperty(schemaProperty(), String(SCHEMA_VERSION));
+}
+
+/**
+ * Brings a spreadsheet to the full layout; idempotent, so it is safe on a live sheet and on a
+ * half-prepared one: creates missing tabs, fills blank header cells (never overwrites a filled
+ * one), bold + frozen header, text-format columns, Players checkboxes, the Matches status
+ * formula and the seat validation. Data rows are never touched.
+ */
+function prepareSpreadsheet(ss) {
+  renameIfUntitled(ss);
   Object.keys(TABS).forEach((name) => {
     const sheet = ss.getSheetByName(name) || ss.insertSheet(name);
-    sheet.getRange(1, 1, 1, TABS[name].length).setValues([TABS[name]]).setFontWeight('bold');
+    const header = sheet.getRange(1, 1, 1, TABS[name].length);
+    const cells = header.getValues()[0];
+    const titles = TABS[name].map((title, i) => (String(cells[i] == null ? '' : cells[i]).trim() === '' ? title : cells[i]));
+    header.setValues([titles]).setFontWeight('bold');
     sheet.setFrozenRows(1);
     (TEXT_COLUMNS[name] || []).forEach((col) => sheet.getRange(col + ':' + col).setNumberFormat('@'));
   });
@@ -468,6 +594,74 @@ function setup() {
 }
 
 /**
+ * A spreadsheet still called what Google names a new one gets a recognisable title; any title
+ * somebody chose is left alone. Cosmetic, so a failure (e.g. no edit permission) is only logged.
+ */
+function renameIfUntitled(ss) {
+  try {
+    const title = String(ss.getName() || '').trim().toLowerCase();
+    if (DEFAULT_TITLES.includes(title)) ss.rename(SHEET_TITLE);
+  } catch (err) {
+    console.warn('Could not rename the spreadsheet:', err && err.message ? err.message : err);
+  }
+}
+
+// ---------- Editor functions (run by hand from the Apps Script editor) ----------
+
+/**
+ * Run once from the editor after a change that uses a new Google service: it touches every
+ * service the web app needs, so Google asks the owner to approve them all. Sends nothing and
+ * changes nothing; logs the results (league ids and names only, never PINs or sheet ids).
+ */
+function authorize() {
+  enterLeague(MAIN_LEAGUE);
+  console.log('Spreadsheet:', spreadsheet().getName());
+  console.log('Owner:', Session.getEffectiveUser().getEmail());
+  console.log('Time zone:', Session.getScriptTimeZone());
+  console.log('Mail quota left today:', MailApp.getRemainingDailyQuota());
+  console.log('Send count:', PropertiesService.getScriptProperties().getProperty(SENDS_PROPERTY));
+  registeredLeagueIds().forEach((id) => {
+    const league = resolveLeague(id);
+    console.log('League:', id, league ? league.name : '(invalid registration)');
+  });
+}
+
+/** Prepares the MAIN league's spreadsheet now (the same preparation the first request would run). */
+function setup() {
+  prepareNow(MAIN_LEAGUE);
+}
+
+/**
+ * Prepares every registered league's spreadsheet now (main and each LEAGUE_<id>), so a new league
+ * is ready, titled, and its first tap not slow. Logs one line per league: id, name, spreadsheet
+ * title, number of Players rows (no secrets). A broken league is logged and skipped.
+ */
+function prepareLeagues() {
+  registeredLeagueIds().forEach((id) => {
+    try {
+      const league = prepareNow(id);
+      console.log(`League ${league.id} | ${league.name} | ${spreadsheet().getName()} | ${dataRowCount(tab('Players'))} players`);
+    } catch (err) {
+      console.error(`League ${id} failed:`, err && err.message ? err.message : err);
+    }
+  });
+}
+
+/** Forces the preparation of one league under the script lock; returns the league. Throws when it cannot. */
+function prepareNow(id) {
+  const league = enterLeague(id);
+  if (!league) throw new Error('Unknown league');
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(LOCK_TIMEOUT_MS)) throw new Error('Busy, try again');
+  try {
+    prepareLeague(true);
+  } finally {
+    lock.releaseLock();
+  }
+  return league;
+}
+
+/**
  * DANGER: DELETES ALL DATA. Clears every data row (row 2 and down) of Players, Nights, Matches
  * and Games, every player, night, match and game, and keeps only the header rows. There is no undo
  * apart from the spreadsheet's version history.
@@ -478,6 +672,7 @@ function setup() {
  * data validation and the status formula in I1 stay).
  */
 function resetAllData() {
+  enterLeague(MAIN_LEAGUE);
   Object.keys(TABS).forEach((name) => {
     const sheet = tab(name);
     if (!sheet) return;
