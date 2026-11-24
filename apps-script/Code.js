@@ -777,7 +777,7 @@ function sendBackups() {
       const backup = readBackupLocked();
       attachments.push(Utilities.newBlob(JSON.stringify(backup, null, 2), 'application/json', `sjineser-${id}-${day}.json`));
       lines.push(`- ${backup.league.name} (${id}): ${backup.players.length} spillere, ${backup.nights.length} kvelder, `
-        + `${backup.matches.length} kamper, ${backup.games.length} spill`);
+        + `${backup.matches.length} sett, ${backup.games.length} spill`);
     } catch (err) {
       const reason = scrub(String(err && err.message ? err.message : err), league);
       lines.push(`- ${id}: feilet: ${reason}`);
