@@ -109,14 +109,19 @@ function standardSheets({ players = MAIN_PLAYERS, nights, nightsHeader = ['date'
  * its own fake spreadsheet 'sheet-<id>'; `registration` replaces the LEAGUE_<id> value).
  * `prepared: false` leaves every schema version unset, so the first request prepares the sheet.
  * `settings` / `leagues.<id>.settings` are the Settings rows of the sheet ([key, value] pairs).
- * The main league is the legacy SHEET_ID + PIN unless `props` registers LEAGUE_main.
+ * The main league is registered as LEAGUE_main ({ sheetId: 'sheet', pin: PIN }, no name) unless `props` replaces it;
+ * a `props` value of null removes that property (`{ LEAGUE_main: null }` = no main league at all).
  */
 function load({ quota = 100, today = '2026-11-11', sends = null, nights, nightsHeader, omitTabs = [], leagues = {},
   prepared = true, props = {}, mainTitle = 'Fotballkveld', renameFails = false, settings = [] } = {}) {
   const sheets = standardSheets({ nights, nightsHeader, settings });
   omitTabs.forEach((name) => delete sheets[name]);
   const spreadsheets = { sheet: fakeSpreadsheet(sheets, mainTitle, { renameFails }) };
-  const properties = { SHEET_ID: 'sheet', PIN, ...(prepared ? { SCHEMA_main: SCHEMA } : {}), ...(sends ? { SUMMARY_SENDS: sends } : {}), ...props };
+  const properties = {
+    LEAGUE_main: JSON.stringify({ sheetId: 'sheet', pin: PIN }),
+    ...(prepared ? { SCHEMA_main: SCHEMA } : {}), ...(sends ? { SUMMARY_SENDS: sends } : {}), ...props,
+  };
+  Object.keys(properties).forEach((key) => { if (properties[key] === null) delete properties[key]; });
   Object.entries(leagues).forEach(([id, league]) => {
     spreadsheets[`sheet-${id}`] = fakeSpreadsheet(standardSheets({ players: league.players ?? LEAGUE_PLAYERS, settings: league.settings }), league.title ?? 'Liga');
     properties[`LEAGUE_${id}`] = league.registration
@@ -160,7 +165,7 @@ function load({ quota = 100, today = '2026-11-11', sends = null, nights, nightsH
     Utilities: { formatDate: () => today },
   });
   const api = vm.runInContext(
-    `${SOURCE}\n;({ doGet, doPost, summaryRecipients, countMissingEmails, setup, prepareLeagues, authorize, resetAllData, migrateMainLeague, registeredLeagueIds })`, context);
+    `${SOURCE}\n;({ doGet, doPost, summaryRecipients, countMissingEmails, setup, prepareLeagues, authorize, resetAllData, registeredLeagueIds })`, context);
   const request = (action, payload, pin = PIN, league) => api.doPost({
     postData: { contents: JSON.stringify({ action, payload, pin, ...(league === undefined ? {} : { league }) }) },
   });
@@ -306,7 +311,6 @@ test('main league: no league, an empty one and "main" all read the main sheet, n
     assert.deepEqual({ ...body.data.league }, expected);
     assert.equal(body.data.players.length, 6);
   }
-  assert.equal(load({ props: { NAME: 'Stua' } }).get().data.league.name, 'Sjineser', 'the legacy NAME property is dropped');
 });
 
 test('main league: a write without a league uses the main PIN and the main sheet, as before', () => {
@@ -319,11 +323,12 @@ test('main league: a write without a league uses the main PIN and the main sheet
   assert.equal(request('addPlayer', { name: 'Jon' }, PIN, 'main').ok, true);
 });
 
-test('main league without a PIN refuses every write', () => {
-  const bare = load({ props: { PIN: null } });
-  assert.equal(bare.request('addPlayer', { name: 'Gro' }, undefined).error, 'pin');
-  assert.equal(bare.request('addPlayer', { name: 'Gro' }, '').error, 'pin');
-  assert.equal(bare.request('addPlayer', { name: 'Gro' }, 'null').error, 'pin');
+test('main league registered without a PIN is unknown, so every write is refused', () => {
+  const bare = load({ props: { LEAGUE_main: JSON.stringify({ sheetId: 'sheet' }) } });
+  for (const pin of [undefined, '', 'null']) {
+    assert.deepEqual({ ...bare.request('addPlayer', { name: 'Gro' }, pin) }, { ok: false, error: 'invalid', message: 'Unknown league' });
+  }
+  assert.equal(names(bare.sheets.Players).length, 6);
 });
 
 test('a registered league reads its own sheet and says who it is', () => {
@@ -345,9 +350,9 @@ test('a write in one league touches only that league\'s sheet', () => {
   assert.equal(request('addPlayer', { name: 'Sol' }, PIN).result, 'applied', 'main has no Sol yet');
 });
 
-test('an unknown or malformed league is "Unknown league" and no reserved property is read', () => {
-  const ctx = load({ leagues: FAMILIE });
-  const bad = ['PIN', 'SHEET_ID', '../x', 'Familie', 'FAMILIE', 'ab', 'x'.repeat(41), '-abc', 'a b', 'a_b', 'LEAGUE_familie', 5, true, {}, ['familie']];
+test('an unknown or malformed league is "Unknown league" and no other property is read', () => {
+  const ctx = load({ leagues: FAMILIE, props: { SHEET_ID: 'sheet', NAME: 'Stua' } });
+  const bad = ['PIN', 'SHEET_ID', 'NAME', '../x', 'Familie', 'FAMILIE', 'ab', 'x'.repeat(41), '-abc', 'a b', 'a_b', 'LEAGUE_familie', 5, true, {}, ['familie']];
   for (const league of bad) {
     ctx.reads.length = 0;
     const get = ctx.get(league);
@@ -622,49 +627,34 @@ test('countMissingEmails: only ACTIVE players with a blank or invalid address', 
   assert.equal(countMissingEmails([]), 0);
 });
 
-// ---------- LEAGUE_main, the legacy fallback and migrateMainLeague ----------
+// ---------- LEAGUE_main ----------
 
 const MAIN_REGISTRATION = (extra = {}) => JSON.stringify({ sheetId: 'sheet', pin: 'main-pin', ...extra });
-/** Main registered as LEAGUE_main only: no legacy properties at all. */
-const modern = (extra = {}, registration = MAIN_REGISTRATION()) => ({
-  props: { LEAGUE_main: registration, SHEET_ID: null, PIN: null }, ...extra,
-});
-const hasLegacy = (properties) => ['SHEET_ID', 'PIN', 'NAME'].some((key) => properties[key] != null);
 
 test('LEAGUE_main is the main league: its sheet and PIN, name optional (default Sjineser)', () => {
-  const { get, request, sheets } = load(modern());
+  const { get, request, sheets } = load({ props: { LEAGUE_main: MAIN_REGISTRATION() } });
   assert.deepEqual({ ...get().data.league }, { id: 'main', name: 'Sjineser', main: true });
-  assert.equal(request('addPlayer', { name: 'Gro' }, PIN).error, 'pin', 'the legacy PIN is gone');
+  assert.equal(request('addPlayer', { name: 'Gro' }, PIN).error, 'pin', 'only the registered PIN opens it');
   assert.equal(request('addPlayer', { name: 'Gro' }, 'main-pin').result, 'applied');
   assert.equal(request('addPlayer', { name: 'Hans' }, 'main-pin', 'main').result, 'applied');
   assert.deepEqual(names(sheets.Players).slice(-2), ['Gro', 'Hans']);
-  assert.equal(load(modern({}, MAIN_REGISTRATION({ name: 'Stua' }))).get().data.league.name, 'Stua', 'registered name is the default');
-  assert.equal(load(modern({}, MAIN_REGISTRATION({ name: '  ' }))).get().data.league.name, 'Sjineser', 'a blank name is absent');
+  assert.equal(load({ props: { LEAGUE_main: MAIN_REGISTRATION({ name: 'Stua' }) } }).get().data.league.name, 'Stua', 'registered name is the default');
+  assert.equal(load({ props: { LEAGUE_main: MAIN_REGISTRATION({ name: '  ' }) } }).get().data.league.name, 'Sjineser', 'a blank name is absent');
 });
 
-test('LEAGUE_main wins over the legacy properties when both exist', () => {
-  const ctx = load({
-    leagues: { other: { name: 'Other' } },
-    props: { LEAGUE_main: JSON.stringify({ sheetId: 'sheet-other', pin: 'other-pin' }) }, // legacy SHEET_ID and PIN still set
-  });
-  assert.deepEqual(ctx.get().data.players.map((p) => p.name), ['Mari', 'Ola', 'Pia', 'Per'], 'LEAGUE_main points at the other sheet');
-  assert.equal(ctx.request('addPlayer', { name: 'Hans' }, PIN).error, 'pin', 'the legacy PIN does not open it');
+test('LEAGUE_main can point at any registered sheet, like any other league', () => {
+  const ctx = load({ leagues: { other: { name: 'Other' } }, props: { LEAGUE_main: JSON.stringify({ sheetId: 'sheet-other', pin: 'other-pin' }) } });
+  assert.deepEqual(ctx.get().data.players.map((p) => p.name), ['Mari', 'Ola', 'Pia', 'Per']);
+  assert.equal(ctx.request('addPlayer', { name: 'Hans' }, PIN).error, 'pin');
   assert.equal(ctx.request('addPlayer', { name: 'Gro' }, 'other-pin').result, 'applied');
-  assert.equal(names(ctx.sheets.Players).length, 6, 'the legacy sheet is untouched');
+  assert.equal(names(ctx.sheets.Players).length, 6, 'the default main sheet is untouched');
 });
 
-test('TEMPORARY legacy fallback: without LEAGUE_main, SHEET_ID and PIN are the main league', () => {
-  const { get, request, sheets } = load();
-  assert.equal(get().data.players.length, 6);
-  assert.equal(request('addPlayer', { name: 'Gro' }).result, 'applied');
-  assert.equal(names(sheets.Players).at(-1), 'Gro');
-});
-
-test('a present but invalid LEAGUE_main is an unknown league: no silent fallback to the legacy properties', () => {
+test('an invalid LEAGUE_main is an unknown league', () => {
   const registrations = ['not json', 'null', '', JSON.stringify({ pin: 'p' }), JSON.stringify({ sheetId: 'sheet' }),
     JSON.stringify({ sheetId: 'sheet', pin: PIN, name: 5 })];
   for (const registration of registrations) {
-    const ctx = load({ props: { LEAGUE_main: registration } }); // the legacy SHEET_ID and PIN are valid here
+    const ctx = load({ props: { LEAGUE_main: registration } });
     assert.deepEqual({ ...ctx.get() }, { ok: false, error: 'invalid', message: 'Unknown league' }, registration);
     assert.equal(ctx.get('main').message, 'Unknown league');
     assert.equal(ctx.request('addPlayer', { name: 'Gro' }, PIN).message, 'Unknown league', registration);
@@ -672,7 +662,20 @@ test('a present but invalid LEAGUE_main is an unknown league: no silent fallback
   }
 });
 
-test('prepareLeagues() logs an invalid LEAGUE_main as failed and does not touch the legacy sheet', () => {
+test('without LEAGUE_main there is no main league: GET and POST are "Unknown league" and SHEET_ID, PIN and NAME are ignored', () => {
+  const ctx = load({ props: { LEAGUE_main: null, SHEET_ID: 'sheet', PIN, NAME: 'Stua' } });
+  assert.equal(ctx.properties.LEAGUE_main, undefined);
+  const unknown = { ok: false, error: 'invalid', message: 'Unknown league' };
+  for (const league of [undefined, '', 'main']) {
+    ctx.reads.length = 0;
+    assert.deepEqual({ ...ctx.get(league) }, unknown, `GET ${JSON.stringify(league)}`);
+    assert.deepEqual({ ...ctx.request('addPlayer', { name: 'Gro' }, PIN, league) }, unknown, `POST ${JSON.stringify(league)}`);
+    assert.ok(!ctx.reads.some((key) => ['SHEET_ID', 'PIN', 'NAME'].includes(key)), 'the flat properties are never read');
+  }
+  assert.equal(names(ctx.sheets.Players).length, 6);
+});
+
+test('prepareLeagues() logs an invalid LEAGUE_main as failed and prepares nothing for it', () => {
   const { prepareLeagues, logs, properties, spreadsheets } = load({ prepared: false, props: { LEAGUE_main: '{' } });
   prepareLeagues();
   assert.match(logs.join('\n'), /League main failed: Unknown league/);
@@ -680,73 +683,19 @@ test('prepareLeagues() logs an invalid LEAGUE_main as failed and does not touch 
   assert.deepEqual(formatCalls(spreadsheets.sheet.sheets), []);
 });
 
-test('registeredLeagueIds(): main once and first, whether it is LEAGUE_main or the legacy properties', () => {
+test('registeredLeagueIds(): main first when LEAGUE_main exists, otherwise just not listed', () => {
   assert.deepEqual([...load({ leagues: FAMILIE }).registeredLeagueIds()], ['main', 'familie']);
-  const both = load({ leagues: FAMILIE, props: { LEAGUE_main: MAIN_REGISTRATION() } });
-  assert.deepEqual([...both.registeredLeagueIds()], ['main', 'familie']);
-  assert.deepEqual([...load({ props: { LEAGUE_zeta: '{', LEAGUE_main: MAIN_REGISTRATION() } }).registeredLeagueIds()], ['main', 'zeta']);
+  assert.deepEqual([...load({ props: { LEAGUE_zeta: '{', LEAGUE_aaa: '{' } }).registeredLeagueIds()], ['main', 'zeta', 'aaa']);
+  assert.deepEqual([...load({ leagues: FAMILIE, props: { LEAGUE_main: null } }).registeredLeagueIds()], ['familie']);
+  assert.deepEqual([...load({ props: { LEAGUE_main: null } }).registeredLeagueIds()], []);
 });
 
 test('prepareLeagues() prepares a LEAGUE_main main league like any other', () => {
-  const { prepareLeagues, logs, properties } = load({ prepared: false, ...modern({ leagues: FAMILIE }, MAIN_REGISTRATION({ name: 'Stua' })) });
+  const { prepareLeagues, logs, properties } = load({ prepared: false, leagues: FAMILIE, props: { LEAGUE_main: MAIN_REGISTRATION({ name: 'Stua' }) } });
   prepareLeagues();
   assert.match(logs.join('\n'), /League main \| Stua \| Fotballkveld \| 6 players/);
   assert.equal(properties.SCHEMA_main, SCHEMA);
   assert.equal(properties.SCHEMA_familie, SCHEMA);
-});
-
-test('migrateMainLeague(): writes LEAGUE_main, then deletes SHEET_ID, PIN and NAME; the log holds no secret', () => {
-  const { migrateMainLeague, properties, logs, writes } = load({ props: { NAME: 'Stua' } });
-  migrateMainLeague();
-  assert.deepEqual(JSON.parse(properties.LEAGUE_main), { name: 'Sjineser', sheetId: 'sheet', pin: PIN });
-  assert.equal(hasLegacy(properties), false);
-  assert.deepEqual(writes, ['LEAGUE_main', 'delete:SHEET_ID', 'delete:PIN', 'delete:NAME'], 'write first, delete after');
-  assert.deepEqual(logs, ['Migrated: LEAGUE_main written, legacy SHEET_ID, PIN and NAME removed']);
-  assert.ok(!logs.join('\n').includes(PIN) && !logs.join('\n').includes('sheet'));
-});
-
-test('migrateMainLeague(): is idempotent and leaves everything alone when LEAGUE_main exists', () => {
-  const ctx = load();
-  ctx.migrateMainLeague();
-  const after = { ...ctx.properties };
-  ctx.logs.length = 0;
-  ctx.migrateMainLeague();
-  assert.deepEqual(ctx.properties, after);
-  assert.deepEqual(ctx.logs, ['Already migrated: LEAGUE_main exists, nothing changed']);
-
-  const existing = load({ props: { LEAGUE_main: MAIN_REGISTRATION(), NAME: 'Stua' } });
-  const before = { ...existing.properties };
-  existing.migrateMainLeague();
-  assert.deepEqual(existing.properties, before, 'legacy properties are kept: nothing is deleted');
-  assert.deepEqual(existing.writes, []);
-
-  const invalid = load({ props: { LEAGUE_main: '{' } });
-  invalid.migrateMainLeague();
-  assert.equal(invalid.properties.LEAGUE_main, '{', 'an invalid LEAGUE_main is never overwritten');
-  assert.equal(invalid.properties.SHEET_ID, 'sheet');
-});
-
-test('migrateMainLeague(): nothing to migrate without SHEET_ID and PIN', () => {
-  for (const props of [{ SHEET_ID: null, PIN: null }, { PIN: null }, { SHEET_ID: '  ' }]) {
-    const ctx = load({ props });
-    ctx.migrateMainLeague();
-    assert.deepEqual(ctx.writes, [], JSON.stringify(props));
-    assert.equal(ctx.properties.LEAGUE_main, undefined);
-    assert.deepEqual(ctx.logs, ['Nothing to migrate: no legacy SHEET_ID and PIN']);
-  }
-});
-
-test('a migrated main league keeps working end to end with the same PIN: GET, POST, the other leagues', () => {
-  const { migrateMainLeague, get, request, post, sheets, sent } = load({ leagues: FAMILIE });
-  migrateMainLeague();
-  assert.deepEqual({ ...get().data.league }, { id: 'main', name: 'Sjineser', main: true });
-  assert.equal(get().data.players.length, 6);
-  assert.equal(request('addPlayer', { name: 'Gro' }, PIN).result, 'applied');
-  assert.equal(names(sheets.Players).at(-1), 'Gro');
-  assert.equal(request('addPlayer', { name: 'Hans' }, 'wrong').error, 'pin');
-  assert.equal(post(MAIL).ok, true);
-  assert.equal(sent.length, 1);
-  assert.equal(get('familie').data.players.length, 4);
 });
 
 // ---------- Settings: the league name ----------
