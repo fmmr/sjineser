@@ -73,6 +73,7 @@ Repo `fmmr/sjineser` (personal GitHub account `fmmr`); Pages serves `main` from 
 - Gate every release on the tests with `&&` (`node --test | grep -q "fail 0" && …`), never `;`: a failing test must stop a deploy chain.
 - Show UI/email changes (a screenshot, or the HTML opened on screen) before publishing them, and verify a deploy on the live system (curl, version check) before saying it is done.
 - When explaining rating, stats or rule logic, give a worked numeric example; the owner asks for one if it is missing.
+- **Hand the owner the link whenever you ask them to look at or change something** (a property, a sheet, the editor, the live app); they do not remember the URLs and should not have to type them. Build them from the repo, never paste ids into docs: script editor `https://script.google.com/d/<scriptId>/edit` (the id is in `apps-script/.clasp.json`), its Script Properties page `https://script.google.com/home/projects/<scriptId>/settings`, the main league's sheet = `SHEET_URL` in `docs/js/config.js`, the app `https://sjineser.rodland.no/` (a league: `?l=<id>`, Mer → Ligaer: `#/more/leagues`), the repo https://github.com/fmmr/sjineser.
 - The owner is a backend developer (Kotlin/Java): explain with the trade-offs and a recommendation, and say what is *not* in the code if it matters.
 
 ## Working notes
