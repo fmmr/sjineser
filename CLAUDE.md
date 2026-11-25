@@ -5,12 +5,21 @@ Mobile-first web app (Norwegian UI) for recording results of the card game *sjin
 ## Commands
 
 ```bash
-npm test            # node --test, Node 22+ (~700 tests, must stay green)
+npm test            # node --test, Node 22+ (hundreds of tests, must stay green; tests/ mirrors the source tree)
 npm run serve       # local server on http://localhost:8000 (serves docs/)
 npm run stamp       # REQUIRED after any change under docs/: regenerates docs/sw.js (version, precache) and docs/js/about-data.js; tests fail until you run it
 ```
 
 Merge conflicts in `docs/sw.js` / `docs/js/about-data.js` are always generated files: `git checkout --theirs` both, then `npm run stamp`.
+
+## The game (what the code models)
+
+- A **set** (sett) is played in **games** (spill); a game is won by team A, team B, or drawn (`A` / `B` / `D`). The first team to **3 game wins** wins the set; draws do not count. A team has **2–3 players** (seats A1–A3 / B1–B3); other players sit out (the bench).
+- A **night** (kveld) lists everyone who was there (`players`) and who went home (`left`). It ends at **noon the next day** (`isNightOngoing`). Players can join or leave during the night.
+- **Elo** is per game: K=24, the team mean rating, provisional for a player's first 10 games, and a **−10 penalty per missed night** (only for active players after their first night, not while a night is ongoing). Explained to users on `#/about/rating`.
+- **Ligatabell** points: 1 per night attended + 2 per set won.
+- **Team proposals** (`domain/proposal.js`): bench rules first, then splits ranked by new partners, new opponents, season variety, balance (repeat counts squared for partners/opponents). Explained on `#/about/teams`.
+- The spec (`design/specs/…`) and `design/stats-ideas.md` have the details and the reasoning.
 
 ## Layout and rules
 
@@ -51,15 +60,30 @@ If `clasp` says you are not logged in or the token expired, run `clasp login` ag
 
 - Emails live only in the sheet's Players column C and the owner-only backup. Never return them from GET or put them in logs. Inactive players must never receive email. The test send exists only in the main league.
 - Never commit a PIN, sheet id or real data. Real import data stays in gitignored `/import/`. Never run `resetAllData()` except to migrate. The script keeps narrow permissions: no full Drive scope (so no renaming or copying spreadsheets).
-- This is a personal public repo: commit as the repo's noreply identity, never the work email (`fmr@finn.no`).
+- This is a personal public repo: commit as the repo's noreply identity, never the owner's work identity or email. Keep addresses, PINs and sheet/script ids out of docs and commits.
 
 ## Publishing
 
-Repo `fmmr/sjineser` (personal GitHub account `fmmr`); Pages serves `main` from `/docs`. Push with `git push origin main`; if it is rejected, `gh auth switch --hostname github.com --user fmmr` first. After a push, wait until `https://sjineser.rodland.no/sw.js` shows the new `VERSION` before telling the owner it is live. Commit trailer: `Co-Authored-By: Claude <noreply@anthropic.com>`.
+Repo `fmmr/sjineser` (personal GitHub account `fmmr`); Pages serves `main` from `/docs`. Push with `git push origin main`; if it is rejected, `gh auth switch --hostname github.com --user fmmr` first. After a push, wait until `https://sjineser.rodland.no/sw.js` shows the new `VERSION` before telling the owner it is live. Use the commit/PR attribution the session tells you to use.
+
+## How we work
+
+- Commit locally as you go. **Push, deploy the backend and publish only when the owner asks** ("merge & deploy", "push it"); an unrequested push of a doc or tweak is not fine on a public repo.
+- Gate every release on the tests with `&&` (`node --test | grep -q "fail 0" && …`), never `;`: a failing test must stop a deploy chain.
+- Show UI/email changes (a screenshot, or the HTML opened on screen) before publishing them, and verify a deploy on the live system (curl, version check) before saying it is done.
+- When explaining rating, stats or rule logic, give a worked numeric example; the owner asks for one if it is missing.
+- The owner is a backend developer (Kotlin/Java): explain with the trade-offs and a recommendation, and say what is *not* in the code if it matters.
 
 ## Working notes
 
-- Browser smoke tests: headless Chrome over CDP against `npm run serve`. A persisted profile keeps the old service worker: delete the profile directory between runs, or you test stale code.
+- macOS: BSD `sed` (use `sed -i ''`, no `\b`), no `shuf` (use `jot`); `npm run serve` needs Python 3.
+- Headless Chrome for smoke tests: `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome --headless=new --remote-debugging-port=<port> --user-data-dir=<tmp>`, driven with Node's built-in `WebSocket` over the DevTools protocol (no dependencies needed).
+
+- A persisted browser profile keeps the old service worker: delete the profile directory between runs, or you test stale code.
 - In `h()` (views/components/dom.js) `false`/`null` children are skipped, but `listGroup` wraps every row in an `<li>`: filter falsy rows yourself.
 - iOS: view transitions are off (fixed tab bar bug), the installed home-screen app has its own storage (leagues must be added there too).
 - Backend and app work split cleanly (`apps-script/` vs `docs/`): fine to do in parallel in separate worktrees, merging afterwards and re-running `npm run stamp`.
+
+## Status (2026-11-25)
+
+Leagues, per-league names (stored in the sheet's `Settings` tab; `name` in the `LEAGUE_<id>` property is only the seed), backup/restore and the monthly backup email (10th, 06:00, installed by the owner) are live and verified. The main league is called "Jaktlaget". A league for a second group is expected: the owner adds its `LEAGUE_<id>` property himself. Open ideas are in `design/backlog.md`.
