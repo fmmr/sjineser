@@ -27,9 +27,25 @@ Merge conflicts in `docs/sw.js` / `docs/js/about-data.js` are always generated f
 - Requests: `GET …/exec[?l=<id>]`; `POST` body `{action, payload, pin, league?}` as plain text (no CORS preflight). The main league sends no `league`.
 - Script Properties (owner-entered): `LEAGUE_<id>` = `{"name"?,"sheetId","pin"}` (main = `LEAGUE_main`). Script-written bookkeeping: `SCHEMA_<id>`, `SUMMARY_SENDS[_<id>]`. Anything that grants access to a sheet is entered by hand, never through the app.
 - Sheet layout is versioned (`SCHEMA_VERSION`): the first request after a bump prepares each league's sheet once under the lock (tabs, headers, formats, validation). Bump it when adding a tab/column. `Settings` tab holds the league `name`.
-- Deploy: `cd apps-script && clasp push -f && clasp create-deployment -i <deployment id>` (the id is in `API_URL` in `docs/js/config.js`). Then verify with `curl`: the public GET must not contain `@`, a wrong PIN must answer `pin`. With curl use `-d '<json>'` and `-L` but **not** `-X POST` (it re-POSTs after Google's redirect and fails).
+- **Deploy** (see "Publishing the backend" below): `cd apps-script && clasp push -f && clasp create-deployment -i <deployment id>`, then verify with `curl`: the public GET must not contain `@`, a wrong PIN must answer `pin`. With curl use `-d '<json>'` and `-L` but **not** `-X POST` (it re-POSTs after Google's redirect and fails).
 - Adding a league: the owner adds one `LEAGUE_<id>` property (id `[a-z0-9-]{3,40}` with a random part, sheet shared with the script owner's Google account as Editor).
 - A new Google permission (e.g. a trigger scope) needs the owner to run `authorize()` once in the editor; the script cannot prompt.
+
+## Publishing the backend (Apps Script, with clasp)
+
+`apps-script/` is a clasp project: `.clasp.json` holds the script id, `.claspignore` limits what is uploaded to `Code.js` and `appsscript.json`. The web app that the app calls is a **deployment** of that script; pushing code does not change what it serves until a new version is deployed to the same deployment.
+
+One-time setup on a machine: `npm i -g @google/clasp` (3.x is installed), `clasp login` in a browser as the script owner's Google account (the token goes to `~/.clasprc.json`, never into the repo), and the Apps Script API switched on at https://script.google.com/home/usersettings.
+
+Every release, from `apps-script/`:
+1. `npm test` from the repo root (the backend is tested with fakes in `tests/apps-script/`).
+2. `clasp push -f` uploads `Code.js` and `appsscript.json` to the script project (the editor then shows the new code, but the live web app is unchanged).
+3. `clasp create-deployment -i <deployment id>` makes a new version and moves the existing deployment to it. The id is the long string in `API_URL` (`docs/js/config.js`, between `/macros/s/` and `/exec`). The URL stays the same, so the app needs no change. It prints `Deployed <id> @<version>`.
+4. Verify as described under Deploy above. `clasp deployments` lists the deployments (the live one with its `@version`; `@HEAD` is the editor's own test deployment, ignore it) and `clasp versions` the history.
+
+Rolling back: `clasp create-deployment -i <id>` only moves forward. To go back, check out the old `Code.js` from git and release it again the same way.
+
+If `clasp` says you are not logged in or the token expired, run `clasp login` again. Properties (`LEAGUE_<id>` and so on) are not touched by a deploy. Run `authorize()` in the editor afterwards only if the code now needs a new Google permission.
 
 ## Security and privacy (do not weaken)
 
