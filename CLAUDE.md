@@ -68,7 +68,8 @@ Repo `fmmr/sjineser` (personal GitHub account `fmmr`); Pages serves `main` from 
 
 ## How we work
 
-- Commit locally as you go. **Push, deploy the backend and publish only when the owner asks** ("merge & deploy", "push it"); an unrequested push of a doc or tweak is not fine on a public repo.
+- **Finish a requested change end to end.** The owner has said this flow is fine: once tests pass, merge, deploy the backend (`clasp push` + `create-deployment`), push `main` to publish the app, verify it live (curl, version check) and report. No need to ask at each step.
+- Stop and ask first for: real emails to players, deleting or overwriting data (`resetAllData`, restore into a league that has data), Script Properties and Google permissions (the owner enters those), force pushes, or anything outside this repo. If the harness blocks a push or deploy, do not work around it: tell the owner what you tried and why.
 - Gate every release on the tests with `&&` (`node --test | grep -q "fail 0" && …`), never `;`: a failing test must stop a deploy chain.
 - Show UI/email changes (a screenshot, or the HTML opened on screen) before publishing them, and verify a deploy on the live system (curl, version check) before saying it is done.
 - When explaining rating, stats or rule logic, give a worked numeric example; the owner asks for one if it is missing.
